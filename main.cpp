@@ -10,7 +10,9 @@
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
-void vertexSpec();
+void vertexSpec(const std::vector<float>& vertices);
+void getCilinderVertices(glm::vec3 p0, glm::vec3 p, std::vector<float>& vertexData);
+void drawCilinder();
 
 unsigned int VBO{};
 unsigned int VAO{};
@@ -28,10 +30,12 @@ float pitch{};
 bool isPressingRightClick{ false };
 bool isFirstMouse{ true };
 
+std::vector<float> vertexData;
+
 int main()
 {
-	constexpr int width{ 800 };
-	constexpr int height{ 600 };
+	constexpr int width{ 960 };
+	constexpr int height{ 540 };
 	std::string title{ "GeoGebra3D" };
 
 	Window window{ width, height, title };
@@ -42,7 +46,8 @@ int main()
 	glfwSetMouseButtonCallback(window.getWindow(), mouse_button_callback);
 	glfwSetCursorPosCallback(window.getWindow(), mouse_cursor_callback);
 
-	vertexSpec();
+	drawCilinder();
+	vertexSpec(vertexData);
 
 	while (!glfwWindowShouldClose(window.getWindow()))
 	{
@@ -54,11 +59,8 @@ int main()
 
 		glm::mat4 view{ glm::lookAt(cameraPos, cameraTarget, worldUp) };
 
-		//view = glm::rotate(view, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
-		//view = glm::rotate(view, pitch, glm::vec3(1.0f, 0.0f, 0.0f));
-
 		glm::mat4 projection{};
-		projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
+		projection = glm::perspective(glm::radians(45.0f), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.0f);
 
 		glm::mat4 model{ 1.0f };
 
@@ -70,7 +72,7 @@ int main()
 		shader.setMat4("model", model);
 
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_LINES, 0, 6);
+		glDrawArrays(GL_LINES, 0, vertexData.size());
 
 		glfwSwapBuffers(window.getWindow());
 		glfwPollEvents();
@@ -130,29 +132,15 @@ void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos)
 	if (pitch < -89.0f)
 		pitch = -89.0f;
 
-	const float radius{ 2.0f };
+	const float radius{ 3.0f };
 
 	cameraPos.x = cameraTarget.x + radius * cos(yaw) * cos(pitch);
 	cameraPos.y = cameraTarget.y + radius * sin(pitch);
 	cameraPos.z = cameraTarget.z + radius * sin(yaw) * cos(pitch);
-
-	std::cout << "x = " << cameraPos.x << ", y = " << cameraPos.y << ", z = " << cameraPos.z << "\n";
 }
 
-void vertexSpec()
+void vertexSpec(const std::vector<float>& vertices)
 {
-	std::vector vertices
-	{
-		-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-		 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-
-		 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-		 0.0f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-
-		 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f,
-		 0.0f, 0.0f,  1.0f, 1.0f, 0.0f, 0.0f
-	};
-
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 
@@ -160,10 +148,78 @@ void vertexSpec()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
 
-	int stride{ 6 * sizeof(float) };
+	int stride{ 3 * sizeof(float) };
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
 
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+	//glEnableVertexAttribArray(1);
+	//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+}
+
+void getCilinderVertices(glm::vec3 p0, glm::vec3 p, std::vector<float>& vertexData)
+{
+	glm::vec3 direction{ p - p0 };
+
+	float length{ glm::length(direction) };
+
+	if (length == 0.0f)
+		return;
+
+	direction = glm::normalize(direction);
+
+	glm::vec3 worldUp{ 0.0f, 1.0f, 0.0f };
+
+	if (worldUp == direction)
+		worldUp = glm::vec3(0.0f, 0.0f, 1.0f);
+	if (worldUp == -direction)
+		worldUp = glm::vec3(0.0f, 0.0f, -1.0f);
+
+	glm::vec3 right{ glm::normalize(glm::cross(direction, worldUp)) };
+	glm::vec3 up{ glm::cross(right, direction) };
+
+	const float radius{ 0.001f };
+	for (float angle{ 0.0f }; angle <= 360.0f; angle += 10.0f)
+	{
+		float rad{ glm::radians(angle) };
+
+		glm::vec3 a{ p0 + radius * cos(rad) * right + radius * sin(rad) * up };
+		glm::vec3 b{ a + length * direction };
+
+		vertexData.push_back(a.x);
+		vertexData.push_back(a.y);
+		vertexData.push_back(a.z);
+
+		vertexData.push_back(b.x);
+		vertexData.push_back(b.y);
+		vertexData.push_back(b.z);
+
+		//std::cout << "A: " << a.x << ", " << a.y << ", " << a.z << "\tB: " << b.x << ", " << b.y << ", " << b.z << "\n";
+	}
+
+	std::cout << "direction: " << direction.x << ", " << direction.y << ", " << direction.z << "\n";
+	std::cout << "right: " << right.x << ", " << right.y << ", " << right.z << "\n";
+	std::cout << "up: " << up.x << ", " << up.y << ", " << up.z << "\n";
+}
+
+void drawCilinder()
+{
+	std::vector vertices
+	{
+		-1.0f, 0.0f, 0.0f,
+		 1.0f, 0.0f, 0.0f,
+
+		 0.0f, -1.0f, 0.0f,
+		 0.0f,  1.0f, 0.0f,
+
+		 0.0f, 0.0f, -1.0f,
+		 0.0f, 0.0f,  1.0f
+	};
+
+	for (int i{ 0 }; i < vertices.size(); i += 6)
+	{
+		glm::vec3 a{ vertices[i], vertices[i + 1], vertices[i + 2] };
+		glm::vec3 b(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
+
+		getCilinderVertices(a, b, vertexData);
+	}
 }
