@@ -57,6 +57,7 @@ int main()
 
 	// glfw window creation
 	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+
 	if (window == NULL)
 	{
 		std::cerr << "Failed to create GLFW window\n";
@@ -324,11 +325,6 @@ void textureSpecification()
 		std::cerr << "Failed to load texture\n";
 	}
 	stbi_image_free(data);
-}
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	glViewport(0, 0, width, height);
 }
 
 void processInput(GLFWwindow* window)
