@@ -6,12 +6,15 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <vector>
+#include <cmath>
+#include <algorithm>
 
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
 void vertexSpec(const std::vector<float>& vertices);
-void getCilinderVertices(glm::vec3 p0, glm::vec3 p, std::vector<float>& vertexData);
+void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData);
+void drawRings(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData);
 void drawCilinder();
 
 unsigned int VBO{};
@@ -30,7 +33,16 @@ float pitch{};
 bool isPressingRightClick{ false };
 bool isFirstMouse{ true };
 
-std::vector<float> vertexData;
+std::vector<float> vertexData
+{
+	0.0f,  1.0f,  1.0f, 0.0f, 0.0f, 0.0f,
+	0.0f, -1.0f,  1.0f, 0.0f, 0.0f, 0.0f,
+	0.0f,  1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+
+	0.0f, -1.0f,  1.0f, 0.0f, 0.0f, 0.0f,
+	0.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+	0.0f,  1.0f, -1.0f, 0.0f, 0.0f, 0.0f
+};
 
 int main()
 {
@@ -48,6 +60,13 @@ int main()
 
 	drawCilinder();
 	vertexSpec(vertexData);
+
+	//for (int i{ 0 }; i < vertexData.size(); ++i)
+	//{
+	//	std::cout << vertexData[i] << " ";
+	//}
+
+	std::cout << "\n\n" << vertexData.size();
 
 	while (!glfwWindowShouldClose(window.getWindow()))
 	{
@@ -72,7 +91,20 @@ int main()
 		shader.setMat4("model", model);
 
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_LINES, 0, vertexData.size());
+		glDrawArrays(GL_LINES, 6, (vertexData.size() - 36) / 2);
+
+		//float stride{ 0.1f };
+		//for (int i{ 0 }; i < 10; ++i)
+		//{
+		//	model = glm::mat4{ 1.0f };
+		//	model = glm::translate(model, glm::vec3(stride, 0.0f, 0.0f));
+		//	model = glm::scale(model, glm::vec3(1.0f, 0.014f, 0.014f));
+
+		//	shader.setMat4("model", model);
+		//	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		//	stride += 0.1f;
+		//}
 
 		glfwSwapBuffers(window.getWindow());
 		glfwPollEvents();
@@ -148,15 +180,15 @@ void vertexSpec(const std::vector<float>& vertices)
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
 
-	int stride{ 3 * sizeof(float) };
+	int stride{ 6 * sizeof(float) };
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
 
-	//glEnableVertexAttribArray(1);
-	//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
 }
 
-void getCilinderVertices(glm::vec3 p0, glm::vec3 p, std::vector<float>& vertexData)
+void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData)
 {
 	glm::vec3 direction{ p - p0 };
 
@@ -169,16 +201,23 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, std::vector<float>& vertexDa
 
 	glm::vec3 worldUp{ 0.0f, 1.0f, 0.0f };
 
-	if (worldUp == direction)
-		worldUp = glm::vec3(0.0f, 0.0f, 1.0f);
-	if (worldUp == -direction)
-		worldUp = glm::vec3(0.0f, 0.0f, -1.0f);
+	// changes worldUp accordingly with the direction vector, because the cross product between vectors with the same direction is a null vector 
+	float cosTheta = glm::dot(direction, worldUp);
+	if (glm::abs(cosTheta) > 0.999f)
+	{
+		if (cosTheta > 0.0f)
+			worldUp = glm::vec3(0.0f, 0.0f, 1.0f);
+
+		if (cosTheta < 0.0f)
+			worldUp = glm::vec3(0.0f, 0.0f, -1.0f);
+	}
 
 	glm::vec3 right{ glm::normalize(glm::cross(direction, worldUp)) };
 	glm::vec3 up{ glm::cross(right, direction) };
 
+	const float linesDensity{ 360.0f / 72.0f };
 	const float radius{ 0.001f };
-	for (float angle{ 0.0f }; angle <= 360.0f; angle += 10.0f)
+	for (float angle{ 0.0f }; angle <= 360.0f; angle += linesDensity)
 	{
 		float rad{ glm::radians(angle) };
 
@@ -188,10 +227,16 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, std::vector<float>& vertexDa
 		vertexData.push_back(a.x);
 		vertexData.push_back(a.y);
 		vertexData.push_back(a.z);
+		vertexData.push_back(color.x);
+		vertexData.push_back(color.y);
+		vertexData.push_back(color.z);
 
 		vertexData.push_back(b.x);
 		vertexData.push_back(b.y);
 		vertexData.push_back(b.z);
+		vertexData.push_back(color.x);
+		vertexData.push_back(color.y);
+		vertexData.push_back(color.z);
 
 		//std::cout << "A: " << a.x << ", " << a.y << ", " << a.z << "\tB: " << b.x << ", " << b.y << ", " << b.z << "\n";
 	}
@@ -199,11 +244,72 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, std::vector<float>& vertexDa
 	std::cout << "direction: " << direction.x << ", " << direction.y << ", " << direction.z << "\n";
 	std::cout << "right: " << right.x << ", " << right.y << ", " << right.z << "\n";
 	std::cout << "up: " << up.x << ", " << up.y << ", " << up.z << "\n";
+	std::cout << "color: " << color.x << ", " << color.y << ", " << color.z << "\n";
+}
+
+void drawRings(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData)
+{
+	glm::vec3 direction{ p - p0 };
+
+	float ringWidth{ glm::length(direction) };
+
+	if (ringWidth == 0.0f)
+		return;
+
+	direction = glm::normalize(direction);
+
+	glm::vec3 worldUp{ 0.0f, 1.0f, 0.0f };
+
+	// changes worldUp accordingly with the direction vector, because the cross product between vectors with the same direction is a null vector 
+	float cosTheta = glm::dot(direction, worldUp);
+	if (glm::abs(cosTheta) > 0.999f)
+	{
+		if (cosTheta > 0.0f)
+			worldUp = glm::vec3(0.0f, 0.0f, 1.0f);
+
+		if (cosTheta < 0.0f)
+			worldUp = glm::vec3(0.0f, 0.0f, -1.0f);
+	}
+
+	glm::vec3 right{ glm::normalize(glm::cross(direction, worldUp)) };
+	glm::vec3 up{ glm::cross(right, direction) };
+
+	const float linesDensity{ 360.0f / 72.0f };
+	const float ringRadius{ 0.002f };
+	float stride{ 0.1f };
+	const int ringCount{ 20 };
+
+	for (int i{ 0 }; i < ringCount; ++i)
+	{
+		p0 += direction * stride;
+
+		for (float angle{ 0.0f }; angle <= 360.0f; angle += linesDensity)
+		{
+			float rad{ glm::radians(angle) };
+
+			glm::vec3 a{ p0 + ringRadius * cos(rad) * right + ringRadius * sin(rad) * up };
+			glm::vec3 b{ a + ringWidth * direction };
+
+			vertexData.push_back(a.x);
+			vertexData.push_back(a.y);
+			vertexData.push_back(a.z);
+			vertexData.push_back(color.x);
+			vertexData.push_back(color.y);
+			vertexData.push_back(color.z);
+
+			vertexData.push_back(b.x);
+			vertexData.push_back(b.y);
+			vertexData.push_back(b.z);
+			vertexData.push_back(color.x);
+			vertexData.push_back(color.y);
+			vertexData.push_back(color.z);
+		}
+	}
 }
 
 void drawCilinder()
 {
-	std::vector vertices
+	std::vector axisVertices
 	{
 		-1.0f, 0.0f, 0.0f,
 		 1.0f, 0.0f, 0.0f,
@@ -215,11 +321,42 @@ void drawCilinder()
 		 0.0f, 0.0f,  1.0f
 	};
 
-	for (int i{ 0 }; i < vertices.size(); i += 6)
+	std::vector axisColors
 	{
-		glm::vec3 a{ vertices[i], vertices[i + 1], vertices[i + 2] };
-		glm::vec3 b(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
+		1.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 1.0f
+	};
 
-		getCilinderVertices(a, b, vertexData);
+	for (int v{ 0 }, c{ 0 }; v < axisVertices.size(); v += 6, c += 3)
+	{
+		glm::vec3 a{ axisVertices[v], axisVertices[v + 1], axisVertices[v + 2] };
+		glm::vec3 b(axisVertices[v + 3], axisVertices[v + 4], axisVertices[v + 5]);
+		glm::vec3 color{ axisColors[c], axisColors[c + 1], axisColors[c + 2] };
+
+		getCilinderVertices(a, b, color, vertexData);
+	}
+
+	float ringWidth{ 0.002f };
+	std::vector ringVertices
+	{
+		-1.0f, 0.0f, 0.0f,
+		-1.0f +ringWidth, 0.0f, 0.0f,
+
+		0.0f, -1.0f, 0.0f,
+		0.0f, -1.0f + ringWidth, 0.0f,
+
+		0.0f, 0.0f, -1.0f,
+		0.0f, 0.0f, -1.0f + ringWidth
+	};
+
+	glm::vec3 ringColor{ 0.0f, 0.0f, 0.0f };
+
+	for (int v{ 0 }; v < axisVertices.size(); v += 6)
+	{
+		glm::vec3 a{ ringVertices[v], ringVertices[v + 1], ringVertices[v + 2] };
+		glm::vec3 b(ringVertices[v + 3], ringVertices[v + 4], ringVertices[v + 5]);
+
+		drawRings(a, b, ringColor, vertexData);
 	}
 }
