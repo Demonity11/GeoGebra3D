@@ -6,8 +6,6 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <vector>
-#include <cmath>
-#include <algorithm>
 
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -33,16 +31,7 @@ float pitch{};
 bool isPressingRightClick{ false };
 bool isFirstMouse{ true };
 
-std::vector<float> vertexData
-{
-	0.0f,  1.0f,  1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, -1.0f,  1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f,  1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-
-	0.0f, -1.0f,  1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f,  1.0f, -1.0f, 0.0f, 0.0f, 0.0f
-};
+std::vector<float> vertexData;
 
 int main()
 {
@@ -91,20 +80,7 @@ int main()
 		shader.setMat4("model", model);
 
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_LINES, 6, (vertexData.size() - 36) / 2);
-
-		//float stride{ 0.1f };
-		//for (int i{ 0 }; i < 10; ++i)
-		//{
-		//	model = glm::mat4{ 1.0f };
-		//	model = glm::translate(model, glm::vec3(stride, 0.0f, 0.0f));
-		//	model = glm::scale(model, glm::vec3(1.0f, 0.014f, 0.014f));
-
-		//	shader.setMat4("model", model);
-		//	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-		//	stride += 0.1f;
-		//}
+		glDrawArrays(GL_LINES, 0, (vertexData.size() - 36) / 2);
 
 		glfwSwapBuffers(window.getWindow());
 		glfwPollEvents();
