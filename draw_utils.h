@@ -16,7 +16,8 @@
 enum class funcType
 {
 	Vector,
-	Point
+	Point,
+	Segment,
 };
 
 // forward declarations for main.cpp
@@ -31,7 +32,7 @@ extern std::vector<float> vertexData;
 
 // forward declarations for interface.cpp
 
-auto isComponentsConvertible(std::string parameters)									  -> std::vector<float>;
+auto extractComponents(std::string& parameters, std::vector<float>& vecComponents)  -> void;
 auto draw(funcType type, const std::vector<float>& vecComponents, const glm::vec3& color) -> void;
 
 #endif

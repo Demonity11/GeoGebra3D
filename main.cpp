@@ -14,7 +14,7 @@ unsigned int VBO{};
 unsigned int VAO{};
 
 glm::vec3 cameraPos   { 0.0f, 0.5f,  3.0f };
-glm::vec3 cameraTarget{ 0.0f, 0.0f, 0.0f };
+glm::vec3 cameraTarget{ 0.0f, 0.0f,  0.0f };
 glm::vec3 worldUp     { 0.0f, 1.0f,  0.0f };
 
 float lastX{ 400.0f };

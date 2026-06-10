@@ -8,7 +8,8 @@ std::stringstream ss{};
 std::vector<std::string> functions
 {
 	"Vector(",
-	"Point("
+	"Point(",
+	"Segment("
 };
 
 void initializeImGui(GLFWwindow* window)
@@ -34,33 +35,80 @@ void getUserInput()
 
 		if (inputText.find(functions[0]) == 0)
 		{
-			auto funcOpenParenthesisPos{ functions[0].length() - 1};
-			auto funcCloseParenthesisPos{ inputText.find(")") };
+			auto funcOpenParenthesisPos{ inputText.find("(") };
+			auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
 
 			if (funcCloseParenthesisPos > funcOpenParenthesisPos)
 			{
 				std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
 
-				std::vector<float> vecComponents{ isComponentsConvertible(parameters) };
+				std::vector<float> vecComponents{};
+				extractComponents(parameters, vecComponents);
 
 				if (vecComponents.size() == 3)
 					draw(funcType::Vector, vecComponents, glm::vec3(1.0f, 1.0f, 0.2f));
 			}
 		}
 
-		if (inputText.find(functions[1]) == 0)
+		else if (inputText.find(functions[1]) == 0)
 		{
-			auto funcOpenParenthesisPos{ functions[1].length() - 1 };
-			auto funcCloseParenthesisPos{ inputText.find(")") };
+			auto funcOpenParenthesisPos{ inputText.find("(") };
+			auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
 
 			if (funcCloseParenthesisPos > funcOpenParenthesisPos)
 			{
 				std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
 
-				std::vector<float> vecComponents{ isComponentsConvertible(parameters) };
+				std::vector<float> vecComponents{};
+				extractComponents(parameters, vecComponents);
 
 				if (vecComponents.size() == 3)
 					draw(funcType::Point, vecComponents, glm::vec3(0.0f, 0.0f, 0.0f));
+			}
+		}
+
+		else if (inputText.find(functions[2]) == 0)
+		{
+			auto funcOpenParenthesisPos{ inputText.find("(") };
+			auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
+
+			if (funcCloseParenthesisPos > funcOpenParenthesisPos)
+			{
+				std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
+
+				funcOpenParenthesisPos = parameters.find("(");
+				funcCloseParenthesisPos = parameters.find(")");
+
+				std::string parametersPointA{};
+				std::string parametersPointB{};
+
+				if (funcCloseParenthesisPos > funcOpenParenthesisPos)
+				{
+					parametersPointA = parameters.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1);
+					parameters = parameters.substr(funcCloseParenthesisPos + 1, parameters.length() - 1);
+				}
+
+				funcOpenParenthesisPos = parameters.find("(");
+				funcCloseParenthesisPos = parameters.find(")");
+
+				if (parameters.substr(funcCloseParenthesisPos, parameters.length() - 1).rfind("(") != std::string::npos
+			   	 || parameters.substr(funcCloseParenthesisPos, parameters.length() - 1).rfind(")") != std::string::npos)
+				{
+					funcCloseParenthesisPos = 0;
+				}
+
+				if (funcCloseParenthesisPos > funcOpenParenthesisPos)
+				{
+					parametersPointB = parameters.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1);
+				}
+
+				std::vector<float> vecComponents{};
+				extractComponents(parametersPointA, vecComponents);
+				extractComponents(parametersPointB, vecComponents);
+
+				std::cout << vecComponents.size() << "\n";
+				if (vecComponents.size() == 6)
+					draw(funcType::Segment, vecComponents, glm::vec3(0.0f, 0.0f, 0.0f));
 			}
 		}
 	}
@@ -68,11 +116,9 @@ void getUserInput()
 	ImGui::End();
 }
 
-// returns a empty vector if something goes wrong
-std::vector<float> isComponentsConvertible(std::string parameters)
+void extractComponents(std::string& parameters, std::vector<float>& vecComponents)
 {
 	auto commaPos{ parameters.find(",") };
-	std::vector<float> vecComponents{};
 
 	while (parameters.find(",") != std::string::npos)
 	{
@@ -87,7 +133,7 @@ std::vector<float> isComponentsConvertible(std::string parameters)
 		catch (const std::invalid_argument& e)
 		{
 			std::cerr << "ERROR::STRING_IS_NOT_A_NUMBER\n";
-			return std::vector<float>{};
+			return;
 		}
 
 		parameters = parameters.substr(commaPos + 1, parameters.length() - 1);
@@ -104,14 +150,12 @@ std::vector<float> isComponentsConvertible(std::string parameters)
 			catch (const std::invalid_argument& e)
 			{
 				std::cerr << "ERROR::STRING_IS_NOT_A_NUMBER\n";
-				return std::vector<float>{};
+				return;
 			}
 
 			break;
 		}
 	}
-
-	return vecComponents;
 }
 
 void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec3& color)
@@ -132,7 +176,7 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		updateBufferData(vertexData);
 	}
 
-	if (type == funcType::Point)
+	else if (type == funcType::Point)
 	{
 		glm::vec3 point{ vecComponents[0], vecComponents[1], vecComponents[2] };
 
@@ -141,6 +185,22 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		const float radius{ 0.005f };
 
 		getSphereVertices(point, color, radius, vertexData);
+
+		updateBufferData(vertexData);
+	}
+
+	else if (type == funcType::Segment)
+	{
+		glm::vec3 pointA{ vecComponents[0], vecComponents[1], vecComponents[2] };
+		glm::vec3 pointB{ vecComponents[3], vecComponents[4], vecComponents[5] };
+
+		pointA *= scale;
+		pointB *= scale;
+
+		const glm::vec3 origin{ 0.0f, 0.0f, 0.0f };
+		const float radius{ 0.0015f };
+
+		getCilinderVertices(pointA, pointB, color, radius, vertexData);
 
 		updateBufferData(vertexData);
 	}
