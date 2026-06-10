@@ -15,7 +15,8 @@ std::stringstream ss{};
 
 std::vector<std::string> functions
 {
-	"Vector("
+	"Vector(",
+	"Point("
 };
 
 void initializeImGui(GLFWwindow* window)
@@ -51,17 +52,23 @@ void getUserInput()
 				std::vector<float> vecComponents{ isComponentsConvertible(parameters) };
 
 				if (vecComponents.size() == 3)
-				{
-					glm::vec3 vector{ vecComponents[0], vecComponents[1], vecComponents[2] };
+					draw(funcType::Vector, vecComponents, glm::vec3(1.0f, 1.0f, 0.2f));
+			}
+		}
 
-					vectorScale(vector);
+		if (inputText.find(functions[1]) == 0)
+		{
+			auto funcOpenParenthesisPos{ functions[1].length() - 1 };
+			auto funcCloseParenthesisPos{ inputText.find(")") };
 
-					std::cout << vertexData.size() << "\n";
-					getCilinderVertices(glm::vec3(0.0f, 0.0f, 0.0f), vector, glm::vec3(1.0f, 1.0f, 0.0f), 0.0015f, vertexData);
-					std::cout << vertexData.size() << "\n";
+			if (funcCloseParenthesisPos > funcOpenParenthesisPos)
+			{
+				std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
 
-					updateBufferData(vertexData);
-				}
+				std::vector<float> vecComponents{ isComponentsConvertible(parameters) };
+
+				if (vecComponents.size() == 3)
+					draw(funcType::Point, vecComponents, glm::vec3(0.0f, 0.0f, 0.0f));
 			}
 		}
 	}
@@ -115,9 +122,29 @@ std::vector<float> isComponentsConvertible(std::string parameters)
 	return vecComponents;
 }
 
-void vectorScale(glm::vec3& vec)
+void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec3& color)
 {
-	float scale{ 0.1f };
+	const float scale{ 0.1f };
 
-	vec *= scale;
+	if (type == funcType::Vector)
+	{
+		glm::vec3 vector{ vecComponents[0], vecComponents[1], vecComponents[2] };
+
+		vector *= scale;
+
+		getCilinderVertices(glm::vec3(0.0f, 0.0f, 0.0f), vector, color, 0.0015f, vertexData);
+
+		updateBufferData(vertexData);
+	}
+
+	if (type == funcType::Point)
+	{
+		glm::vec3 point{ vecComponents[0], vecComponents[1], vecComponents[2] };
+
+		point *= scale;
+
+		getSphereVertices(point, color, 0.005f, vertexData);
+
+		updateBufferData(vertexData);
+	}
 }

@@ -250,7 +250,7 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, float radiu
 	//std::cout << "color: " << color.x << ", " << color.y << ", " << color.z << "\n";
 }
 
-void drawRings(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData)
+void getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData)
 {
 	glm::vec3 direction{ p - p0 };
 
@@ -310,6 +310,74 @@ void drawRings(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& v
 	}
 }
 
+void getSphereVertices(glm::vec3 translation, glm::vec3 color, float radius, std::vector<float>& vertexData)
+{
+	const float deltaPhi{ 180.f / 60.0f };
+
+	const float deltaTheta{ 360.0f / 72.0f };
+
+	for (float i{ 0.0f }; i <= 180.0f - deltaPhi; i += deltaPhi)
+	{
+		float phi{ glm::radians(i) };
+		float phiNext{ glm::radians(i + deltaPhi) };
+
+		for (float j{ 0.0f }; j <= 360.0f - deltaTheta; j += deltaTheta)
+		{
+			float theta{ glm::radians(j) };
+			float thetaNext{ glm::radians(j + deltaTheta) };
+
+			glm::vec3 p0
+			{
+				translation.x + radius * sin(phi) * cos(theta),
+				translation.y + radius * cos(phi),
+				translation.z + radius * sin(phi) * sin(theta)
+			};
+
+			glm::vec3 pRight
+			{
+				translation.x + radius * sin(phi) * cos(thetaNext),
+				translation.y + radius * cos(phi),
+				translation.z + radius * sin(phi) * sin(thetaNext)
+			};
+
+			glm::vec3 pBottom
+			{
+				translation.x + radius * sin(phiNext) * cos(theta),
+				translation.y + radius * cos(phiNext),
+				translation.z + radius * sin(phiNext) * sin(theta)
+			};
+
+			vertexData.push_back(p0.x);
+			vertexData.push_back(p0.y);
+			vertexData.push_back(p0.z);
+			vertexData.push_back(color.x);
+			vertexData.push_back(color.y);
+			vertexData.push_back(color.z);
+
+			vertexData.push_back(pRight.x);
+			vertexData.push_back(pRight.y);
+			vertexData.push_back(pRight.z);
+			vertexData.push_back(color.x);
+			vertexData.push_back(color.y);
+			vertexData.push_back(color.z);
+
+			vertexData.push_back(p0.x);
+			vertexData.push_back(p0.y);
+			vertexData.push_back(p0.z);
+			vertexData.push_back(color.x);
+			vertexData.push_back(color.y);
+			vertexData.push_back(color.z);
+
+			vertexData.push_back(pBottom.x);
+			vertexData.push_back(pBottom.y);
+			vertexData.push_back(pBottom.z);
+			vertexData.push_back(color.x);
+			vertexData.push_back(color.y);
+			vertexData.push_back(color.z);
+		}
+	}
+}
+
 void drawCilinder()
 {
 	std::vector axisVertices
@@ -360,6 +428,6 @@ void drawCilinder()
 		glm::vec3 a{ ringVertices[v], ringVertices[v + 1], ringVertices[v + 2] };
 		glm::vec3 b(ringVertices[v + 3], ringVertices[v + 4], ringVertices[v + 5]);
 
-		drawRings(a, b, ringColor, vertexData);
+		getRingsVertices(a, b, ringColor, vertexData);
 	}
 }
