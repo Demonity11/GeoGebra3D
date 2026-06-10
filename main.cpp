@@ -194,7 +194,7 @@ void updateBufferData(const std::vector<float>& vertices)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
 }
 
-void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData)
+void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, float radius, std::vector<float>& vertexData)
 {
 	glm::vec3 direction{ p - p0 };
 
@@ -222,7 +222,6 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector
 	glm::vec3 up{ glm::cross(right, direction) };
 
 	const float linesDensity{ 360.0f / 72.0f };
-	const float radius{ 0.001f };
 	for (float angle{ 0.0f }; angle <= 360.0f; angle += linesDensity)
 	{
 		float rad{ glm::radians(angle) };
@@ -338,7 +337,7 @@ void drawCilinder()
 		glm::vec3 b(axisVertices[v + 3], axisVertices[v + 4], axisVertices[v + 5]);
 		glm::vec3 color{ axisColors[c], axisColors[c + 1], axisColors[c + 2] };
 
-		getCilinderVertices(a, b, color, vertexData);
+		getCilinderVertices(a, b, color, 0.001f ,vertexData);
 	}
 
 	float ringWidth{ 0.002f };

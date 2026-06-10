@@ -54,8 +54,10 @@ void getUserInput()
 				{
 					glm::vec3 vector{ vecComponents[0], vecComponents[1], vecComponents[2] };
 
+					vectorScale(vector);
+
 					std::cout << vertexData.size() << "\n";
-					getCilinderVertices(glm::vec3(0.0f, 0.0f, 0.0f), vector, glm::vec3(1.0f, 1.0f, 0.0f), vertexData);
+					getCilinderVertices(glm::vec3(0.0f, 0.0f, 0.0f), vector, glm::vec3(1.0f, 1.0f, 0.0f), 0.0015f, vertexData);
 					std::cout << vertexData.size() << "\n";
 
 					updateBufferData(vertexData);
@@ -111,4 +113,11 @@ std::vector<float> isComponentsConvertible(std::string parameters)
 	}
 
 	return vecComponents;
+}
+
+void vectorScale(glm::vec3& vec)
+{
+	float scale{ 0.1f };
+
+	vec *= scale;
 }

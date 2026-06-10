@@ -16,7 +16,7 @@
 // forward declarations for main.cpp
 void vertexSpec(const std::vector<float>& vertices);
 void updateBufferData(const std::vector<float>& vertices);
-void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData);
+void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, float radius, std::vector<float>& vertexData);
 void drawRings(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData);
 void drawCilinder();
 
@@ -25,5 +25,6 @@ extern std::vector<float> vertexData;
 // forward declarations for interface.cpp
 
 std::vector<float> isComponentsConvertible(std::string parameters);
+void vectorScale(glm::vec3& vec);
 
 #endif
