@@ -1,11 +1,3 @@
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include "Window.h"
 #include "draw_utils.h"
 
@@ -132,7 +124,10 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 
 		vector *= scale;
 
-		getCilinderVertices(glm::vec3(0.0f, 0.0f, 0.0f), vector, color, 0.0015f, vertexData);
+		const glm::vec3 origin{ 0.0f, 0.0f, 0.0f };
+		const float radius{ 0.0015f };
+
+		getCilinderVertices(origin, vector, color, radius, vertexData);
 
 		updateBufferData(vertexData);
 	}
@@ -143,7 +138,9 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 
 		point *= scale;
 
-		getSphereVertices(point, color, 0.005f, vertexData);
+		const float radius{ 0.005f };
+
+		getSphereVertices(point, color, radius, vertexData);
 
 		updateBufferData(vertexData);
 	}

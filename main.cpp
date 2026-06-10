@@ -2,16 +2,6 @@
 #include "Shader.h"
 #include "draw_utils.h"
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
-
-#include <vector>
-
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
