@@ -23,9 +23,12 @@ enum class funcType
 // forward declarations for main.cpp
 auto vertexSpec(const std::vector<float>& vertices)																   -> void;
 auto updateBufferData(const std::vector<float>& vertices)														   -> void;
-auto getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, float radius, std::vector<float>& vertexData) -> void;
-auto getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData)				   -> void;
-auto getSphereVertices(glm::vec3 translation, glm::vec3 color, float radius, std::vector<float>& vertexData)	   -> void;
+
+// forward declarations for draw.cpp
+auto getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radius, std::vector<float>& vertexData) -> void;
+auto getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<float>& vertexData)				   -> void;
+auto getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std::vector<float>& vertexData)	   -> void;
+auto getGridVertices()																							   -> void;
 auto drawCilinder()																								   -> void;
 
 extern std::vector<float> vertexData;
@@ -33,6 +36,6 @@ extern std::vector<float> vertexData;
 // forward declarations for interface.cpp
 
 auto extractComponents(std::string& parameters, std::vector<float>& vecComponents)  -> void;
-auto draw(funcType type, const std::vector<float>& vecComponents, const glm::vec3& color) -> void;
+auto draw(funcType type, const std::vector<float>& vecComponents, const glm::vec4& color) -> void;
 
 #endif

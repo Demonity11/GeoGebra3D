@@ -5,6 +5,7 @@
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
+void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 // interface.cpp
 void initializeImGui(GLFWwindow* window);
@@ -23,10 +24,21 @@ float lastY{ 300.0f };
 float yaw{};
 float pitch{};
 
+float fov{ 45.0f };
+
 bool isPressingRightClick{ false };
 bool isFirstMouse{ true };
 
-std::vector<float> vertexData;
+std::vector<float> vertexData
+{  // plane positions      // colors
+	 1.0f, 0.0f, -1.0f,  0.0f, 0.0f, 0.0f, 0.1f,
+	 1.0f, 0.0f,  1.0f,  0.0f, 0.0f, 0.0f, 0.1f,
+	-1.0f, 0.0f, -1.0f,  0.0f, 0.0f, 0.0f, 0.1f,
+
+	 1.0f, 0.0f,  1.0f,  0.0f, 0.0f, 0.0f, 0.1f,
+	-1.0f, 0.0f,  1.0f,  0.0f, 0.0f, 0.0f, 0.1f,
+	-1.0f, 0.0f, -1.0f,  0.0f, 0.0f, 0.0f, 0.1f
+};
 
 int main()
 {
@@ -41,6 +53,7 @@ int main()
 
 	glfwSetMouseButtonCallback(window.getWindow(), mouse_button_callback);
 	glfwSetCursorPosCallback(window.getWindow(), mouse_cursor_callback);
+	glfwSetScrollCallback(window.getWindow(), mouse_scroll_callback);
 
 	drawCilinder();
 	vertexSpec(vertexData);
@@ -54,6 +67,9 @@ int main()
 
 	initializeImGui(window.getWindow());
 
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	while (!glfwWindowShouldClose(window.getWindow()))
 	{
 		processInput(window.getWindow());
@@ -63,14 +79,14 @@ int main()
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		window.clear(0.6f, 0.3f, 0.0f, 1.0f);
+		window.clear(0.0f, 0.5f, 0.8f, 1.0f);
 
 		shader.use();
 
 		glm::mat4 view{ glm::lookAt(cameraPos, cameraTarget, worldUp) };
 
 		glm::mat4 projection{};
-		projection = glm::perspective(glm::radians(45.0f), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.0f);
+		projection = glm::perspective(glm::radians(fov), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.0f);
 
 		glm::mat4 model{ 1.0f };
 
@@ -82,7 +98,9 @@ int main()
 		shader.setMat4("model", model);
 
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_LINES, 0, vertexData.size() / 6);
+		//glDrawArrays(GL_LINES, 0, vertexData.size() / 6);
+		glDrawArrays(GL_LINES, 42, (vertexData.size() - 42) / 6);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		// render ImGui here
 		ImGui::ShowDemoWindow();
@@ -161,6 +179,16 @@ void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos)
 	cameraPos.z = cameraTarget.z + radius * sin(yaw) * cos(pitch);
 }
 
+void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	fov -= static_cast<float>(yoffset) * 1.3f;
+
+	if (fov < 1.0f)
+		fov = 1.0f;
+	if (fov > 45.0f)
+		fov = 45.0f;
+}
+
 void vertexSpec(const std::vector<float>& vertices)
 {
 	glGenVertexArrays(1, &VAO);
@@ -170,254 +198,16 @@ void vertexSpec(const std::vector<float>& vertices)
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
 
-	int stride{ 6 * sizeof(float) };
+	int stride{ 7 * sizeof(float) };
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
 
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
 }
 
 void updateBufferData(const std::vector<float>& vertices)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
-}
-
-void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, float radius, std::vector<float>& vertexData)
-{
-	glm::vec3 direction{ p - p0 };
-
-	float length{ glm::length(direction) };
-
-	if (length == 0.0f)
-		return;
-
-	direction = glm::normalize(direction);
-
-	glm::vec3 worldUp{ 0.0f, 1.0f, 0.0f };
-
-	// changes worldUp accordingly with the direction vector, because the cross product between vectors with the same direction is a null vector 
-	float cosTheta = glm::dot(direction, worldUp);
-	if (glm::abs(cosTheta) > 0.999f)
-	{
-		if (cosTheta > 0.0f)
-			worldUp = glm::vec3(0.0f, 0.0f, 1.0f);
-
-		if (cosTheta < 0.0f)
-			worldUp = glm::vec3(0.0f, 0.0f, -1.0f);
-	}
-
-	glm::vec3 right{ glm::normalize(glm::cross(direction, worldUp)) };
-	glm::vec3 up{ glm::cross(right, direction) };
-
-	const float linesDensity{ 360.0f / 72.0f };
-	for (float angle{ 0.0f }; angle <= 360.0f; angle += linesDensity)
-	{
-		float rad{ glm::radians(angle) };
-
-		glm::vec3 a{ p0 + radius * cos(rad) * right + radius * sin(rad) * up };
-		glm::vec3 b{ a + length * direction };
-
-		vertexData.push_back(a.x);
-		vertexData.push_back(a.y);
-		vertexData.push_back(a.z);
-		vertexData.push_back(color.x);
-		vertexData.push_back(color.y);
-		vertexData.push_back(color.z);
-
-		vertexData.push_back(b.x);
-		vertexData.push_back(b.y);
-		vertexData.push_back(b.z);
-		vertexData.push_back(color.x);
-		vertexData.push_back(color.y);
-		vertexData.push_back(color.z);
-	}
-
-	//std::cout << "direction: " << direction.x << ", " << direction.y << ", " << direction.z << "\n";
-	//std::cout << "right: " << right.x << ", " << right.y << ", " << right.z << "\n";
-	//std::cout << "up: " << up.x << ", " << up.y << ", " << up.z << "\n";
-	//std::cout << "color: " << color.x << ", " << color.y << ", " << color.z << "\n";
-}
-
-void getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData)
-{
-	glm::vec3 direction{ p - p0 };
-
-	float ringWidth{ glm::length(direction) };
-
-	if (ringWidth == 0.0f)
-		return;
-
-	direction = glm::normalize(direction);
-
-	glm::vec3 worldUp{ 0.0f, 1.0f, 0.0f };
-
-	// changes worldUp accordingly with the direction vector, because the cross product between vectors with the same direction is a null vector 
-	float cosTheta = glm::dot(direction, worldUp);
-	if (glm::abs(cosTheta) > 0.999f)
-	{
-		if (cosTheta > 0.0f)
-			worldUp = glm::vec3(0.0f, 0.0f, 1.0f);
-
-		if (cosTheta < 0.0f)
-			worldUp = glm::vec3(0.0f, 0.0f, -1.0f);
-	}
-
-	glm::vec3 right{ glm::normalize(glm::cross(direction, worldUp)) };
-	glm::vec3 up{ glm::cross(right, direction) };
-
-	const float linesDensity{ 360.0f / 72.0f };
-	const float ringRadius{ 0.002f };
-	float stride{ 0.1f };
-	const int ringCount{ 20 };
-
-	for (int i{ 0 }; i < ringCount; ++i)
-	{
-		p0 += direction * stride;
-
-		for (float angle{ 0.0f }; angle <= 360.0f; angle += linesDensity)
-		{
-			float rad{ glm::radians(angle) };
-
-			glm::vec3 a{ p0 + ringRadius * cos(rad) * right + ringRadius * sin(rad) * up };
-			glm::vec3 b{ a + ringWidth * direction };
-
-			vertexData.push_back(a.x);
-			vertexData.push_back(a.y);
-			vertexData.push_back(a.z);
-			vertexData.push_back(color.x);
-			vertexData.push_back(color.y);
-			vertexData.push_back(color.z);
-
-			vertexData.push_back(b.x);
-			vertexData.push_back(b.y);
-			vertexData.push_back(b.z);
-			vertexData.push_back(color.x);
-			vertexData.push_back(color.y);
-			vertexData.push_back(color.z);
-		}
-	}
-}
-
-void getSphereVertices(glm::vec3 translation, glm::vec3 color, float radius, std::vector<float>& vertexData)
-{
-	const float deltaPhi{ 180.f / 60.0f };
-
-	const float deltaTheta{ 360.0f / 72.0f };
-
-	for (float i{ 0.0f }; i <= 180.0f - deltaPhi; i += deltaPhi)
-	{
-		float phi{ glm::radians(i) };
-		float phiNext{ glm::radians(i + deltaPhi) };
-
-		for (float j{ 0.0f }; j <= 360.0f - deltaTheta; j += deltaTheta)
-		{
-			float theta{ glm::radians(j) };
-			float thetaNext{ glm::radians(j + deltaTheta) };
-
-			glm::vec3 p0
-			{
-				translation.x + radius * sin(phi) * cos(theta),
-				translation.y + radius * cos(phi),
-				translation.z + radius * sin(phi) * sin(theta)
-			};
-
-			glm::vec3 pRight
-			{
-				translation.x + radius * sin(phi) * cos(thetaNext),
-				translation.y + radius * cos(phi),
-				translation.z + radius * sin(phi) * sin(thetaNext)
-			};
-
-			glm::vec3 pBottom
-			{
-				translation.x + radius * sin(phiNext) * cos(theta),
-				translation.y + radius * cos(phiNext),
-				translation.z + radius * sin(phiNext) * sin(theta)
-			};
-
-			vertexData.push_back(p0.x);
-			vertexData.push_back(p0.y);
-			vertexData.push_back(p0.z);
-			vertexData.push_back(color.x);
-			vertexData.push_back(color.y);
-			vertexData.push_back(color.z);
-
-			vertexData.push_back(pRight.x);
-			vertexData.push_back(pRight.y);
-			vertexData.push_back(pRight.z);
-			vertexData.push_back(color.x);
-			vertexData.push_back(color.y);
-			vertexData.push_back(color.z);
-
-			vertexData.push_back(p0.x);
-			vertexData.push_back(p0.y);
-			vertexData.push_back(p0.z);
-			vertexData.push_back(color.x);
-			vertexData.push_back(color.y);
-			vertexData.push_back(color.z);
-
-			vertexData.push_back(pBottom.x);
-			vertexData.push_back(pBottom.y);
-			vertexData.push_back(pBottom.z);
-			vertexData.push_back(color.x);
-			vertexData.push_back(color.y);
-			vertexData.push_back(color.z);
-		}
-	}
-}
-
-void drawCilinder()
-{
-	std::vector axisVertices
-	{
-		-1.0f, 0.0f, 0.0f,
-		 1.0f, 0.0f, 0.0f,
-
-		 0.0f, -1.0f, 0.0f,
-		 0.0f,  1.0f, 0.0f,
-
-		 0.0f, 0.0f, -1.0f,
-		 0.0f, 0.0f,  1.0f
-	};
-
-	std::vector axisColors
-	{
-		1.0f, 0.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
-		0.0f, 0.0f, 1.0f
-	};
-
-	for (int v{ 0 }, c{ 0 }; v < axisVertices.size(); v += 6, c += 3)
-	{
-		glm::vec3 a{ axisVertices[v], axisVertices[v + 1], axisVertices[v + 2] };
-		glm::vec3 b(axisVertices[v + 3], axisVertices[v + 4], axisVertices[v + 5]);
-		glm::vec3 color{ axisColors[c], axisColors[c + 1], axisColors[c + 2] };
-
-		getCilinderVertices(a, b, color, 0.001f ,vertexData);
-	}
-
-	float ringWidth{ 0.002f };
-	std::vector ringVertices
-	{
-		-1.0f, 0.0f, 0.0f,
-		-1.0f +ringWidth, 0.0f, 0.0f,
-
-		0.0f, -1.0f, 0.0f,
-		0.0f, -1.0f + ringWidth, 0.0f,
-
-		0.0f, 0.0f, -1.0f,
-		0.0f, 0.0f, -1.0f + ringWidth
-	};
-
-	glm::vec3 ringColor{ 0.0f, 0.0f, 0.0f };
-
-	for (int v{ 0 }; v < axisVertices.size(); v += 6)
-	{
-		glm::vec3 a{ ringVertices[v], ringVertices[v + 1], ringVertices[v + 2] };
-		glm::vec3 b(ringVertices[v + 3], ringVertices[v + 4], ringVertices[v + 5]);
-
-		getRingsVertices(a, b, ringColor, vertexData);
-	}
 }

@@ -46,7 +46,7 @@ void getUserInput()
 				extractComponents(parameters, vecComponents);
 
 				if (vecComponents.size() == 3)
-					draw(funcType::Vector, vecComponents, glm::vec3(1.0f, 1.0f, 0.2f));
+					draw(funcType::Vector, vecComponents, glm::vec4(1.0f, 1.0f, 0.2f, 1.0f));
 			}
 		}
 
@@ -63,7 +63,7 @@ void getUserInput()
 				extractComponents(parameters, vecComponents);
 
 				if (vecComponents.size() == 3)
-					draw(funcType::Point, vecComponents, glm::vec3(0.0f, 0.0f, 0.0f));
+					draw(funcType::Point, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 			}
 		}
 
@@ -91,11 +91,11 @@ void getUserInput()
 				funcOpenParenthesisPos = parameters.find("(");
 				funcCloseParenthesisPos = parameters.find(")");
 
-				if (parameters.substr(funcCloseParenthesisPos, parameters.length() - 1).rfind("(") != std::string::npos
-			   	 || parameters.substr(funcCloseParenthesisPos, parameters.length() - 1).rfind(")") != std::string::npos)
-				{
-					funcCloseParenthesisPos = 0;
-				}
+				//if (parameters.substr(funcCloseParenthesisPos, parameters.length() - 1).rfind("(") != std::string::npos
+			 //  	 || parameters.substr(funcCloseParenthesisPos, parameters.length() - 1).rfind(")") != std::string::npos)
+				//{
+				//	funcCloseParenthesisPos = 0;
+				//}
 
 				if (funcCloseParenthesisPos > funcOpenParenthesisPos)
 				{
@@ -106,9 +106,8 @@ void getUserInput()
 				extractComponents(parametersPointA, vecComponents);
 				extractComponents(parametersPointB, vecComponents);
 
-				std::cout << vecComponents.size() << "\n";
 				if (vecComponents.size() == 6)
-					draw(funcType::Segment, vecComponents, glm::vec3(0.0f, 0.0f, 0.0f));
+					draw(funcType::Segment, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 			}
 		}
 	}
@@ -158,7 +157,7 @@ void extractComponents(std::string& parameters, std::vector<float>& vecComponent
 	}
 }
 
-void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec3& color)
+void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec4& color)
 {
 	const float scale{ 0.1f };
 
