@@ -1,19 +1,24 @@
 #include "Window.h"
 #include "Shader.h"
+#include "draw_utils.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 
 #include <vector>
 
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
-void vertexSpec(const std::vector<float>& vertices);
-void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData);
-void drawRings(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData);
-void drawCilinder();
+
+// interface.cpp
+void initializeImGui(GLFWwindow* window);
+void getUserInput();
 
 unsigned int VBO{};
 unsigned int VAO{};
@@ -55,11 +60,18 @@ int main()
 	//	std::cout << vertexData[i] << " ";
 	//}
 
-	std::cout << "\n\n" << vertexData.size();
+	//std::cout << "\n\n" << vertexData.size();
+
+	initializeImGui(window.getWindow());
 
 	while (!glfwWindowShouldClose(window.getWindow()))
 	{
 		processInput(window.getWindow());
+
+		// ImGui stuff
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
 
 		window.clear(0.6f, 0.3f, 0.0f, 1.0f);
 
@@ -80,11 +92,23 @@ int main()
 		shader.setMat4("model", model);
 
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_LINES, 0, (vertexData.size() - 36) / 2);
+		glDrawArrays(GL_LINES, 0, vertexData.size() / 6);
+
+		// render ImGui here
+		ImGui::ShowDemoWindow();
+		getUserInput();
+
+		ImGui::Render();
+
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(window.getWindow());
 		glfwPollEvents();
 	}
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 }
 
 void processInput(GLFWwindow* window)
@@ -154,7 +178,7 @@ void vertexSpec(const std::vector<float>& vertices)
 
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
 
 	int stride{ 6 * sizeof(float) };
 	glEnableVertexAttribArray(0);
@@ -162,6 +186,12 @@ void vertexSpec(const std::vector<float>& vertices)
 
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+}
+
+void updateBufferData(const std::vector<float>& vertices)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
 }
 
 void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData)
@@ -213,14 +243,12 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector
 		vertexData.push_back(color.x);
 		vertexData.push_back(color.y);
 		vertexData.push_back(color.z);
-
-		//std::cout << "A: " << a.x << ", " << a.y << ", " << a.z << "\tB: " << b.x << ", " << b.y << ", " << b.z << "\n";
 	}
 
-	std::cout << "direction: " << direction.x << ", " << direction.y << ", " << direction.z << "\n";
-	std::cout << "right: " << right.x << ", " << right.y << ", " << right.z << "\n";
-	std::cout << "up: " << up.x << ", " << up.y << ", " << up.z << "\n";
-	std::cout << "color: " << color.x << ", " << color.y << ", " << color.z << "\n";
+	//std::cout << "direction: " << direction.x << ", " << direction.y << ", " << direction.z << "\n";
+	//std::cout << "right: " << right.x << ", " << right.y << ", " << right.z << "\n";
+	//std::cout << "up: " << up.x << ", " << up.y << ", " << up.z << "\n";
+	//std::cout << "color: " << color.x << ", " << color.y << ", " << color.z << "\n";
 }
 
 void drawRings(glm::vec3 p0, glm::vec3 p, glm::vec3 color, std::vector<float>& vertexData)
