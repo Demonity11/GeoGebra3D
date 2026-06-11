@@ -43,11 +43,14 @@ void getUserInput()
 			{
 				std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
 
-				std::vector<float> vecComponents{};
-				extractComponents(parameters, vecComponents);
+				std::vector<std::string> args{ splitArgs(parameters) };
 
-				if (vecComponents.size() == 3)
-					draw(funcType::Vector, vecComponents, glm::vec4(1.0f, 1.0f, 0.2f, 1.0f));
+				std::vector<float> vecComponents{ getObjectComponents(args, funcType::Point) };
+
+				int componentsCount{ static_cast<int>(vecComponents.size()) };
+
+				if (componentsCount == 6 || componentsCount == 3)
+					draw(funcType::Vector, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 			}
 		}
 
@@ -77,32 +80,56 @@ void getUserInput()
 			{
 				std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
 
-				funcOpenParenthesisPos = parameters.find("(");
-				funcCloseParenthesisPos = parameters.find(")");
+				std::vector<std::string> args{ splitArgs(parameters) };
 
-				std::string parametersPointA{};
-				std::string parametersPointB{};
+				std::vector<float> vecComponents{ getObjectComponents(args, funcType::Point) };
 
-				if (funcCloseParenthesisPos > funcOpenParenthesisPos)
-				{
-					parametersPointA = parameters.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1);
-					parameters = parameters.substr(funcCloseParenthesisPos + 1, parameters.length() - 1);
-				}
+				int componentsCount{ static_cast<int>(vecComponents.size()) };
 
-				funcOpenParenthesisPos = parameters.find("(");
-				funcCloseParenthesisPos = parameters.find(")");
-
-				if (funcCloseParenthesisPos > funcOpenParenthesisPos)
-				{
-					parametersPointB = parameters.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1);
-				}
-
-				std::vector<float> vecComponents{};
-				extractComponents(parametersPointA, vecComponents);
-				extractComponents(parametersPointB, vecComponents);
-
-				if (vecComponents.size() == 6)
+				if (componentsCount == 6)
 					draw(funcType::Segment, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+			//	funcOpenParenthesisPos = parameters.find("(");
+
+			//	if (funcOpenParenthesisPos == std::string::npos)
+			//	{
+			//		if (auto commaPos{ parameters.find(",") }; commaPos != std::string::npos)
+			//		{
+			//			std::string parametersPointA{ parameters.substr(0, commaPos) };
+			//			std::string parametersPointB{ parameters.substr(commaPos + 1, parameters.length())};
+
+			//			int pointA_ID{ searchObjectID(parametersPointA) };
+			//			int pointB_ID{ searchObjectID(parametersPointB) };
+
+			//			std::cout << parametersPointA << " " << parametersPointB << "\n";
+			//		}
+			//	}
+
+			//	funcCloseParenthesisPos = parameters.find(")");
+
+			//	std::string parametersPointA{};
+			//	std::string parametersPointB{};
+
+			//	if (funcCloseParenthesisPos > funcOpenParenthesisPos)
+			//	{
+			//		parametersPointA = parameters.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1);
+			//		parameters = parameters.substr(funcCloseParenthesisPos + 1, parameters.length() - 1);
+			//	}
+
+			//	funcOpenParenthesisPos = parameters.find("(");
+			//	funcCloseParenthesisPos = parameters.find(")");
+
+			//	if (funcCloseParenthesisPos > funcOpenParenthesisPos)
+			//	{
+			//		parametersPointB = parameters.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1);
+			//	}
+
+			//	std::vector<float> vecComponents{};
+			//	extractComponents(parametersPointA, vecComponents);
+			//	extractComponents(parametersPointB, vecComponents);
+
+			//	if (vecComponents.size() == 6)
+			//		draw(funcType::Segment, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 			}
 		}
 
@@ -157,6 +184,93 @@ void extractComponents(std::string& parameters, std::vector<float>& vecComponent
 	}
 }
 
+void stripArg(std::string& arg)
+{
+	std::string newArg{};
+
+	for (char c : arg)
+	{
+		if (c != '(' && c != ')' && c != ' ')
+			newArg += c;
+	}
+
+	arg = newArg;
+}
+
+std::vector<std::string> splitArgs(const std::string& argumentString)
+{
+	std::vector<std::string> args{};
+	std::string currentArg{};
+	int parenthesisCount{ 0 };
+
+	for (char c : argumentString)
+	{
+		if (c == '(')
+			++parenthesisCount;
+		if (c == ')')
+			--parenthesisCount;
+
+		if (c == ',' && parenthesisCount == 0)
+		{
+			stripArg(currentArg);
+
+			args.push_back(currentArg);
+			currentArg.clear();
+		}
+		else
+		{
+			currentArg += c;
+		}
+	}
+
+	if (!currentArg.empty())
+	{
+		stripArg(currentArg);
+		args.push_back(currentArg);
+	}
+
+	return args;
+}
+
+int searchObjectID(const std::string& objName)
+{
+	for (const auto& [name, id] : symbolTable)
+	{
+		if (objName == name)
+			return id;
+	}
+
+	return -1; // if object is not found
+}
+
+std::vector<float> getObjectComponents(std::vector<std::string>& args, funcType type)
+{
+	std::vector<float> vecComponents{};
+
+	for (auto& arg : args)
+	{
+		stripArg(arg);
+		std::cout << arg << "\n";
+
+
+		int objID{ searchObjectID(arg) };
+
+		if (objID != -1 && objInfo[objID].type == type)
+		{
+			vecComponents.push_back(objInfo[objID].components[0]);
+			vecComponents.push_back(objInfo[objID].components[1]);
+			vecComponents.push_back(objInfo[objID].components[2]);
+		}
+
+		else if (objID == -1)
+		{
+			extractComponents(arg, vecComponents);
+		}
+	}
+
+	return vecComponents;
+}
+
 void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec4& color)
 {
 	const float scale{ 0.1f };
@@ -167,19 +281,29 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 
 	if (type == funcType::Vector)
 	{
-		glm::vec3 vector{ vecComponents[0], vecComponents[1], vecComponents[2] };
+		glm::vec3 pointA{ 0.0f, 0.0f, 0.0f };
+		glm::vec3 pointB{ vecComponents[0], vecComponents[1], vecComponents[2] };
 
-		vector *= scale;
+		if (vecComponents.size() == 6)
+		{
+			pointA = glm::vec3(vecComponents[0], vecComponents[1], vecComponents[2]);
+			pointB = glm::vec3(vecComponents[3], vecComponents[4], vecComponents[5]);
+		}
 
-		const glm::vec3 origin{ 0.0f, 0.0f, 0.0f };
+		pointA *= scale;
+		pointB *= scale;
+
 		const float radius{ 0.0015f };
 
-		getCilinderVertices(origin, vector, color, radius, vertexData);
+		getCilinderVertices(glm::vec3(0.0f, 0.0f, 0.0f), pointB - pointA, color, radius, vertexData);
 
 		// getCilinderVertices create 1008 new vertices
-		addNewObject(144, GL_LINES, funcType::Vector, std::string(1, vecSymbol));
+		addNewObject(144, GL_LINES, funcType::Vector, std::string(1, vecSymbol), vecComponents);
 
 		++vecSymbol;
+
+		if (vecSymbol == 'x')
+			vecSymbol = 'a';
 
 		updateBufferData(vertexData);
 	}
@@ -195,7 +319,7 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		getSphereVertices(point, color, radius, vertexData);
 
 		// getSphereVertices create 120960 new vertices => 120960 / 7 = 17280, where 7 = number of components
-		addNewObject(17280, GL_LINES, funcType::Point, std::string(1, pointSymbol));
+		addNewObject(17280, GL_LINES, funcType::Point, std::string(1, pointSymbol), vecComponents);
 
 		++pointSymbol;
 
@@ -216,7 +340,7 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		getCilinderVertices(pointA, pointB, color, radius, vertexData);
 
 		// getCilinderVertices create 1008 new vertices
-		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, segmentSymbol));
+		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, segmentSymbol), vecComponents);
 
 		++segmentSymbol;
 

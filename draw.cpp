@@ -200,10 +200,10 @@ void getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std
 void getGridVertices()
 {
 	glm::vec3 p0Horizontal{ -1.0f, 0.0f, -1.0f };
-	glm::vec3 pHorizontal{ 1.0f, 0.0f, -1.0f };
+	glm::vec3 pHorizontal {  1.0f, 0.0f, -1.0f };
 
-	glm::vec3 p0Vertical{ -1.0f, 0.0f, -1.0f };
-	glm::vec3 pVertical{ -1.0f, 0.0f,  1.0f };
+	glm::vec3 p0Vertical  { -1.0f, 0.0f, -1.0f };
+	glm::vec3 pVertical   { -1.0f, 0.0f,  1.0f };
 
 	glm::vec4 color{ 0.0f, 0.0f, 0.0f, 0.5f };
 
@@ -285,7 +285,7 @@ void drawCilinder()
 
 		getCilinderVertices(a, b, color, 0.001f, vertexData);
 		
-		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS");
+		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS", {});
 
 		++axis;
 	}
@@ -316,7 +316,7 @@ void drawCilinder()
 
 		getRingsVertices(a, b, ringColor, vertexData);
 
-		addNewObject(2880, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS_RINGS");
+		addNewObject(2880, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS_RINGS", {});
 
 		++axis;
 	}
@@ -324,10 +324,10 @@ void drawCilinder()
 
 	// this execution does 21 * 28 = 588 pushbacks
 	getGridVertices();
-	addNewObject(84, GL_LINES, funcType::Segment, "GRID_LINES");
+	addNewObject(84, GL_LINES, funcType::Segment, "GRID_LINES", {});
 }
 
-void addNewObject(int vertexCount, unsigned int primitive, funcType type, std::string name)
+void addNewObject(int vertexCount, unsigned int primitive, funcType type, std::string name, const std::vector<float>& components)
 {
 	int offset{ 0 };
 
@@ -345,7 +345,8 @@ void addNewObject(int vertexCount, unsigned int primitive, funcType type, std::s
 		vertexCount,
 		primitive,
 		type,
-		name
+		name,
+		components
 	};
 
 	symbolTable[name] = objID;

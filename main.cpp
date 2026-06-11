@@ -56,7 +56,7 @@ int main()
 	glfwSetCursorPosCallback(window.getWindow(), mouse_cursor_callback);
 	glfwSetScrollCallback(window.getWindow(), mouse_scroll_callback);
 
-	addNewObject(static_cast<int>(vertexData.size()) / 7, GL_TRIANGLES, funcType::Plane, "GRID_PLANE"); // add plane
+	addNewObject(static_cast<int>(vertexData.size()) / 7, GL_TRIANGLES, funcType::Plane, "GRID_PLANE", {}); // add plane
 	drawCilinder();
 	vertexSpec(vertexData);
 
