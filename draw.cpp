@@ -1,4 +1,5 @@
 #include "draw_utils.h"
+#include "Window.h"
 
 void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radius, std::vector<float>& vertexData)
 {
@@ -28,7 +29,9 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radiu
 	glm::vec3 up{ glm::cross(right, direction) };
 
 	const float linesDensity{ 360.0f / 72.0f };
-	for (float angle{ 0.0f }; angle <= 360.0f; angle += linesDensity)
+
+	// this loop does 72 * 14 = 1008 pushbacks
+	for (float angle{ 0.0f }; angle < 360.0f; angle += linesDensity)
 	{
 		float rad{ glm::radians(angle) };
 
@@ -90,11 +93,12 @@ void getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<fl
 	float stride{ 0.1f };
 	const int ringCount{ 20 };
 
+	// this loop does 20 * 72 * 14 = 20160 pushbacks
 	for (int i{ 0 }; i < ringCount; ++i)
 	{
 		p0 += direction * stride;
 
-		for (float angle{ 0.0f }; angle <= 360.0f; angle += linesDensity)
+		for (float angle{ 0.0f }; angle < 360.0f; angle += linesDensity)
 		{
 			float rad{ glm::radians(angle) };
 
@@ -126,6 +130,7 @@ void getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std
 
 	const float deltaTheta{ 360.0f / 72.0f };
 
+	// this loop does 60 * 72 * 28 = 120960 pushbacks
 	for (float i{ 0.0f }; i <= 180.0f - deltaPhi; i += deltaPhi)
 	{
 		float phi{ glm::radians(i) };
@@ -205,6 +210,7 @@ void getGridVertices()
 	const float stride{ 0.1f };
 	const int lineCount{ 21 };
 
+	// this loop does 21 * 28 = 588 pushbacks
 	for (int i{ 0 }; i < lineCount; ++i)
 	{
 		vertexData.push_back(p0Horizontal.x);
@@ -268,6 +274,7 @@ void drawCilinder()
 		0.0f, 0.0f, 1.0f, 1.0f
 	};
 
+	// this loop does 3 * 1008 = 3024 pushbacks
 	for (int v{ 0 }, c{ 0 }; v < axisVertices.size(); v += 6, c += 4)
 	{
 		glm::vec3 a{ axisVertices[v], axisVertices[v + 1], axisVertices[v + 2] };
@@ -276,6 +283,8 @@ void drawCilinder()
 
 		getCilinderVertices(a, b, color, 0.001f, vertexData);
 	}
+
+	addNewObject(3024, GL_LINES);
 
 	float ringWidth{ 0.002f };
 	std::vector ringVertices
@@ -292,6 +301,7 @@ void drawCilinder()
 
 	glm::vec4 ringColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 
+	// this loop does 3 * 20160 = 60480 pushbacks
 	for (int v{ 0 }; v < axisVertices.size(); v += 6)
 	{
 		glm::vec3 a{ ringVertices[v], ringVertices[v + 1], ringVertices[v + 2] };
@@ -300,5 +310,27 @@ void drawCilinder()
 		getRingsVertices(a, b, ringColor, vertexData);
 	}
 
+	addNewObject(60480, GL_LINES);
+
+	// this execution does 21 * 28 = 588 pushbacks
 	getGridVertices();
+	addNewObject(588, GL_LINES);
+}
+
+void addNewObject(int vertexCount, unsigned int primitive)
+{
+	int offset{ 0 };
+
+	if (!objInfo.empty())
+	{
+		int previousId{ static_cast<int>(objInfo.size()) - 1 };
+		offset = objInfo[previousId].offset + objInfo[previousId].vertexCount;
+	}
+
+	objInfo[objInfo.size()] = ObjectMetadata
+	{
+		offset,
+		vertexCount,
+		primitive
+	};
 }

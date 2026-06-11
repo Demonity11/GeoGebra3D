@@ -172,6 +172,8 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 
 		getCilinderVertices(origin, vector, color, radius, vertexData);
 
+		addNewObject(1008, GL_LINES);
+
 		updateBufferData(vertexData);
 	}
 
@@ -184,6 +186,8 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		const float radius{ 0.005f };
 
 		getSphereVertices(point, color, radius, vertexData);
+
+		addNewObject(120960, GL_LINES);
 
 		updateBufferData(vertexData);
 	}
@@ -200,6 +204,8 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		const float radius{ 0.0015f };
 
 		getCilinderVertices(pointA, pointB, color, radius, vertexData);
+
+		addNewObject(1008, GL_LINES);
 
 		updateBufferData(vertexData);
 	}

@@ -7,10 +7,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
-// interface.cpp
-void initializeImGui(GLFWwindow* window);
-void getUserInput();
-
 unsigned int VBO{};
 unsigned int VAO{};
 
@@ -40,6 +36,9 @@ std::vector<float> vertexData
 	-1.0f, 0.0f, -1.0f,  0.0f, 0.0f, 0.0f, 0.1f
 };
 
+    // id          // offset, vertexCount, primitive
+std::map<int, ObjectMetadata> objInfo{};
+
 int main()
 {
 	constexpr int width{ 960 };
@@ -55,6 +54,7 @@ int main()
 	glfwSetCursorPosCallback(window.getWindow(), mouse_cursor_callback);
 	glfwSetScrollCallback(window.getWindow(), mouse_scroll_callback);
 
+	addNewObject(static_cast<int>(vertexData.size()), GL_TRIANGLES); // add plane
 	drawCilinder();
 	vertexSpec(vertexData);
 
@@ -99,8 +99,15 @@ int main()
 
 		glBindVertexArray(VAO);
 		//glDrawArrays(GL_LINES, 0, vertexData.size() / 6);
-		glDrawArrays(GL_LINES, 42, (vertexData.size() - 42) / 6);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		//glDrawArrays(GL_LINES, 42, (vertexData.size() - 42) / 6);
+		//glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		int numObjects{ static_cast<int>(objInfo.size()) - 1 };
+
+		for (int id{ numObjects }; id >= 0; --id)
+		{
+			glDrawArrays(objInfo[id].primitiveType, objInfo[id].offset, objInfo[id].vertexCount);
+		}
 
 		// render ImGui here
 		ImGui::ShowDemoWindow();

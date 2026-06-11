@@ -12,6 +12,7 @@
 #include <vector>
 #include <sstream>
 #include <string>
+#include <map>
 
 enum class funcType
 {
@@ -30,12 +31,23 @@ auto getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<fl
 auto getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std::vector<float>& vertexData)	   -> void;
 auto getGridVertices()																							   -> void;
 auto drawCilinder()																								   -> void;
+auto addNewObject(int vertexCount, unsigned int primitive)														   -> void;
+
+struct ObjectMetadata
+{
+	int offset{};
+	int vertexCount{};
+	unsigned int primitiveType{};
+};
 
 extern std::vector<float> vertexData;
+extern std::map<int, ObjectMetadata> objInfo;
+
 
 // forward declarations for interface.cpp
-
-auto extractComponents(std::string& parameters, std::vector<float>& vecComponents)  -> void;
+auto initializeImGui(GLFWwindow* window)												  -> void;
+auto getUserInput()																		  -> void;
+auto extractComponents(std::string& parameters, std::vector<float>& vecComponents)		  -> void;
 auto draw(funcType type, const std::vector<float>& vecComponents, const glm::vec4& color) -> void;
 
 #endif
