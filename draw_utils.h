@@ -57,6 +57,7 @@ auto draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 void stripArg(std::string& arg);
 int searchObjectID(const std::string& objName);
 std::vector<std::string> splitArgs(const std::string& argumentString);
-std::vector<float> getObjectComponents(std::vector<std::string>& args, funcType type);
+std::vector<float> getObjectComponents(std::vector<std::string>& args);
+bool compareObjectType(const std::string& component, funcType expectedType);
 
 #endif
