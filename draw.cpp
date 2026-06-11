@@ -274,6 +274,8 @@ void drawCilinder()
 		0.0f, 0.0f, 1.0f, 1.0f
 	};
 
+	char axis{ 'X' };
+
 	// this loop does 3 * 1008 = 3024 pushbacks
 	for (int v{ 0 }, c{ 0 }; v < axisVertices.size(); v += 6, c += 4)
 	{
@@ -282,9 +284,12 @@ void drawCilinder()
 		glm::vec4 color{ axisColors[c], axisColors[c + 1], axisColors[c + 2], axisColors[c + 3] };
 
 		getCilinderVertices(a, b, color, 0.001f, vertexData);
+		
+		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS");
+
+		++axis;
 	}
 
-	addNewObject(3024, GL_LINES);
 
 	float ringWidth{ 0.002f };
 	std::vector ringVertices
@@ -301,6 +306,8 @@ void drawCilinder()
 
 	glm::vec4 ringColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 
+	axis = 'X';
+
 	// this loop does 3 * 20160 = 60480 pushbacks
 	for (int v{ 0 }; v < axisVertices.size(); v += 6)
 	{
@@ -308,16 +315,19 @@ void drawCilinder()
 		glm::vec3 b(ringVertices[v + 3], ringVertices[v + 4], ringVertices[v + 5]);
 
 		getRingsVertices(a, b, ringColor, vertexData);
+
+		addNewObject(2880, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS_RINGS");
+
+		++axis;
 	}
 
-	addNewObject(60480, GL_LINES);
 
 	// this execution does 21 * 28 = 588 pushbacks
 	getGridVertices();
-	addNewObject(588, GL_LINES);
+	addNewObject(84, GL_LINES, funcType::Segment, "GRID_LINES");
 }
 
-void addNewObject(int vertexCount, unsigned int primitive)
+void addNewObject(int vertexCount, unsigned int primitive, funcType type, std::string name)
 {
 	int offset{ 0 };
 
@@ -327,10 +337,23 @@ void addNewObject(int vertexCount, unsigned int primitive)
 		offset = objInfo[previousId].offset + objInfo[previousId].vertexCount;
 	}
 
-	objInfo[objInfo.size()] = ObjectMetadata
+	int objID{ static_cast<int>(objInfo.size()) };
+
+	objInfo[objID] = ObjectMetadata
 	{
 		offset,
 		vertexCount,
-		primitive
+		primitive,
+		type,
+		name
 	};
+
+	symbolTable[name] = objID;
+
+	for (const auto& [name, id] : symbolTable)
+	{
+		std::cout << name << ": " << id << "\n";
+	}
+
+	std::cout << "\n\n";
 }

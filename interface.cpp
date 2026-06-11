@@ -9,7 +9,8 @@ std::vector<std::string> functions
 {
 	"Vector(",
 	"Point(",
-	"Segment("
+	"Segment(",
+	"Plane("
 };
 
 void initializeImGui(GLFWwindow* window)
@@ -91,12 +92,6 @@ void getUserInput()
 				funcOpenParenthesisPos = parameters.find("(");
 				funcCloseParenthesisPos = parameters.find(")");
 
-				//if (parameters.substr(funcCloseParenthesisPos, parameters.length() - 1).rfind("(") != std::string::npos
-			 //  	 || parameters.substr(funcCloseParenthesisPos, parameters.length() - 1).rfind(")") != std::string::npos)
-				//{
-				//	funcCloseParenthesisPos = 0;
-				//}
-
 				if (funcCloseParenthesisPos > funcOpenParenthesisPos)
 				{
 					parametersPointB = parameters.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1);
@@ -109,6 +104,11 @@ void getUserInput()
 				if (vecComponents.size() == 6)
 					draw(funcType::Segment, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 			}
+		}
+
+		else if (inputText.find(functions[3]) == 0)
+		{
+
 		}
 	}
 
@@ -161,6 +161,10 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 {
 	const float scale{ 0.1f };
 
+	static char vecSymbol{ 'u' };
+	static char pointSymbol{ 'A' };
+	static char segmentSymbol{ 'f' };
+
 	if (type == funcType::Vector)
 	{
 		glm::vec3 vector{ vecComponents[0], vecComponents[1], vecComponents[2] };
@@ -172,7 +176,10 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 
 		getCilinderVertices(origin, vector, color, radius, vertexData);
 
-		addNewObject(1008, GL_LINES);
+		// getCilinderVertices create 1008 new vertices
+		addNewObject(144, GL_LINES, funcType::Vector, std::string(1, vecSymbol));
+
+		++vecSymbol;
 
 		updateBufferData(vertexData);
 	}
@@ -187,7 +194,10 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 
 		getSphereVertices(point, color, radius, vertexData);
 
-		addNewObject(120960, GL_LINES);
+		// getSphereVertices create 120960 new vertices => 120960 / 7 = 17280, where 7 = number of components
+		addNewObject(17280, GL_LINES, funcType::Point, std::string(1, pointSymbol));
+
+		++pointSymbol;
 
 		updateBufferData(vertexData);
 	}
@@ -205,7 +215,10 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 
 		getCilinderVertices(pointA, pointB, color, radius, vertexData);
 
-		addNewObject(1008, GL_LINES);
+		// getCilinderVertices create 1008 new vertices
+		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, segmentSymbol));
+
+		++segmentSymbol;
 
 		updateBufferData(vertexData);
 	}

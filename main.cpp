@@ -39,6 +39,8 @@ std::vector<float> vertexData
     // id          // offset, vertexCount, primitive
 std::map<int, ObjectMetadata> objInfo{};
 
+std::map<std::string, int> symbolTable{};
+
 int main()
 {
 	constexpr int width{ 960 };
@@ -54,7 +56,7 @@ int main()
 	glfwSetCursorPosCallback(window.getWindow(), mouse_cursor_callback);
 	glfwSetScrollCallback(window.getWindow(), mouse_scroll_callback);
 
-	addNewObject(static_cast<int>(vertexData.size()), GL_TRIANGLES); // add plane
+	addNewObject(static_cast<int>(vertexData.size()) / 7, GL_TRIANGLES, funcType::Plane, "GRID_PLANE"); // add plane
 	drawCilinder();
 	vertexSpec(vertexData);
 
@@ -98,12 +100,8 @@ int main()
 		shader.setMat4("model", model);
 
 		glBindVertexArray(VAO);
-		//glDrawArrays(GL_LINES, 0, vertexData.size() / 6);
-		//glDrawArrays(GL_LINES, 42, (vertexData.size() - 42) / 6);
-		//glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		int numObjects{ static_cast<int>(objInfo.size()) - 1 };
-
 		for (int id{ numObjects }; id >= 0; --id)
 		{
 			glDrawArrays(objInfo[id].primitiveType, objInfo[id].offset, objInfo[id].vertexCount);

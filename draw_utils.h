@@ -19,6 +19,7 @@ enum class funcType
 	Vector,
 	Point,
 	Segment,
+	Plane
 };
 
 // forward declarations for main.cpp
@@ -31,17 +32,20 @@ auto getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<fl
 auto getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std::vector<float>& vertexData)	   -> void;
 auto getGridVertices()																							   -> void;
 auto drawCilinder()																								   -> void;
-auto addNewObject(int vertexCount, unsigned int primitive)														   -> void;
+auto addNewObject(int vertexCount, unsigned int primitive, funcType type, std::string name)						   -> void;
 
 struct ObjectMetadata
 {
 	int offset{};
 	int vertexCount{};
 	unsigned int primitiveType{};
+	funcType type{};
+	std::string name{};
 };
 
 extern std::vector<float> vertexData;
 extern std::map<int, ObjectMetadata> objInfo;
+extern std::map<std::string, int> symbolTable;
 
 
 // forward declarations for interface.cpp
