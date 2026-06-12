@@ -14,20 +14,12 @@ struct FuncArgs
 
 std::vector<FuncArgs> functions
 {
-	{"Point(",   funcType::Point,   {} },
+	{"Point(",   funcType::Point,   {}                                  },
 	{"Vector(",  funcType::Vector,  {funcType::Point,  funcType::Point} },
 	{"Vector(",  funcType::Vector,  {funcType::Point}                   },
 	{"Segment(", funcType::Segment, {funcType::Point,  funcType::Point} },
 	{"Plane(",   funcType::Plane,   {funcType::Vector, funcType::Point} }
 };
-
-//std::vector<std::string> functions
-//{
-//	"Vector(",
-//	"Point(",
-//	"Segment(",
-//	"Plane("
-//};
 
 void initializeImGui(GLFWwindow* window)
 {
@@ -101,60 +93,6 @@ void getUserInput()
 				}
 			}
 		}
-
-		// ===============================================================
-
-		//for (const auto& func : functions)
-		//{
-		//	if (inputText.find(func.name) == 0)
-		//	{
-		//		auto funcOpenParenthesisPos{ inputText.find("(") };
-		//		auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
-
-		//		if (funcCloseParenthesisPos > funcOpenParenthesisPos)
-		//		{
-		//			std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
-
-		//			std::vector<std::string> args{ splitArgs(parameters) };
-
-		//			if (func.type == funcType::Point && args.size() == 3)
-		//			{
-		//				std::vector<float> vecComponents{};
-		//				extractComponents(parameters, vecComponents);
-
-		//				draw(func.type, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-		//			}
-
-		//			bool isObjectValid{ true };
-
-		//			for (int index{ 0 }; index < args.size(); ++index)
-		//			{
-		//				if (func.expectedArgs.size() != args.size())
-		//				{
-		//					isObjectValid = false;
-		//					break;
-		//				}
-
-		//				isObjectValid = compareObjectType(args[index], func.expectedArgs[index]);
-
-		//				if (!isObjectValid)
-		//				{
-		//					isObjectValid = false;
-		//					break;
-		//				}
-		//			}
-
-		//			if (isObjectValid)
-		//			{
-		//				std::vector<float> vecComponents{ getObjectComponents(args) };
-
-		//				int componentsCount{ static_cast<int>(vecComponents.size()) };
-
-		//				draw(func.type, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-		//			}
-		//		}
-		//	}
-		//}
 	}
 
 	ImGui::End();
@@ -306,9 +244,10 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 {
 	const float scale{ 0.1f };
 
-	static char vecSymbol{ 'u' };
-	static char pointSymbol{ 'A' };
+	static char vecSymbol    { 'u' };
+	static char pointSymbol  { 'A' };
 	static char segmentSymbol{ 'f' };
+	static char planeSymbol  { 'p' };
 
 	if (type == funcType::Vector)
 	{
@@ -382,16 +321,27 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 	{
 		glm::vec3 normalP0{ 0.0f, 0.0f, 0.0f };
 		glm::vec3 normalP { vecComponents[0], vecComponents[1], vecComponents[2] };
+		glm::vec3 point{};
 
-		if (vecComponents.size() == 6)
+		if (vecComponents.size() == 9)
 		{
 			normalP0 = glm::vec3(vecComponents[0], vecComponents[1], vecComponents[2]);
 			normalP =  glm::vec3(vecComponents[3], vecComponents[4], vecComponents[5]);
+			point = glm::vec3(vecComponents[6], vecComponents[7], vecComponents[8]);
 		}
+
+		point = glm::vec3(vecComponents[3], vecComponents[4], vecComponents[5]);
 
 		normalP0 *= scale;
 		normalP  *= scale;
+		point    *= scale;
 
+		getPlaneVertices(normalP0, normalP, point, color, vertexData);
 
+		addNewObject(6, GL_TRIANGLES, funcType::Plane, std::string(1, planeSymbol), vecComponents);
+
+		++planeSymbol;
+
+		updateBufferData(vertexData);
 	}
 }
