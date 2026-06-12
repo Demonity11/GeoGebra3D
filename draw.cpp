@@ -1,15 +1,8 @@
 #include "draw_utils.h"
 #include "Window.h"
 
-void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radius, std::vector<float>& vertexData)
+void getNewCoordSystem(glm::vec3& direction, glm::vec3& right, glm::vec3& up)
 {
-	glm::vec3 direction{ p - p0 };
-
-	float length{ glm::length(direction) };
-
-	if (length == 0.0f)
-		return;
-
 	direction = glm::normalize(direction);
 
 	glm::vec3 worldUp{ 0.0f, 1.0f, 0.0f };
@@ -25,8 +18,23 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radiu
 			worldUp = glm::vec3(0.0f, 0.0f, -1.0f);
 	}
 
-	glm::vec3 right{ glm::normalize(glm::cross(direction, worldUp)) };
-	glm::vec3 up{ glm::cross(right, direction) };
+	right = glm::normalize(glm::cross(direction, worldUp));
+	up = glm::cross(right, direction);
+}
+
+void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radius, std::vector<float>& vertexData)
+{
+	glm::vec3 direction{ p - p0 };
+
+	float length{ glm::length(direction) };
+
+	if (length == 0.0f)
+		return;
+
+	glm::vec3 right{};
+	glm::vec3 up{};
+
+	getNewCoordSystem(direction, right, up);
 
 	const float linesDensity{ 360.0f / 72.0f };
 
@@ -54,11 +62,6 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radiu
 		vertexData.push_back(color.z);
 		vertexData.push_back(color.w);
 	}
-
-	//std::cout << "direction: " << direction.x << ", " << direction.y << ", " << direction.z << "\n";
-	//std::cout << "right: " << right.x << ", " << right.y << ", " << right.z << "\n";
-	//std::cout << "up: " << up.x << ", " << up.y << ", " << up.z << "\n";
-	//std::cout << "color: " << color.x << ", " << color.y << ", " << color.z << "\n";
 }
 
 void getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<float>& vertexData)
@@ -70,23 +73,10 @@ void getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<fl
 	if (ringWidth == 0.0f)
 		return;
 
-	direction = glm::normalize(direction);
+	glm::vec3 right{};
+	glm::vec3 up{};
 
-	glm::vec3 worldUp{ 0.0f, 1.0f, 0.0f };
-
-	// changes worldUp accordingly with the direction vector, because the cross product between vectors with the same direction is a null vector 
-	float cosTheta = glm::dot(direction, worldUp);
-	if (glm::abs(cosTheta) > 0.999f)
-	{
-		if (cosTheta > 0.0f)
-			worldUp = glm::vec3(0.0f, 0.0f, 1.0f);
-
-		if (cosTheta < 0.0f)
-			worldUp = glm::vec3(0.0f, 0.0f, -1.0f);
-	}
-
-	glm::vec3 right{ glm::normalize(glm::cross(direction, worldUp)) };
-	glm::vec3 up{ glm::cross(right, direction) };
+	getNewCoordSystem(direction, right, up);
 
 	const float linesDensity{ 360.0f / 72.0f };
 	const float ringRadius{ 0.002f };
@@ -194,6 +184,55 @@ void getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std
 			vertexData.push_back(color.z);
 			vertexData.push_back(color.w);
 		}
+	}
+}
+
+void getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, glm::vec4 color, std::vector<float>& vertexData)
+{
+	glm::vec3 direction{ normalP - normalP0 };
+
+	float length{ glm::length(direction) };
+
+	if (length == 0.0f)
+		return;
+
+	glm::vec3 right{};
+	glm::vec3 up{};
+
+	getNewCoordSystem(direction, right, up);
+
+	//glm::mat3 R{ right, up, direction };
+
+	std::vector planeVertices
+	{
+		 1.0f, 0.0f, -1.0f,
+		 1.0f, 0.0f,  1.0f,
+		-1.0f, 0.0f, -1.0f,
+
+		 1.0f, 0.0f,  1.0f,
+		-1.0f, 0.0f,  1.0f,
+		-1.0f, 0.0f, -1.0f
+	};
+
+	for (int i{ 0 }; i < planeVertices.size(); i += 3)
+	{
+		//glm::vec3 p{ R * glm::vec3(planeVertices[i], planeVertices[i + 1], planeVertices[i + 2]) + point};
+
+		glm::vec3 p
+		{
+			planeVertices[i] * right.x + planeVertices[i + 2] * direction.x + point.x,
+			planeVertices[i] * right.y + planeVertices[i + 2] * direction.y + point.y,
+			planeVertices[i] * right.z + planeVertices[i + 2] * direction.z + point.z
+		};
+
+		vertexData.push_back(p.x);
+		vertexData.push_back(p.y);
+		vertexData.push_back(p.z);
+
+		vertexData.push_back(color.x);
+		vertexData.push_back(color.y);
+		vertexData.push_back(color.z);
+		vertexData.push_back(color.w);
 	}
 }
 
@@ -353,7 +392,7 @@ void addNewObject(int vertexCount, unsigned int primitive, funcType type, std::s
 
 	for (const auto& [name, id] : symbolTable)
 	{
-		std::cout << name << ": " << id << "\n";
+		std::cout << name << "::" << id << "::" << objInfo[id].components.size() << "\n";
 	}
 
 	std::cout << "\n\n";

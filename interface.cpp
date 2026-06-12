@@ -16,6 +16,7 @@ std::vector<FuncArgs> functions
 {
 	{"Point(",   funcType::Point,   {} },
 	{"Vector(",  funcType::Vector,  {funcType::Point,  funcType::Point} },
+	{"Vector(",  funcType::Vector,  {funcType::Point}                   },
 	{"Segment(", funcType::Segment, {funcType::Point,  funcType::Point} },
 	{"Plane(",   funcType::Plane,   {funcType::Vector, funcType::Point} }
 };
@@ -51,25 +52,25 @@ void getUserInput()
 
 		for (const auto& func : functions)
 		{
-			if (inputText.find(func.name) == 0)
+			auto funcOpenParenthesisPos{ inputText.find("(") };
+			auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
+
+			if (funcCloseParenthesisPos > funcOpenParenthesisPos)
 			{
-				auto funcOpenParenthesisPos{ inputText.find("(") };
-				auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
+				std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
 
-				if (funcCloseParenthesisPos > funcOpenParenthesisPos)
+				std::vector<std::string> args{ splitArgs(parameters) };
+
+				if (func.type == funcType::Point && args.size() == 3)
 				{
-					std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
+					std::vector<float> vecComponents{};
+					extractComponents(parameters, vecComponents);
 
-					std::vector<std::string> args{ splitArgs(parameters) };
+					draw(func.type, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+				}
 
-					if (func.type == funcType::Point && args.size() == 3)
-					{
-						std::vector<float> vecComponents{};
-						extractComponents(parameters, vecComponents);
-
-						draw(func.type, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-					}
-
+				if (inputText.find(func.name) == 0 && args.size() == func.expectedArgs.size())
+				{
 					bool isObjectValid{ true };
 
 					for (int index{ 0 }; index < args.size(); ++index)
@@ -100,6 +101,60 @@ void getUserInput()
 				}
 			}
 		}
+
+		// ===============================================================
+
+		//for (const auto& func : functions)
+		//{
+		//	if (inputText.find(func.name) == 0)
+		//	{
+		//		auto funcOpenParenthesisPos{ inputText.find("(") };
+		//		auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
+
+		//		if (funcCloseParenthesisPos > funcOpenParenthesisPos)
+		//		{
+		//			std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
+
+		//			std::vector<std::string> args{ splitArgs(parameters) };
+
+		//			if (func.type == funcType::Point && args.size() == 3)
+		//			{
+		//				std::vector<float> vecComponents{};
+		//				extractComponents(parameters, vecComponents);
+
+		//				draw(func.type, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+		//			}
+
+		//			bool isObjectValid{ true };
+
+		//			for (int index{ 0 }; index < args.size(); ++index)
+		//			{
+		//				if (func.expectedArgs.size() != args.size())
+		//				{
+		//					isObjectValid = false;
+		//					break;
+		//				}
+
+		//				isObjectValid = compareObjectType(args[index], func.expectedArgs[index]);
+
+		//				if (!isObjectValid)
+		//				{
+		//					isObjectValid = false;
+		//					break;
+		//				}
+		//			}
+
+		//			if (isObjectValid)
+		//			{
+		//				std::vector<float> vecComponents{ getObjectComponents(args) };
+
+		//				int componentsCount{ static_cast<int>(vecComponents.size()) };
+
+		//				draw(func.type, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+		//			}
+		//		}
+		//	}
+		//}
 	}
 
 	ImGui::End();
@@ -321,5 +376,22 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		++segmentSymbol;
 
 		updateBufferData(vertexData);
+	}
+
+	else if (type == funcType::Plane)
+	{
+		glm::vec3 normalP0{ 0.0f, 0.0f, 0.0f };
+		glm::vec3 normalP { vecComponents[0], vecComponents[1], vecComponents[2] };
+
+		if (vecComponents.size() == 6)
+		{
+			normalP0 = glm::vec3(vecComponents[0], vecComponents[1], vecComponents[2]);
+			normalP =  glm::vec3(vecComponents[3], vecComponents[4], vecComponents[5]);
+		}
+
+		normalP0 *= scale;
+		normalP  *= scale;
+
+
 	}
 }
