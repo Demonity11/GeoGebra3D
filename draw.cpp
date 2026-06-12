@@ -11,6 +11,8 @@ void getNewCoordSystem(glm::vec3& direction, glm::vec3& right, glm::vec3& up)
 	float cosTheta = glm::dot(direction, worldUp);
 	if (glm::abs(cosTheta) > 0.999f)
 	{
+		std::cout << "entrei aqui\n";
+
 		if (cosTheta > 0.0f)
 			worldUp = glm::vec3(0.0f, 0.0f, 1.0f);
 
@@ -201,7 +203,17 @@ void getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, gl
 
 	getNewCoordSystem(direction, right, up);
 
-	//glm::mat3 R{ right, up, direction };
+	const float cosTheta{ glm::dot(direction, glm::vec3(0.0f, 1.0f, 0.0f)) };
+	if (glm::abs(cosTheta) > 0.999f)
+	{
+		std::cout << "entrei aqui\n";
+
+		glm::vec3 temporary{ direction };
+		direction = up;
+		up = temporary;
+	}
+
+	//glm::mat3 R{ right, direction, up };
 
 	std::vector planeVertices
 	{
@@ -214,6 +226,8 @@ void getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, gl
 		-1.0f, 0.0f, -1.0f
 	};
 
+	const float scale{ 1.5f };
+
 	for (int i{ 0 }; i < planeVertices.size(); i += 3)
 	{
 		//glm::vec3 p{ R * glm::vec3(planeVertices[i], planeVertices[i + 1], planeVertices[i + 2]) + point};
@@ -224,6 +238,8 @@ void getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, gl
 			planeVertices[i] * right.y + planeVertices[i + 2] * direction.y + point.y,
 			planeVertices[i] * right.z + planeVertices[i + 2] * direction.z + point.z
 		};
+
+		//p *= scale;
 
 		vertexData.push_back(p.x);
 		vertexData.push_back(p.y);
@@ -324,7 +340,7 @@ void drawCilinder()
 
 		getCilinderVertices(a, b, color, 0.001f, vertexData);
 		
-		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS", {});
+		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS", {}, color);
 
 		++axis;
 	}
@@ -355,7 +371,7 @@ void drawCilinder()
 
 		getRingsVertices(a, b, ringColor, vertexData);
 
-		addNewObject(2880, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS_RINGS", {});
+		addNewObject(2880, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS_RINGS", {}, ringColor);
 
 		++axis;
 	}
@@ -363,10 +379,10 @@ void drawCilinder()
 
 	// this execution does 21 * 28 = 588 pushbacks
 	getGridVertices();
-	addNewObject(84, GL_LINES, funcType::Segment, "GRID_LINES", {});
+	addNewObject(84, GL_LINES, funcType::Segment, "GRID_LINES", {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
 }
 
-void addNewObject(int vertexCount, unsigned int primitive, funcType type, std::string name, const std::vector<float>& components)
+void addNewObject(int vertexCount, unsigned int primitive, funcType type, std::string name, const std::vector<float>& components, const glm::vec4 color)
 {
 	int offset{ 0 };
 
@@ -385,7 +401,8 @@ void addNewObject(int vertexCount, unsigned int primitive, funcType type, std::s
 		primitive,
 		type,
 		name,
-		components
+		components,
+		color
 	};
 
 	symbolTable[name] = objID;

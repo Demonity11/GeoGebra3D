@@ -264,11 +264,12 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		pointB *= scale;
 
 		const float radius{ 0.0015f };
+		const glm::vec4 color{ 0.0f, 0.0f, 0.0f, 1.0f };
 
 		getCilinderVertices(pointA, pointB, color, radius, vertexData);
 
 		// getCilinderVertices create 1008 new vertices
-		addNewObject(144, GL_LINES, funcType::Vector, std::string(1, vecSymbol), vecComponents);
+		addNewObject(144, GL_LINES, funcType::Vector, std::string(1, vecSymbol), vecComponents, color);
 
 		++vecSymbol;
 
@@ -285,11 +286,12 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		point *= scale;
 
 		const float radius{ 0.005f };
+		const glm::vec4 color{ 0.0f, 0.2f, 0.5f, 1.0f };
 
 		getSphereVertices(point, color, radius, vertexData);
 
 		// getSphereVertices create 120960 new vertices => 120960 / 7 = 17280, where 7 = number of components
-		addNewObject(17280, GL_LINES, funcType::Point, std::string(1, pointSymbol), vecComponents);
+		addNewObject(17280, GL_LINES, funcType::Point, std::string(1, pointSymbol), vecComponents, color);
 
 		++pointSymbol;
 
@@ -304,13 +306,13 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		pointA *= scale;
 		pointB *= scale;
 
-		const glm::vec3 origin{ 0.0f, 0.0f, 0.0f };
 		const float radius{ 0.0015f };
+		const glm::vec4 color{ 0.0f, 0.0f, 0.0f, 1.0f };
 
 		getCilinderVertices(pointA, pointB, color, radius, vertexData);
 
 		// getCilinderVertices create 1008 new vertices
-		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, segmentSymbol), vecComponents);
+		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, segmentSymbol), vecComponents, color);
 
 		++segmentSymbol;
 
@@ -336,9 +338,11 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		normalP  *= scale;
 		point    *= scale;
 
+		const glm::vec4 color{ 0.0f, 0.0f, 0.0f, 0.2f };
+
 		getPlaneVertices(normalP0, normalP, point, color, vertexData);
 
-		addNewObject(6, GL_TRIANGLES, funcType::Plane, std::string(1, planeSymbol), vecComponents);
+		addNewObject(6, GL_TRIANGLES, funcType::Plane, std::string(1, planeSymbol), vecComponents, color);
 
 		++planeSymbol;
 

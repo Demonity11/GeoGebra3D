@@ -2,6 +2,8 @@
 #include "Shader.h"
 #include "draw_utils.h"
 
+#include <algorithm>
+
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
@@ -56,16 +58,9 @@ int main()
 	glfwSetCursorPosCallback(window.getWindow(), mouse_cursor_callback);
 	glfwSetScrollCallback(window.getWindow(), mouse_scroll_callback);
 
-	addNewObject(static_cast<int>(vertexData.size()) / 7, GL_TRIANGLES, funcType::Plane, "GRID_PLANE", {}); // add plane
+	addNewObject(static_cast<int>(vertexData.size()) / 7, GL_TRIANGLES, funcType::Plane, "GRID_PLANE", {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.1f)); // add plane
 	drawCilinder();
 	vertexSpec(vertexData);
-
-	//for (int i{ 0 }; i < vertexData.size(); ++i)
-	//{
-	//	std::cout << vertexData[i] << " ";
-	//}
-
-	//std::cout << "\n\n" << vertexData.size();
 
 	initializeImGui(window.getWindow());
 
@@ -100,6 +95,16 @@ int main()
 		shader.setMat4("model", model);
 
 		glBindVertexArray(VAO);
+
+		std::vector<int> transparentQueue{};
+		
+		for (auto const& [id, metadata] : objInfo)
+		{
+			if (metadata.color.w < 1.0f)
+			{
+				transparentQueue.push_back(id);
+			}
+		}
 
 		int numObjects{ static_cast<int>(objInfo.size()) - 1 };
 		for (int id{ numObjects }; id >= 0; --id)

@@ -32,7 +32,7 @@ auto getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<fl
 auto getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std::vector<float>& vertexData)	   -> void;
 auto getGridVertices()																							   -> void;
 auto drawCilinder()																								   -> void;
-auto addNewObject(int vertexCount, unsigned int primitive, funcType type, std::string name, const std::vector<float>& components) -> void;
+auto addNewObject(int vertexCount, unsigned int primitive, funcType type, std::string name, const std::vector<float>& components, const glm::vec4 color) -> void;
 void getNewCoordSystem(glm::vec3& direction, glm::vec3& right, glm::vec3& up);
 void getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, glm::vec4 color, std::vector<float>& vertexData);
 
@@ -44,6 +44,7 @@ struct ObjectMetadata
 	funcType type{};
 	std::string name{};
 	std::vector<float> components{};
+	glm::vec4 color{};
 };
 
 extern std::vector<float> vertexData;
