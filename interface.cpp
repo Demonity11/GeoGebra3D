@@ -5,13 +5,28 @@ static char inputBuffer[128] = "";
 std::string inputText{};
 std::stringstream ss{};
 
-std::vector<std::string> functions
+struct FuncArgs
 {
-	"Vector(",
-	"Point(",
-	"Segment(",
-	"Plane("
+	std::string name{};
+	funcType type{};
+	std::vector<funcType> expectedArgs{};
 };
+
+std::vector<FuncArgs> functions
+{
+	{"Point(",   funcType::Point,   {} },
+	{"Vector(",  funcType::Vector,  {funcType::Point,  funcType::Point} },
+	{"Segment(", funcType::Segment, {funcType::Point,  funcType::Point} },
+	{"Plane(",   funcType::Plane,   {funcType::Vector, funcType::Point} }
+};
+
+//std::vector<std::string> functions
+//{
+//	"Vector(",
+//	"Point(",
+//	"Segment(",
+//	"Plane("
+//};
 
 void initializeImGui(GLFWwindow* window)
 {
@@ -34,92 +49,56 @@ void getUserInput()
 		ss = std::stringstream(inputBuffer);
 		inputText = ss.str();
 
-		if (inputText.find(functions[0]) == 0)
+		for (const auto& func : functions)
 		{
-			auto funcOpenParenthesisPos{ inputText.find("(") };
-			auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
-
-			if (funcCloseParenthesisPos > funcOpenParenthesisPos)
+			if (inputText.find(func.name) == 0)
 			{
-				std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
+				auto funcOpenParenthesisPos{ inputText.find("(") };
+				auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
 
-				std::vector<std::string> args{ splitArgs(parameters) };
-
-				bool isObjectValid{ false };
-
-				for (auto& arg : args)
+				if (funcCloseParenthesisPos > funcOpenParenthesisPos)
 				{
-					isObjectValid = compareObjectType(arg, funcType::Point);
+					std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
 
-					if (!isObjectValid)
-						break;
-				}
+					std::vector<std::string> args{ splitArgs(parameters) };
 
-				if (isObjectValid)
-				{
-					std::vector<float> vecComponents{ getObjectComponents(args) };
+					if (func.type == funcType::Point && args.size() == 3)
+					{
+						std::vector<float> vecComponents{};
+						extractComponents(parameters, vecComponents);
 
-					int componentsCount{ static_cast<int>(vecComponents.size()) };
+						draw(func.type, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+					}
 
-					if (componentsCount == 6 || componentsCount == 3)
-						draw(funcType::Vector, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+					bool isObjectValid{ true };
+
+					for (int index{ 0 }; index < args.size(); ++index)
+					{
+						if (func.expectedArgs.size() != args.size())
+						{
+							isObjectValid = false;
+							break;
+						}
+
+						isObjectValid = compareObjectType(args[index], func.expectedArgs[index]);
+
+						if (!isObjectValid)
+						{
+							isObjectValid = false;
+							break;
+						}
+					}
+
+					if (isObjectValid)
+					{
+						std::vector<float> vecComponents{ getObjectComponents(args) };
+
+						int componentsCount{ static_cast<int>(vecComponents.size()) };
+
+						draw(func.type, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+					}
 				}
 			}
-		}
-
-		else if (inputText.find(functions[1]) == 0)
-		{
-			auto funcOpenParenthesisPos{ inputText.find("(") };
-			auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
-
-			if (funcCloseParenthesisPos > funcOpenParenthesisPos)
-			{
-				std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
-
-				std::vector<float> vecComponents{};
-				extractComponents(parameters, vecComponents);
-
-				if (vecComponents.size() == 3)
-					draw(funcType::Point, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-			}
-		}
-
-		else if (inputText.find(functions[2]) == 0)
-		{
-			auto funcOpenParenthesisPos{ inputText.find("(") };
-			auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
-
-			if (funcCloseParenthesisPos > funcOpenParenthesisPos)
-			{
-				std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
-
-				std::vector<std::string> args{ splitArgs(parameters) };
-
-				bool isObjectValid{ false };
-
-				for (auto& arg : args)
-				{
-					isObjectValid = compareObjectType(arg, funcType::Point);
-
-					if (!isObjectValid)
-						break;
-				}
-
-				if (isObjectValid)
-				{
-					std::vector<float> vecComponents{ getObjectComponents(args) };
-
-					int componentsCount{ static_cast<int>(vecComponents.size()) };
-
-					if (componentsCount == 6)
-						draw(funcType::Segment, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-				}
-			}
-		}
-
-		else if (inputText.find(functions[3]) == 0)
-		{
-
 		}
 	}
 
