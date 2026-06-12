@@ -2,8 +2,6 @@
 #include "Shader.h"
 #include "draw_utils.h"
 
-#include <algorithm>
-
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
@@ -13,7 +11,7 @@ unsigned int VBO{};
 unsigned int VAO{};
 
 glm::vec3 cameraPos   { 0.0f, 0.5f,  3.0f };
-glm::vec3 cameraTarget{ 0.0f, 0.0f,  0.0f };
+glm::vec3 cameraTarget{ 0.0f, 1.0f,  0.0f };
 glm::vec3 worldUp     { 0.0f, 1.0f,  0.0f };
 
 float lastX{ 400.0f };
@@ -96,21 +94,36 @@ int main()
 
 		glBindVertexArray(VAO);
 
-		std::vector<int> transparentQueue{};
-		
-		for (auto const& [id, metadata] : objInfo)
+		std::vector<RenderOp> transparentQueue{};
+		for (auto const& [id, obj] : objInfo)
 		{
-			if (metadata.color.w < 1.0f)
-			{
-				transparentQueue.push_back(id);
-			}
+			bool forceOrigin{ (obj.name.find("GRID") != std::string::npos) };
+			//bool forceOrigin{ (obj.name.find("GRID") != std::string::npos || obj.name.find("AXIS") != std::string::npos) };
+
+			glm::vec3 objCenter{ calculateObjectCenter(id, forceOrigin) };
+			float distanceToCamera{ glm::distance(cameraPos, objCenter) };
+
+			transparentQueue.push_back({ id, distanceToCamera });
 		}
 
-		int numObjects{ static_cast<int>(objInfo.size()) - 1 };
-		for (int id{ numObjects }; id >= 0; --id)
+		std::sort(transparentQueue.begin(), transparentQueue.end(),
+			[](const RenderOp& a, const RenderOp& b) {
+				return a.squaredDistance > b.squaredDistance;
+			}
+		);
+
+		for (auto const& op : transparentQueue)
 		{
-			glDrawArrays(objInfo[id].primitiveType, objInfo[id].offset, objInfo[id].vertexCount);
+			const auto& obj{ objInfo[op.id] };
+
+			glDrawArrays(obj.primitiveType, obj.offset, obj.vertexCount);
 		}
+
+		//int numObjects{ static_cast<int>(objInfo.size()) - 1 };
+		//for (int id{ numObjects }; id >= 0; --id)
+		//{
+		//	glDrawArrays(objInfo[id].primitiveType, objInfo[id].offset, objInfo[id].vertexCount);
+		//}
 
 		// render ImGui here
 		ImGui::ShowDemoWindow();
@@ -220,4 +233,43 @@ void updateBufferData(const std::vector<float>& vertices)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
+}
+
+glm::vec3 calculateObjectCenter(int id, bool pointToOrigin)
+{
+	if (pointToOrigin)
+	{
+		return glm::vec3(0.0f, 0.0f, 0.0f);
+	}
+
+	const auto& obj = objInfo[id];
+	glm::vec3 rawCenter{ 0.0f };
+
+	switch (obj.type)
+	{
+	case funcType::Point:
+		rawCenter = glm::vec3(obj.components[0], obj.components[1], obj.components[2]);
+		break;
+
+	case funcType::Segment:
+	case funcType::Vector:
+	{
+		if (obj.name.find("AXIS") != std::string::npos)
+			return glm::vec3{ obj.components[0], obj.components[1], obj.components[2]} - cameraPos;
+
+		glm::vec3 pointA(obj.components[0], obj.components[1], obj.components[2]);
+		glm::vec3 pointB(obj.components[3], obj.components[4], obj.components[5]);
+		rawCenter = (pointA + pointB) * 0.5f;
+		break;
+	}
+
+	case funcType::Plane:
+		rawCenter = glm::vec3(obj.components[6], obj.components[7], obj.components[8]);
+		break;
+
+	default:
+		return glm::vec3(0.0f, 0.0f, 0.0f);
+	}
+
+	return rawCenter * (0.1f * 3.0f);
 }

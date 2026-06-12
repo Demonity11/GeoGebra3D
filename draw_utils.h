@@ -13,6 +13,8 @@
 #include <sstream>
 #include <string>
 #include <map>
+#include <algorithm>
+#include <functional>
 
 enum class funcType
 {
@@ -25,6 +27,7 @@ enum class funcType
 // forward declarations for main.cpp
 auto vertexSpec(const std::vector<float>& vertices)																   -> void;
 auto updateBufferData(const std::vector<float>& vertices)														   -> void;
+glm::vec3 calculateObjectCenter(int id, bool pointToOrigin);
 
 // forward declarations for draw.cpp
 auto getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radius, std::vector<float>& vertexData) -> void;
@@ -47,10 +50,16 @@ struct ObjectMetadata
 	glm::vec4 color{};
 };
 
+struct RenderOp
+{
+	int id{};
+	float squaredDistance{};
+};
+
 extern std::vector<float> vertexData;
 extern std::map<int, ObjectMetadata> objInfo;
 extern std::map<std::string, int> symbolTable;
-
+extern std::vector<RenderOp> transparentQueue;
 
 // forward declarations for interface.cpp
 auto initializeImGui(GLFWwindow* window)												  -> void;

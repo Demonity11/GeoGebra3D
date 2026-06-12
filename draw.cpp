@@ -203,16 +203,6 @@ void getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, gl
 
 	getNewCoordSystem(direction, right, up);
 
-	const float cosTheta{ glm::dot(direction, glm::vec3(0.0f, 1.0f, 0.0f)) };
-	if (glm::abs(cosTheta) > 0.999f)
-	{
-		std::cout << "entrei aqui\n";
-
-		glm::vec3 temporary{ direction };
-		direction = up;
-		up = temporary;
-	}
-
 	//glm::mat3 R{ right, direction, up };
 
 	std::vector planeVertices
@@ -226,20 +216,14 @@ void getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, gl
 		-1.0f, 0.0f, -1.0f
 	};
 
-	const float scale{ 1.5f };
-
 	for (int i{ 0 }; i < planeVertices.size(); i += 3)
 	{
-		//glm::vec3 p{ R * glm::vec3(planeVertices[i], planeVertices[i + 1], planeVertices[i + 2]) + point};
-
 		glm::vec3 p
 		{
-			planeVertices[i] * right.x + planeVertices[i + 2] * direction.x + point.x,
-			planeVertices[i] * right.y + planeVertices[i + 2] * direction.y + point.y,
-			planeVertices[i] * right.z + planeVertices[i + 2] * direction.z + point.z
+			planeVertices[i] * right.x + planeVertices[i + 2] * up.x + point.x,
+			planeVertices[i] * right.y + planeVertices[i + 2] * up.y + point.y,
+			planeVertices[i] * right.z + planeVertices[i + 2] * up.z + point.z
 		};
-
-		//p *= scale;
 
 		vertexData.push_back(p.x);
 		vertexData.push_back(p.y);
@@ -331,6 +315,8 @@ void drawCilinder()
 
 	char axis{ 'X' };
 
+	std::vector<float> axisPos{ 0.0f, 0.5f, 0.0f };
+
 	// this loop does 3 * 1008 = 3024 pushbacks
 	for (int v{ 0 }, c{ 0 }; v < axisVertices.size(); v += 6, c += 4)
 	{
@@ -340,7 +326,7 @@ void drawCilinder()
 
 		getCilinderVertices(a, b, color, 0.001f, vertexData);
 		
-		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS", {}, color);
+		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS", axisPos, color);
 
 		++axis;
 	}
@@ -371,7 +357,7 @@ void drawCilinder()
 
 		getRingsVertices(a, b, ringColor, vertexData);
 
-		addNewObject(2880, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS_RINGS", {}, ringColor);
+		addNewObject(2880, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS_RINGS", axisPos, ringColor);
 
 		++axis;
 	}

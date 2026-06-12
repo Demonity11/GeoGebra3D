@@ -226,9 +226,9 @@ std::vector<float> getObjectComponents(std::vector<std::string>& args)
 
 		if (objID != -1)
 		{
-			vecComponents.push_back(objInfo[objID].components[0]);
-			vecComponents.push_back(objInfo[objID].components[1]);
-			vecComponents.push_back(objInfo[objID].components[2]);
+			for (const auto comp : objInfo[objID].components)
+				vecComponents.push_back(comp);
+
 		}
 
 		else if (objID == -1)
@@ -254,10 +254,22 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		glm::vec3 pointA{ 0.0f, 0.0f, 0.0f };
 		glm::vec3 pointB{ vecComponents[0], vecComponents[1], vecComponents[2] };
 
+		std::vector<float> newComponents{};
+
 		if (vecComponents.size() == 6)
 		{
 			pointA = glm::vec3(vecComponents[0], vecComponents[1], vecComponents[2]);
 			pointB = glm::vec3(vecComponents[3], vecComponents[4], vecComponents[5]);
+		}
+		else
+		{
+			newComponents.push_back(pointA.x);
+			newComponents.push_back(pointA.y);
+			newComponents.push_back(pointA.z);
+
+			newComponents.push_back(pointB.x);
+			newComponents.push_back(pointB.y);
+			newComponents.push_back(pointB.z);
 		}
 
 		pointA *= scale;
@@ -269,7 +281,7 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		getCilinderVertices(pointA, pointB, color, radius, vertexData);
 
 		// getCilinderVertices create 1008 new vertices
-		addNewObject(144, GL_LINES, funcType::Vector, std::string(1, vecSymbol), vecComponents, color);
+		addNewObject(144, GL_LINES, funcType::Vector, std::string(1, vecSymbol), (newComponents.size() > 0 ? newComponents : vecComponents), color);
 
 		++vecSymbol;
 
@@ -323,16 +335,16 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 	{
 		glm::vec3 normalP0{ 0.0f, 0.0f, 0.0f };
 		glm::vec3 normalP { vecComponents[0], vecComponents[1], vecComponents[2] };
-		glm::vec3 point{};
+		glm::vec3 point{ vecComponents[3], vecComponents[4], vecComponents[5] };
 
 		if (vecComponents.size() == 9)
 		{
+			std::cout << "entrei aqui mesmo\n";
+
 			normalP0 = glm::vec3(vecComponents[0], vecComponents[1], vecComponents[2]);
 			normalP =  glm::vec3(vecComponents[3], vecComponents[4], vecComponents[5]);
 			point = glm::vec3(vecComponents[6], vecComponents[7], vecComponents[8]);
 		}
-
-		point = glm::vec3(vecComponents[3], vecComponents[4], vecComponents[5]);
 
 		normalP0 *= scale;
 		normalP  *= scale;
