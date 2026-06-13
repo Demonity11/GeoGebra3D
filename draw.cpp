@@ -11,8 +11,6 @@ void getNewCoordSystem(glm::vec3& direction, glm::vec3& right, glm::vec3& up)
 	float cosTheta = glm::dot(direction, worldUp);
 	if (glm::abs(cosTheta) > 0.999f)
 	{
-		std::cout << "entrei aqui\n";
-
 		if (cosTheta > 0.0f)
 			worldUp = glm::vec3(0.0f, 0.0f, 1.0f);
 

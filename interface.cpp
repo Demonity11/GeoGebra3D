@@ -36,7 +36,7 @@ void initializeImGui(GLFWwindow* window)
 void getUserInput()
 {
 	ImGui::Begin("Input");
-	ImGui::InputText("Input", inputBuffer, IM_COUNTOF(inputBuffer));
+	ImGui::InputTextWithHint("Input", "input", inputBuffer, IM_COUNTOF(inputBuffer));
 	if (ImGui::Button("Enter"))
 	{
 		ss = std::stringstream(inputBuffer);
@@ -58,7 +58,7 @@ void getUserInput()
 					std::vector<float> vecComponents{};
 					extractComponents(parameters, vecComponents);
 
-					draw(func.type, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+					draw(func.type, vecComponents);
 				}
 
 				if (inputText.find(func.name) == 0 && args.size() == func.expectedArgs.size())
@@ -88,14 +88,48 @@ void getUserInput()
 
 						int componentsCount{ static_cast<int>(vecComponents.size()) };
 
-						draw(func.type, vecComponents, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+						draw(func.type, vecComponents);
 					}
 				}
 			}
 		}
 	}
 
+	ImGui::SeparatorText("Variables");
+
+	for(int i{ 8 }; i < objInfo.size(); ++i)
+	{
+		auto& obj{ objInfo[i] };
+
+		std::string headerText{ obj.name + " : " + getStringFuncType(obj.type) };
+
+		if (ImGui::CollapsingHeader(headerText.c_str(), ImGuiTreeNodeFlags_None))
+		{
+			char s{ 'A' };
+			for (int increment{ 0 }; increment < obj.components.size(); increment += 3)
+			{
+				ImGui::InputFloat3((obj.name + "::" + s).c_str(), &obj.components[increment], "%.3f");
+
+				if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
+					updateObject(i, obj);
+
+				++s;
+			}
+		}
+	}
+
 	ImGui::End();
+}
+
+std::string getStringFuncType(funcType type)
+{
+	switch (type)
+	{
+	case funcType::Point:   return "Point";
+	case funcType::Vector:  return "Vector";
+	case funcType::Segment: return "Segment";
+	case funcType::Plane:   return "Plane";
+	}
 }
 
 void extractComponents(std::string& parameters, std::vector<float>& vecComponents)
@@ -240,7 +274,7 @@ std::vector<float> getObjectComponents(std::vector<std::string>& args)
 	return vecComponents;
 }
 
-void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec4& color)
+void draw(funcType type, const std::vector<float>& vecComponents, bool update)
 {
 	const float scale{ 0.1f };
 
@@ -278,6 +312,12 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		const float radius{ 0.0015f };
 		const glm::vec4 color{ 0.0f, 0.0f, 0.0f, 1.0f };
 
+		if (update)
+		{
+			getCilinderVertices(pointA, pointB, color, radius, vertexData);
+			return;
+		}
+
 		getCilinderVertices(pointA, pointB, color, radius, vertexData);
 
 		// getCilinderVertices create 1008 new vertices
@@ -300,6 +340,12 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		const float radius{ 0.005f };
 		const glm::vec4 color{ 0.0f, 0.2f, 0.5f, 1.0f };
 
+		if (update)
+		{
+			getSphereVertices(point, color, radius, vertexData);
+			return;
+		}
+
 		getSphereVertices(point, color, radius, vertexData);
 
 		// getSphereVertices create 120960 new vertices => 120960 / 7 = 17280, where 7 = number of components
@@ -321,6 +367,12 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		const float radius{ 0.0015f };
 		const glm::vec4 color{ 0.0f, 0.0f, 0.0f, 1.0f };
 
+		if (update)
+		{
+			getCilinderVertices(pointA, pointB, color, radius, vertexData);
+			return;
+		}
+
 		getCilinderVertices(pointA, pointB, color, radius, vertexData);
 
 		// getCilinderVertices create 1008 new vertices
@@ -337,10 +389,8 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		glm::vec3 normalP { vecComponents[0], vecComponents[1], vecComponents[2] };
 		glm::vec3 point{ vecComponents[3], vecComponents[4], vecComponents[5] };
 
-		if (vecComponents.size() == 9)
+		if (vecComponents.size() == 9) // get back here later.
 		{
-			std::cout << "entrei aqui mesmo\n";
-
 			normalP0 = glm::vec3(vecComponents[0], vecComponents[1], vecComponents[2]);
 			normalP =  glm::vec3(vecComponents[3], vecComponents[4], vecComponents[5]);
 			point = glm::vec3(vecComponents[6], vecComponents[7], vecComponents[8]);
@@ -351,6 +401,12 @@ void draw(funcType type, const std::vector<float>& vecComponents, const glm::vec
 		point    *= scale;
 
 		const glm::vec4 color{ 0.0f, 0.0f, 0.0f, 0.2f };
+
+		if (update)
+		{
+			getPlaneVertices(normalP0, normalP, point, color, vertexData);
+			return;
+		}
 
 		getPlaneVertices(normalP0, normalP, point, color, vertexData);
 
