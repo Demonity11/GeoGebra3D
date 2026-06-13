@@ -37,9 +37,9 @@ struct ObjectMetadata
 // forward declarations for main.cpp
 auto vertexSpec(const std::vector<float>& vertices)																   -> void;
 auto updateBufferData(const std::vector<float>& vertices)														   -> void;
-std::vector<float> deleteObject(int objID);
+std::vector<float> deleteObjectFromVertexData(int objID);
 void updateObject(int objID, const ObjectMetadata& newObj);
-//glm::vec3 calculateObjectCenter(int id, bool pointToOrigin);
+void deleteObjectRegister(int objID);
 
 // forward declarations for draw.cpp
 auto getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radius, std::vector<float>& vertexData) -> void;
@@ -65,12 +65,15 @@ extern std::map<std::string, int> symbolTable;
 auto initializeImGui(GLFWwindow* window)												  -> void;
 auto getUserInput()																		  -> void;
 auto extractComponents(std::string& parameters, std::vector<float>& vecComponents)		  -> void;
-auto draw(funcType type, const std::vector<float>& vecComponents, bool update = false)			  -> void;
+auto draw(funcType type, const std::vector<float>& vecComponents, glm::vec4 color, bool update = false) -> void;
 void stripArg(std::string& arg);
 int searchObjectID(const std::string& objName);
 std::vector<std::string> splitArgs(const std::string& argumentString);
 std::vector<float> getObjectComponents(std::vector<std::string>& args);
 bool compareObjectType(const std::string& component, funcType expectedType);
 std::string getStringFuncType(funcType type);
+char updateObjectName(funcType type, bool isObjectDeleted = false);
+
+extern std::map<funcType, char> objSymbols;
 
 #endif

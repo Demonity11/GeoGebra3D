@@ -369,14 +369,25 @@ void drawCilinder()
 void addNewObject(int vertexCount, unsigned int primitive, funcType type, std::string name, const std::vector<float>& components, const glm::vec4 color)
 {
 	int offset{ 0 };
+	int objID{ static_cast<int>(objInfo.size()) };
 
 	if (!objInfo.empty())
 	{
 		int previousId{ static_cast<int>(objInfo.size()) - 1 };
 		offset = objInfo[previousId].offset + objInfo[previousId].vertexCount;
-	}
 
-	int objID{ static_cast<int>(objInfo.size()) };
+		for (int i{ 0 }; i < objInfo.size(); ++i)
+		{
+			try
+			{
+				objInfo.at(i);
+			}
+			catch (const std::out_of_range& e)
+			{
+				objID = i;
+			}
+		}
+	}
 
 	objInfo[objID] = ObjectMetadata
 	{

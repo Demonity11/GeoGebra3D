@@ -94,28 +94,11 @@ int main()
 
 		glBindVertexArray(VAO);
 
-		//std::vector<RenderOp> transparentQueue{};
-		//for (auto const& [id, obj] : objInfo)
-		//{
-		//	bool forceOrigin{ (obj.name.find("GRID") != std::string::npos) };
-
-		//	glm::vec3 objCenter{ calculateObjectCenter(id, forceOrigin) };
-		//	float distanceToCamera{ glm::distance(cameraPos, objCenter) };
-
-		//	transparentQueue.push_back({ id, distanceToCamera });
-		//}
-
 		std::vector<int> transparentQueue{};
 		for (auto const& [id, obj] : objInfo)
 		{
 			transparentQueue.push_back(id);
 		}
-
-		//std::sort(transparentQueue.begin(), transparentQueue.end(),
-		//	[](const RenderOp& a, const RenderOp& b) {
-		//		return a.squaredDistance > b.squaredDistance;
-		//	}
-		//);
 
 		std::sort(transparentQueue.begin(), transparentQueue.end(),
 			[](const int a, const int b) 
@@ -123,13 +106,6 @@ int main()
 				return objInfo[a].color.w > objInfo[b].color.w;
 			}
 		);
-
-		//for (auto const& op : transparentQueue)
-		//{
-		//	const auto& obj{ objInfo[op.id] };
-
-		//	glDrawArrays(obj.primitiveType, obj.offset, obj.vertexCount);
-		//}
 
 		for (auto const id : transparentQueue)
 		{
@@ -248,7 +224,7 @@ void updateBufferData(const std::vector<float>& vertices)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
 }
 
-std::vector<float> deleteObject(int objID)
+std::vector<float> deleteObjectFromVertexData(int objID)
 {
 	if (vertexData.empty())
 		return {};
@@ -273,12 +249,18 @@ std::vector<float> deleteObject(int objID)
 	return newVertexData;
 }
 
+void deleteObjectRegister(int objID)
+{
+	symbolTable.erase(objInfo[objID].name);
+	objInfo.erase(objID);
+}
+
 void updateObject(int objID, const ObjectMetadata& newObj)
 {
 	if (objInfo.find(objID) == objInfo.end())
 		return;
 
-	vertexData = deleteObject(objID);
+	vertexData = deleteObjectFromVertexData(objID);
 	symbolTable.erase(objInfo[objID].name);
 	
 	objInfo[objID] = newObj;
@@ -286,45 +268,6 @@ void updateObject(int objID, const ObjectMetadata& newObj)
 
 	symbolTable[obj.name] = objID;
 
-	draw(obj.type, obj.components, true);
+	draw(obj.type, obj.components, obj.color, true);
 	updateBufferData(vertexData);
 }
-
-//glm::vec3 calculateObjectCenter(int id, bool pointToOrigin)
-//{
-//	if (pointToOrigin)
-//	{
-//		return glm::vec3(0.0f, 0.0f, 0.0f);
-//	}
-//
-//	const auto& obj = objInfo[id];
-//	glm::vec3 rawCenter{ 0.0f };
-//
-//	switch (obj.type)
-//	{
-//	case funcType::Point:
-//		rawCenter = glm::vec3(obj.components[0], obj.components[1], obj.components[2]);
-//		break;
-//
-//	case funcType::Segment:
-//	case funcType::Vector:
-//	{
-//		if (obj.name.find("AXIS") != std::string::npos)
-//			return glm::vec3{ obj.components[0], obj.components[1], obj.components[2]} - cameraPos;
-//
-//		glm::vec3 pointA(obj.components[0], obj.components[1], obj.components[2]);
-//		glm::vec3 pointB(obj.components[3], obj.components[4], obj.components[5]);
-//		rawCenter = (pointA + pointB) * 0.5f;
-//		break;
-//	}
-//
-//	case funcType::Plane:
-//		rawCenter = glm::vec3(obj.components[6], obj.components[7], obj.components[8]);
-//		break;
-//
-//	default:
-//		return glm::vec3(0.0f, 0.0f, 0.0f);
-//	}
-//
-//	return rawCenter * (0.1f * 3.0f);
-//}

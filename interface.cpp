@@ -1,10 +1,6 @@
 #include "Window.h"
 #include "draw_utils.h"
 
-static char inputBuffer[128] = "";
-std::string inputText{};
-std::stringstream ss{};
-
 struct FuncArgs
 {
 	std::string name{};
@@ -21,6 +17,14 @@ std::vector<FuncArgs> functions
 	{"Plane(",   funcType::Plane,   {funcType::Vector, funcType::Point} }
 };
 
+std::map<funcType, char> objSymbols
+{
+	{ funcType::Vector,  'u' },
+	{ funcType::Point,   'A' },
+	{ funcType::Segment, 'f' },
+	{ funcType::Plane,   'p' },
+};
+
 void initializeImGui(GLFWwindow* window)
 {
 	IMGUI_CHECKVERSION();
@@ -35,12 +39,14 @@ void initializeImGui(GLFWwindow* window)
 
 void getUserInput()
 {
+	static char inputBuffer[128] = "";
+
 	ImGui::Begin("Input");
 	ImGui::InputTextWithHint("Input", "input", inputBuffer, IM_COUNTOF(inputBuffer));
 	if (ImGui::Button("Enter"))
 	{
-		ss = std::stringstream(inputBuffer);
-		inputText = ss.str();
+		auto ss{ std::stringstream(inputBuffer) };
+		auto inputText{ ss.str() };
 
 		for (const auto& func : functions)
 		{
@@ -58,7 +64,7 @@ void getUserInput()
 					std::vector<float> vecComponents{};
 					extractComponents(parameters, vecComponents);
 
-					draw(func.type, vecComponents);
+					draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
 				}
 
 				if (inputText.find(func.name) == 0 && args.size() == func.expectedArgs.size())
@@ -88,7 +94,7 @@ void getUserInput()
 
 						int componentsCount{ static_cast<int>(vecComponents.size()) };
 
-						draw(func.type, vecComponents);
+						draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f });
 					}
 				}
 			}
@@ -108,12 +114,25 @@ void getUserInput()
 			char s{ 'A' };
 			for (int increment{ 0 }; increment < obj.components.size(); increment += 3)
 			{
-				ImGui::InputFloat3((obj.name + "::" + s).c_str(), &obj.components[increment], "%.3f");
+				ImGui::InputFloat3((obj.name + "::" + s).c_str(), &obj.components[increment], "%.2f");
 
 				if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
 					updateObject(i, obj);
 
 				++s;
+			}
+
+			ImGui::InputFloat4((obj.name + "::Color").c_str(), &obj.color[0], "%.2f");
+
+			if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
+				updateObject(i, obj);
+
+			if (ImGui::Button("Delete"))
+			{
+				vertexData = deleteObjectFromVertexData(i);
+				updateObjectName(obj.type, true);
+				deleteObjectRegister(i);
+				updateBufferData(vertexData);
 			}
 		}
 	}
@@ -274,14 +293,9 @@ std::vector<float> getObjectComponents(std::vector<std::string>& args)
 	return vecComponents;
 }
 
-void draw(funcType type, const std::vector<float>& vecComponents, bool update)
+void draw(funcType type, const std::vector<float>& vecComponents, glm::vec4 color, bool update)
 {
 	const float scale{ 0.1f };
-
-	static char vecSymbol    { 'u' };
-	static char pointSymbol  { 'A' };
-	static char segmentSymbol{ 'f' };
-	static char planeSymbol  { 'p' };
 
 	if (type == funcType::Vector)
 	{
@@ -310,7 +324,6 @@ void draw(funcType type, const std::vector<float>& vecComponents, bool update)
 		pointB *= scale;
 
 		const float radius{ 0.0015f };
-		const glm::vec4 color{ 0.0f, 0.0f, 0.0f, 1.0f };
 
 		if (update)
 		{
@@ -321,12 +334,7 @@ void draw(funcType type, const std::vector<float>& vecComponents, bool update)
 		getCilinderVertices(pointA, pointB, color, radius, vertexData);
 
 		// getCilinderVertices create 1008 new vertices
-		addNewObject(144, GL_LINES, funcType::Vector, std::string(1, vecSymbol), (newComponents.size() > 0 ? newComponents : vecComponents), color);
-
-		++vecSymbol;
-
-		if (vecSymbol == 'x')
-			vecSymbol = 'a';
+		addNewObject(144, GL_LINES, funcType::Vector, std::string(1, updateObjectName(type)), (newComponents.size() > 0 ? newComponents : vecComponents), color);
 
 		updateBufferData(vertexData);
 	}
@@ -338,7 +346,6 @@ void draw(funcType type, const std::vector<float>& vecComponents, bool update)
 		point *= scale;
 
 		const float radius{ 0.005f };
-		const glm::vec4 color{ 0.0f, 0.2f, 0.5f, 1.0f };
 
 		if (update)
 		{
@@ -349,9 +356,7 @@ void draw(funcType type, const std::vector<float>& vecComponents, bool update)
 		getSphereVertices(point, color, radius, vertexData);
 
 		// getSphereVertices create 120960 new vertices => 120960 / 7 = 17280, where 7 = number of components
-		addNewObject(17280, GL_LINES, funcType::Point, std::string(1, pointSymbol), vecComponents, color);
-
-		++pointSymbol;
+		addNewObject(17280, GL_LINES, funcType::Point, std::string(1, updateObjectName(type)), vecComponents, color);
 
 		updateBufferData(vertexData);
 	}
@@ -365,7 +370,6 @@ void draw(funcType type, const std::vector<float>& vecComponents, bool update)
 		pointB *= scale;
 
 		const float radius{ 0.0015f };
-		const glm::vec4 color{ 0.0f, 0.0f, 0.0f, 1.0f };
 
 		if (update)
 		{
@@ -376,9 +380,7 @@ void draw(funcType type, const std::vector<float>& vecComponents, bool update)
 		getCilinderVertices(pointA, pointB, color, radius, vertexData);
 
 		// getCilinderVertices create 1008 new vertices
-		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, segmentSymbol), vecComponents, color);
-
-		++segmentSymbol;
+		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, updateObjectName(type)), vecComponents, color);
 
 		updateBufferData(vertexData);
 	}
@@ -400,7 +402,7 @@ void draw(funcType type, const std::vector<float>& vecComponents, bool update)
 		normalP  *= scale;
 		point    *= scale;
 
-		const glm::vec4 color{ 0.0f, 0.0f, 0.0f, 0.2f };
+		color.w = 0.2f;
 
 		if (update)
 		{
@@ -410,10 +412,32 @@ void draw(funcType type, const std::vector<float>& vecComponents, bool update)
 
 		getPlaneVertices(normalP0, normalP, point, color, vertexData);
 
-		addNewObject(6, GL_TRIANGLES, funcType::Plane, std::string(1, planeSymbol), vecComponents, color);
-
-		++planeSymbol;
+		addNewObject(6, GL_TRIANGLES, funcType::Plane, std::string(1, updateObjectName(type)), vecComponents, color);
 
 		updateBufferData(vertexData);
 	}
+}
+
+char updateObjectName(funcType type, bool isObjectDeleted)
+{
+	if (isObjectDeleted)
+	{
+		return --objSymbols[type];
+	}
+	
+	//if (objID != -1)
+	//{
+	//	for (auto& [id, obj] : objInfo)
+	//	{
+	//		if (obj.name.c_str() == 'a')
+	//	}
+	//}
+
+	if (objSymbols[type] + 1 == 'x' && type == funcType::Vector)
+	{
+		objSymbols[type] = 'a';
+		return objSymbols[type];
+	}
+
+	return objSymbols[type]++;
 }
