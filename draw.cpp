@@ -335,7 +335,7 @@ void getEnvironmentVertices()
 		createObject(std::move(obj), 144, axisPos, color, 0);
 
 		// legacy
-		addNewObject(144, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS", axisPos, color);
+		//addNewObject(144, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS", axisPos, color);
 
 		++axis;
 	}
@@ -371,7 +371,7 @@ void getEnvironmentVertices()
 		createObject(std::move(obj), 2880, axisPos, ringColor, 0);
 
 		// legacy
-		addNewObject(2880, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS_RINGS", axisPos, ringColor);
+		//addNewObject(2880, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS_RINGS", axisPos, ringColor);
 
 		++axis;
 	}
@@ -385,53 +385,53 @@ void getEnvironmentVertices()
 	createObject(std::move(obj), 84, {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f), 0);
 
 	// legacy
-	addNewObject(84, GL_LINES, funcType::Segment, "GRID_LINES", {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
+	//addNewObject(84, GL_LINES, funcType::Segment, "GRID_LINES", {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
 }
 
 // legacy func that create objects
-void addNewObject(int vertexCount, unsigned int primitive, funcType type, std::string name, const std::vector<float>& components, const glm::vec4 color)
-{
-	int offset{ 0 };
-	int objID{ static_cast<int>(objInfo.size()) };
-
-	if (!objInfo.empty())
-	{
-		int previousId{ static_cast<int>(objInfo.size()) - 1 };
-		offset = objInfo[previousId].offset + objInfo[previousId].vertexCount;
-
-		//for (int i{ 0 }; i < objInfo.size(); ++i)
-		//{
-		//	try
-		//	{
-		//		objInfo.at(i);
-		//	}
-		//	catch (const std::out_of_range& e)
-		//	{
-		//		objID = i;
-		//	}
-		//}
-	}
-
-	objInfo[objID] = ObjectMetadata
-	{
-		offset,
-		vertexCount,
-		primitive,
-		type,
-		name,
-		components,
-		color
-	};
-
-	symbolTable_legacy[name] = objID;
-
-	for (const auto& [name, id] : symbolTable_legacy)
-	{
-		std::cout << name << "::" << id << "::" << objInfo[id].components.size() << "\n";
-	}
-
-	std::cout << "\n\n";
-}
+//void addNewObject(int vertexCount, unsigned int primitive, funcType type, std::string name, const std::vector<float>& components, const glm::vec4 color)
+//{
+//	int offset{ 0 };
+//	int objID{ static_cast<int>(objInfo.size()) };
+//
+//	if (!objInfo.empty())
+//	{
+//		int previousId{ static_cast<int>(objInfo.size()) - 1 };
+//		offset = objInfo[previousId].offset + objInfo[previousId].vertexCount;
+//
+//		//for (int i{ 0 }; i < objInfo.size(); ++i)
+//		//{
+//		//	try
+//		//	{
+//		//		objInfo.at(i);
+//		//	}
+//		//	catch (const std::out_of_range& e)
+//		//	{
+//		//		objID = i;
+//		//	}
+//		//}
+//	}
+//
+//	objInfo[objID] = ObjectMetadata
+//	{
+//		offset,
+//		vertexCount,
+//		primitive,
+//		type,
+//		name,
+//		components,
+//		color
+//	};
+//
+//	symbolTable_legacy[name] = objID;
+//
+//	for (const auto& [name, id] : symbolTable_legacy)
+//	{
+//		std::cout << name << "::" << id << "::" << objInfo[id].components.size() << "\n";
+//	}
+//
+//	std::cout << "\n\n";
+//}
 
 void createObject(Object obj, int vCount, const std::vector<float>& comp, const glm::vec4 color, uint8_t pCount, std::array<int, 3> pIDs)
 {

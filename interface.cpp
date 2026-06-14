@@ -269,16 +269,16 @@ void getUserInput()
 }
 
 // legacy function to convert funcType to std::string
-std::string getStringFuncType(funcType type)
-{
-	switch (type)
-	{
-	case funcType::Point:   return "Point";
-	case funcType::Vector:  return "Vector";
-	case funcType::Segment: return "Segment";
-	case funcType::Plane:   return "Plane";
-	}
-}
+//std::string getStringFuncType(funcType type)
+//{
+//	switch (type)
+//	{
+//	case funcType::Point:   return "Point";
+//	case funcType::Vector:  return "Vector";
+//	case funcType::Segment: return "Segment";
+//	case funcType::Plane:   return "Plane";
+//	}
+//}
 
 // new function to convert Object::Type to std::string
 std::string getStringFunctionType(Object::Type type)
@@ -352,18 +352,18 @@ bool compareObjectType(const std::string& component, Object::Type expectedType)
 }
 
 // legacy function for comparing objects
-bool compareObjectType_legacy(const std::string& component, funcType expectedType)
-{
-	int objID{ searchObjectID(component) };
-
-	if (objID != -1)
-	{
-		if (objInfo[objID].type != expectedType)
-			return false;
-	}
-
-	return true;
-}
+//bool compareObjectType_legacy(const std::string& component, funcType expectedType)
+//{
+//	int objID{ searchObjectID(component) };
+//
+//	if (objID != -1)
+//	{
+//		if (objInfo[objID].type != expectedType)
+//			return false;
+//	}
+//
+//	return true;
+//}
 
 void stripArg(std::string& arg)
 {

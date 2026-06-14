@@ -41,7 +41,7 @@ std::vector<float> vertexData
 std::map<int, ObjectMetadata> objInfo{};
 
 // legacy symbolTable
-std::map<std::string, int> symbolTable_legacy{};
+//std::map<std::string, int> symbolTable_legacy{};
 
 struct TransparentItem
 {
@@ -68,7 +68,7 @@ int main()
 	createObject({ "GRID_PLANE", Object::Plane, GL_TRIANGLES }, static_cast<int>(vertexData.size()) / 7, {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.1f), 0); // add plane
 
 	// legacy
-	addNewObject(static_cast<int>(vertexData.size()) / 7, GL_TRIANGLES, funcType::Plane, "GRID_PLANE", {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.1f)); 
+	//addNewObject(static_cast<int>(vertexData.size()) / 7, GL_TRIANGLES, funcType::Plane, "GRID_PLANE", {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.1f)); 
 
 	getEnvironmentVertices();
 	vertexSpec(vertexData);
@@ -292,36 +292,36 @@ std::vector<float> deleteObjectFromVertexData(int objIndex)
 }
 
 // legacy function to delete objects from vertexData
-std::vector<float> deleteObjectFromVertexData_legacy(int objID)
-{
-	if (vertexData.empty())
-		return {};
+//std::vector<float> deleteObjectFromVertexData_legacy(int objID)
+//{
+//	if (vertexData.empty())
+//		return {};
+//
+//	// 7 is the number of components for each vertice
+//	// 3 position components + 4 color values
+//	int offset{ objInfo[objID].offset * 7 };
+//	int floatCount{ objInfo[objID].vertexCount * 7 };
+//
+//	std::vector<float> newVertexData{};
+//
+//	newVertexData.reserve(vertexData.size() - floatCount);
+//
+//	for (int i{ 0 }; i < vertexData.size(); ++i)
+//	{
+//		if (i >= offset && i < offset + floatCount)
+//			continue;
+//
+//		newVertexData.push_back(vertexData[i]);
+//	}
+//
+//	return newVertexData;
+//}
 
-	// 7 is the number of components for each vertice
-	// 3 position components + 4 color values
-	int offset{ objInfo[objID].offset * 7 };
-	int floatCount{ objInfo[objID].vertexCount * 7 };
-
-	std::vector<float> newVertexData{};
-
-	newVertexData.reserve(vertexData.size() - floatCount);
-
-	for (int i{ 0 }; i < vertexData.size(); ++i)
-	{
-		if (i >= offset && i < offset + floatCount)
-			continue;
-
-		newVertexData.push_back(vertexData[i]);
-	}
-
-	return newVertexData;
-}
-
-void deleteObjectRegister(int objID)
-{
-	symbolTable_legacy.erase(objInfo[objID].name);
-	objInfo.erase(objID);
-}
+//void deleteObjectRegister(int objID)
+//{
+//	symbolTable_legacy.erase(objInfo[objID].name);
+//	objInfo.erase(objID);
+//}
 
 // new function to update objects
 void updateObject(int objIndex, const Object& newObj)
