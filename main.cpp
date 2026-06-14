@@ -1,6 +1,7 @@
 #include "Window.h"
 #include "Shader.h"
 #include "draw_utils.h"
+#include "Object.h"
 
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -36,10 +37,17 @@ std::vector<float> vertexData
 	-1.0f, 0.0f, -1.0f,  0.0f, 0.0f, 0.0f, 0.1f
 };
 
-    // id          // offset, vertexCount, primitive
+    // id     // offset, vertexCount, primitive
 std::map<int, ObjectMetadata> objInfo{};
 
-std::map<std::string, int> symbolTable{};
+// legacy symbolTable
+std::map<std::string, int> symbolTable_legacy{};
+
+struct TransparentItem
+{
+	int objIndex{};
+	float alpha{};
+};
 
 int main()
 {
@@ -56,8 +64,13 @@ int main()
 	glfwSetCursorPosCallback(window.getWindow(), mouse_cursor_callback);
 	glfwSetScrollCallback(window.getWindow(), mouse_scroll_callback);
 
-	addNewObject(static_cast<int>(vertexData.size()) / 7, GL_TRIANGLES, funcType::Plane, "GRID_PLANE", {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.1f)); // add plane
-	drawCilinder();
+	// new architecture
+	createObject({ "GRID_PLANE", Object::Plane, GL_TRIANGLES }, static_cast<int>(vertexData.size()) / 7, {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.1f), 0); // add plane
+
+	// legacy
+	addNewObject(static_cast<int>(vertexData.size()) / 7, GL_TRIANGLES, funcType::Plane, "GRID_PLANE", {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.1f)); 
+
+	getEnvironmentVertices();
 	vertexSpec(vertexData);
 
 	initializeImGui(window.getWindow());
@@ -94,25 +107,51 @@ int main()
 
 		glBindVertexArray(VAO);
 
-		std::vector<int> transparentQueue{};
-		for (auto const& [id, obj] : objInfo)
+		// new
+		std::vector<TransparentItem> transparentQueue{};
+		for (auto const& obj : object)
 		{
-			transparentQueue.push_back(id);
+			transparentQueue.push_back({ obj.getID(), obj.getColor().w});
 		}
 
+		// legacy
+		//std::vector<int> transparentQueue{};
+		//for (auto const& [id, obj] : objInfo)
+		//{
+		//	transparentQueue.push_back(id);
+		//}
+
+		// new
 		std::sort(transparentQueue.begin(), transparentQueue.end(),
-			[](const int a, const int b) 
+			[](const TransparentItem a, const TransparentItem b)
 			{
-				return objInfo[a].color.w > objInfo[b].color.w;
+				return a.alpha > b.alpha;
 			}
 		);
 
-		for (auto const id : transparentQueue)
-		{
-			const auto& obj{ objInfo[id] };
+		// legacy
+		//std::sort(transparentQueue.begin(), transparentQueue.end(),
+		//	[](const int a, const int b) 
+		//	{
+		//		return objInfo[a].color.w > objInfo[b].color.w;
+		//	}
+		//);
 
-			glDrawArrays(obj.primitiveType, obj.offset, obj.vertexCount);
+		// new
+		for (auto const& t : transparentQueue)
+		{
+			const auto& obj{ object[t.objIndex] };
+
+			glDrawArrays(obj.getPrimitive(), obj.getOffset(), obj.getVertexCount());
 		}
+
+		// legacy
+		//for (auto const id : transparentQueue)
+		//{
+		//	const auto& obj{ objInfo[id] };
+
+		//	glDrawArrays(obj.primitiveType, obj.offset, obj.vertexCount);
+		//}
 
 		// render ImGui here
 		ImGui::ShowDemoWindow();
@@ -224,7 +263,36 @@ void updateBufferData(const std::vector<float>& vertices)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
 }
 
-std::vector<float> deleteObjectFromVertexData(int objID)
+// new function to delete objects from vertexData
+std::vector<float> deleteObjectFromVertexData(int objIndex)
+{
+	if (vertexData.empty())
+		return {};
+
+	// 7 is the number of components for each vertice
+	// 3 position components + 4 color values
+	const auto& obj{ object[objIndex] };
+
+	int offset{ obj.getOffset() * 7 };
+	int floatCount{ obj.getVertexCount() * 7 };
+
+	std::vector<float> newVertexData{};
+
+	newVertexData.reserve(vertexData.size() - floatCount);
+
+	for (int i{ 0 }; i < vertexData.size(); ++i)
+	{
+		if (i >= offset && i < offset + floatCount)
+			continue;
+
+		newVertexData.push_back(vertexData[i]);
+	}
+
+	return newVertexData;
+}
+
+// legacy function to delete objects from vertexData
+std::vector<float> deleteObjectFromVertexData_legacy(int objID)
 {
 	if (vertexData.empty())
 		return {};
@@ -251,23 +319,43 @@ std::vector<float> deleteObjectFromVertexData(int objID)
 
 void deleteObjectRegister(int objID)
 {
-	symbolTable.erase(objInfo[objID].name);
+	symbolTable_legacy.erase(objInfo[objID].name);
 	objInfo.erase(objID);
 }
 
-void updateObject(int objID, const ObjectMetadata& newObj)
+// new function to update objects
+void updateObject(int objIndex, const Object& newObj)
 {
-	if (objInfo.find(objID) == objInfo.end())
-		return;
+	//if (objInfo.find(objID) == objInfo.end())
+	//	return;
 
-	vertexData = deleteObjectFromVertexData(objID);
-	symbolTable.erase(objInfo[objID].name);
-	
-	objInfo[objID] = newObj;
-	const auto& obj{ objInfo[objID] };
+	vertexData = deleteObjectFromVertexData(objIndex);
 
-	symbolTable[obj.name] = objID;
+	symbolTable.erase(object[objIndex].getName());
 
-	draw(obj.type, obj.components, obj.color, true);
+	object[objIndex] = newObj;
+	const auto& obj{ object[objIndex] };
+
+	symbolTable[obj.getName()] = obj.getID();
+
+	draw(obj.getType(), obj.getComponents(), obj.getColor(), obj.getParentIDs(), true);
 	updateBufferData(vertexData);
 }
+
+// legacy function to update objects
+//void updateObject_legacy(int objID, const ObjectMetadata& newObj)
+//{
+//	if (objInfo.find(objID) == objInfo.end())
+//		return;
+//
+//	vertexData = deleteObjectFromVertexData(objID);
+//	symbolTable_legacy.erase(objInfo[objID].name);
+//	
+//	objInfo[objID] = newObj;
+//	const auto& obj{ objInfo[objID] };
+//
+//	symbolTable_legacy[obj.name] = objID;
+//
+//	draw_legacy(obj.type, obj.components, obj.color, true);
+//	updateBufferData(vertexData);
+//}
