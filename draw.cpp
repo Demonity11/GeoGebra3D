@@ -296,8 +296,24 @@ void getGridVertices()
 	}
 }
 
-void getEnvironmentVertices()
+void getEnvironmentVertices(bool firstRun)
 {
+	std::vector planeVertices
+	{
+		 1.0f, 0.0f, -1.0f,  0.0f, 0.0f, 0.0f, 0.1f,
+		 1.0f, 0.0f,  1.0f,  0.0f, 0.0f, 0.0f, 0.1f,
+		-1.0f, 0.0f, -1.0f,  0.0f, 0.0f, 0.0f, 0.1f,
+
+		 1.0f, 0.0f,  1.0f,  0.0f, 0.0f, 0.0f, 0.1f,
+		-1.0f, 0.0f,  1.0f,  0.0f, 0.0f, 0.0f, 0.1f,
+		-1.0f, 0.0f, -1.0f,  0.0f, 0.0f, 0.0f, 0.1f
+	};
+
+	if (firstRun)
+		createObject({ "GRID_PLANE", Object::Plane, GL_TRIANGLES }, static_cast<int>(planeVertices.size()) / 7, {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.1f), 0);
+	
+	vertexData = std::move(planeVertices);
+
 	std::vector axisVertices
 	{
 		-1.0f, 0.0f, 0.0f,
@@ -331,13 +347,16 @@ void getEnvironmentVertices()
 		getCilinderVertices(a, b, color, 0.001f, vertexData);
 		
 		// new
-		Object obj{ std::string(1, axis) + "_AXIS", Object::Segment, GL_LINES };
-		createObject(std::move(obj), 144, axisPos, color, 0);
+		if (firstRun)
+		{
+			Object obj{ std::string(1, axis) + "_AXIS", Object::Segment, GL_LINES };
+			createObject(std::move(obj), 144, axisPos, color, 0);
+			++axis;
+		}
 
 		// legacy
 		//addNewObject(144, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS", axisPos, color);
 
-		++axis;
 	}
 
 
@@ -367,13 +386,15 @@ void getEnvironmentVertices()
 		getRingsVertices(a, b, ringColor, vertexData);
 
 		//new
-		Object obj{ std::string(1, axis) + "_AXIS_RINGS", Object::Segment, GL_LINES };
-		createObject(std::move(obj), 2880, axisPos, ringColor, 0);
-
+		if (firstRun)
+		{
+			Object obj{ std::string(1, axis) + "_AXIS_RINGS", Object::Segment, GL_LINES };
+			createObject(std::move(obj), 2880, axisPos, ringColor, 0);
+			++axis;
+		}
 		// legacy
 		//addNewObject(2880, GL_LINES, funcType::Segment, std::string(1, axis) + "_AXIS_RINGS", axisPos, ringColor);
 
-		++axis;
 	}
 
 
@@ -381,8 +402,11 @@ void getEnvironmentVertices()
 	getGridVertices();
 
 	// new
-	Object obj{ "GRID_LINES", Object::Segment, GL_LINES };
-	createObject(std::move(obj), 84, {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f), 0);
+	if (firstRun)
+	{
+		Object obj{ "GRID_LINES", Object::Segment, GL_LINES };
+		createObject(std::move(obj), 84, {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f), 0);
+	}
 
 	// legacy
 	//addNewObject(84, GL_LINES, funcType::Segment, "GRID_LINES", {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
@@ -433,7 +457,7 @@ void getEnvironmentVertices()
 //	std::cout << "\n\n";
 //}
 
-void createObject(Object obj, int vCount, const std::vector<float>& comp, const glm::vec4 color, uint8_t pCount, std::array<int, 3> pIDs)
+void createObject(Object obj, int vCount, const std::vector<float>& comp, const glm::vec4 color, uint8_t pCount, std::array<int, 3> pIDs, std::array<int, 3> pCompIndex)
 {
 	int offset{ 0 };
 	int id{ static_cast<int>(object.size()) };
@@ -452,7 +476,21 @@ void createObject(Object obj, int vCount, const std::vector<float>& comp, const 
 	obj.setColor(color);
 
 	if (pIDs[0] != -1)
+	{
 		obj.setParentIDs(pIDs);
+		obj.setpCompIndex(pCompIndex);
+	}
 
 	object.push_back(std::move(obj));
+}
+
+void deleteObject(int objIndex)
+{
+	for (std::vector<Object>::iterator it = object.begin(); it != object.end();)
+	{
+		if (it->getID() == objIndex)
+			it = object.erase(it);
+		else
+			++it;
+	}
 }
