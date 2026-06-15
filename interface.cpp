@@ -15,7 +15,7 @@ std::vector<FunctionArgs> function
 {
 	{"Point(",   Object::Point,   {}                              },
 	{"Vector(",  Object::Vector,  {Object::Point,  Object::Point} },
-	//{"Vector(",  Object::Vector,  {Object::Point}                 },
+	{"Vector(",  Object::Vector,  {Object::Point}                 },
 	{"Segment(", Object::Segment, {Object::Point,  Object::Point} },
 	{"Plane(",   Object::Plane,   {Object::Vector, Object::Point} }
 };
@@ -99,9 +99,30 @@ void getUserInput()
 						std::array<int, 3> pIDs{ -1, -1, -1 };
 						std::array<int, 3> pCompIndex{ -1, -1, -1 };
 
-						std::vector<float> vecComponents{ getObjectComponents(args, pIDs, pCompIndex) };
+						std::vector<float> vecComponents{};
 
-						draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
+						for (const auto& arg : args)
+							std::cout << arg << " ";
+
+						std::cout << "\n";
+
+						if (args.size() == 1)
+						{
+							pIDs[0] = componentLiteral;
+							pCompIndex[0] = 0;
+
+							vecComponents = { 0.0f, 0.0f, 0.0f };
+
+							getObjectComponents(args, vecComponents, pIDs, pCompIndex);
+
+							draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
+						}
+
+						else
+						{
+							getObjectComponents(args, vecComponents, pIDs, pCompIndex);
+							draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
+						}
 					}
 				}
 			}
@@ -279,23 +300,24 @@ int searchObjectIndex(const std::string& objName)
 	return -1;
 }
 
-std::vector<float> getObjectComponents(std::vector<std::string>& args, std::array<int, 3>& pIDs, std::array<int, 3>& pCompIndex)
+void getObjectComponents(std::vector<std::string>& args, std::vector<float>& vecComponents, std::array<int, 3>& pIDs, std::array<int, 3>& pCompIndex)
 {
-	std::vector<float> vecComponents{};
-
 	for (int index{ 0 }; index < args.size(); ++index)
 	{
 		auto& arg{ args[index] };
 
-		stripArg(arg);
-		std::cout << arg << "\n";
+		//stripArg(arg);
 
 		int objIndex{ searchObjectIndex(arg) };
 
 		if (objIndex != -1)
 		{
-			pIDs[index] = object[objIndex].getID();
-			pCompIndex[index] = static_cast<int>(vecComponents.size());
+			int pIndex{ nextFreeParentID(pIDs) };
+
+			std::cout << "pIndex: " << pIndex << "\n";
+
+			pIDs[pIndex] = object[objIndex].getID();
+			pCompIndex[pIndex] = static_cast<int>(vecComponents.size());
 
 			for (const auto comp : object[objIndex].getComponents())
 				vecComponents.push_back(comp);
@@ -303,13 +325,24 @@ std::vector<float> getObjectComponents(std::vector<std::string>& args, std::arra
 
 		else if (objIndex == -1)
 		{
+			int pIndex{ nextFreeParentID(pIDs) };
+
+			std::cout << "pIndex: " << pIndex << "\n";
+
+			pIDs[pIndex] = componentLiteral;
+			pCompIndex[pIndex] = static_cast<int>(vecComponents.size());
+			
 			extractComponents(arg, vecComponents);
-			pIDs[index] = componentLiteral;
-			pCompIndex[index] = static_cast<int>(vecComponents.size());
 		}
 	}
+}
 
-	return vecComponents;
+int nextFreeParentID(const std::array<int, 3>& pIDs)
+{
+	for (int index{ 0 }; index < pIDs.size(); ++index)
+		if (pIDs[index] == -1) return index;
+
+	return -1;
 }
 
 // new architecture for drawing things
@@ -348,29 +381,8 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		glm::vec3 pointA{};
 		glm::vec3 pointB{};
 
-		//if (startB == -1)
-		//{
-		//	pCompIndex[1] = 3;
-
-		//	int start{ startA };
-
-		//	std::cout << "passei aqui1\n";
-
-		//	pointA = { 0.0f, 0.0f, 0.0f };
-		//	pointB = { vecComponents[start], vecComponents[start + 1], vecComponents[start + 2] };
-
-		//	std::cout << "passei aqui2\n";
-
-		//	vecComponents.clear();
-
-		//	vecComponents.push_back(pointA.x);
-		//	vecComponents.push_back(pointA.y);
-		//	vecComponents.push_back(pointA.z);
-
-		//	vecComponents.push_back(pointB.x);
-		//	vecComponents.push_back(pointB.y);
-		//	vecComponents.push_back(pointB.z);
-		//}
+		std::cout << pIDs[0] << "::" << pCompIndex[0] << "\n";
+		std::cout << pIDs[1] << "::" << pCompIndex[1] << "\n";
 
 		if (startA != -1 && startB != -1)
 		{
@@ -427,6 +439,9 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 	else if (type == Object::Plane)
 	{
+		std::cout << pIDs[0] << "::" << pCompIndex[0] << "\n";
+		std::cout << pIDs[1] << "::" << pCompIndex[1] << "\n";
+
 		int startNormal{ pCompIndex[0] };
 		int startPoint{ pCompIndex[1] };
 

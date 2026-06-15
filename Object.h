@@ -74,6 +74,7 @@ std::string getStringFunctionType(Object::Type type);
 std::vector<float> deleteObjectFromVertexData(int objIndex);
 void updateObject(int objIndex, const Object& newObj);
 int searchObjectIndex(const std::string& objName);
+int nextFreeParentID(const std::array<int, 3>& pIDs);
 
 extern std::vector<Object> object;
 

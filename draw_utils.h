@@ -59,7 +59,7 @@ auto getUserInput()																		  -> void;
 auto extractComponents(std::string& parameters, std::vector<float>& vecComponents)		  -> void;
 void stripArg(std::string& arg);
 std::vector<std::string> splitArgs(const std::string& argumentString);
-std::vector<float> getObjectComponents(std::vector<std::string>& args, std::array<int, 3>& pIDs, std::array<int, 3>& pCompIndex);
+void getObjectComponents(std::vector<std::string>& args, std::vector<float>& vecComponents, std::array<int, 3>& pIDs, std::array<int, 3>& pCompIndex);
 int searchObjectID(const std::string& objName);
 
 //extern std::map<std::string, int> symbolTable;
