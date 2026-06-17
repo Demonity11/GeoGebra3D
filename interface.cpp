@@ -1,6 +1,7 @@
 #include "Window.h"
 #include "draw_utils.h"
-#include "Object.h"
+#include "utilities.h"
+#include "objectCoords.h"
 
 // new
 struct FunctionArgs
@@ -17,6 +18,7 @@ std::vector<FunctionArgs> function
 	{"Vector(",  Object::Vector,  {Object::Point,  Object::Point} },
 	{"Vector(",  Object::Vector,  {Object::Point}                 },
 	{"Segment(", Object::Segment, {Object::Point,  Object::Point} },
+	{"Line(",    Object::Line,    {Object::Point,  Object::Vector}},
 	{"Plane(",   Object::Plane,   {Object::Vector, Object::Point} }
 };
 
@@ -27,10 +29,10 @@ std::map<Object::Type, char> objectSymbols
 	{ Object::Point,   'A' },
 	{ Object::Segment, 'f' },
 	{ Object::Plane,   'p' },
+	{ Object::Line,    'r' }
 };
 
-constexpr int componentLiteral{ -2 };
-
+// initializes ImGui context
 void initializeImGui(GLFWwindow* window)
 {
 	IMGUI_CHECKVERSION();
@@ -43,6 +45,7 @@ void initializeImGui(GLFWwindow* window)
 	ImGui_ImplOpenGL3_Init("#version 330");
 }
 
+// captures user input through Dear ImGui interface
 void getUserInput()
 {
 	static char inputBuffer[128] = "";
@@ -68,7 +71,7 @@ void getUserInput()
 				if (func.type == Object::Point && args.size() == 3)
 				{
 					std::vector<float> vecComponents{};
-					extractComponents(parameters, vecComponents);
+					convertParametersToFloat(parameters, vecComponents);
 
 					draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
 				}
@@ -100,11 +103,6 @@ void getUserInput()
 						std::array<int, 3> pCompIndex{ -1, -1, -1 };
 
 						std::vector<float> vecComponents{};
-
-						for (const auto& arg : args)
-							std::cout << arg << " ";
-
-						std::cout << "\n";
 
 						if (args.size() == 1)
 						{
@@ -167,185 +165,7 @@ void getUserInput()
 	ImGui::End();
 }
 
-// new function to convert Object::Type to std::string
-std::string getStringFunctionType(Object::Type type)
-{
-	switch (type)
-	{
-	case Object::Point:   return "Point";
-	case Object::Vector:  return "Vector";
-	case Object::Segment: return "Segment";
-	case Object::Plane:   return "Plane";
-	}
-}
-
-void extractComponents(std::string& parameters, std::vector<float>& vecComponents)
-{
-	auto commaPos{ parameters.find(",") };
-
-	while (parameters.find(",") != std::string::npos)
-	{
-		int startComp{ 0 };
-
-		// convert the extracted string component into float
-		try
-		{
-			vecComponents.push_back(std::stof(parameters.substr(startComp, commaPos - startComp)));
-		}
-
-		catch (const std::invalid_argument& e)
-		{
-			std::cerr << "ERROR::STRING_IS_NOT_A_NUMBER\n";
-			return;
-		}
-
-		parameters = parameters.substr(commaPos + 1, parameters.length() - 1);
-
-		commaPos = parameters.find(",");
-
-		if (commaPos == std::string::npos)
-		{
-			try
-			{
-				vecComponents.push_back(std::stof(parameters));
-			}
-
-			catch (const std::invalid_argument& e)
-			{
-				std::cerr << "ERROR::STRING_IS_NOT_A_NUMBER\n";
-				return;
-			}
-
-			break;
-		}
-	}
-}
-
-// new function for comparing objects
-bool compareObjectType(const std::string& component, Object::Type expectedType)
-{
-	for (const auto& obj : object)
-	{
-		if (component == obj.getName())
-		{
-			if (obj.getType() == expectedType)
-				return true;
-
-			return false;
-		}
-	}
-
-	return false;
-}
-
-void stripArg(std::string& arg)
-{
-	std::string newArg{};
-
-	for (char c : arg)
-	{
-		if (c != '(' && c != ')' && c != ' ')
-			newArg += c;
-	}
-
-	arg = newArg;
-}
-
-std::vector<std::string> splitArgs(const std::string& argumentString)
-{
-	std::vector<std::string> args{};
-	std::string currentArg{};
-	int parenthesisCount{ 0 };
-
-	for (char c : argumentString)
-	{
-		if (c == '(')
-			++parenthesisCount;
-		if (c == ')')
-			--parenthesisCount;
-
-		if (c == ',' && parenthesisCount == 0)
-		{
-			stripArg(currentArg);
-
-			args.push_back(currentArg);
-			currentArg.clear();
-		}
-		else
-		{
-			currentArg += c;
-		}
-	}
-
-	if (!currentArg.empty())
-	{
-		stripArg(currentArg);
-		args.push_back(currentArg);
-	}
-
-	return args;
-}
-
-// new function search object's index
-int searchObjectIndex(const std::string& objName)
-{
-	for (int index{ 0 }; index < object.size(); ++index)
-	{
-		const auto& obj{ object[index] };
-
-		if (obj.getName() == objName)
-			return index;
-	}
-
-	return -1;
-}
-
-void getObjectComponents(std::vector<std::string>& args, std::vector<float>& vecComponents, std::array<int, 3>& pIDs, std::array<int, 3>& pCompIndex)
-{
-	for (int index{ 0 }; index < args.size(); ++index)
-	{
-		auto& arg{ args[index] };
-
-		//stripArg(arg);
-
-		int objIndex{ searchObjectIndex(arg) };
-
-		if (objIndex != -1)
-		{
-			int pIndex{ nextFreeParentID(pIDs) };
-
-			std::cout << "pIndex: " << pIndex << "\n";
-
-			pIDs[pIndex] = object[objIndex].getID();
-			pCompIndex[pIndex] = static_cast<int>(vecComponents.size());
-
-			for (const auto comp : object[objIndex].getComponents())
-				vecComponents.push_back(comp);
-		}
-
-		else if (objIndex == -1)
-		{
-			int pIndex{ nextFreeParentID(pIDs) };
-
-			std::cout << "pIndex: " << pIndex << "\n";
-
-			pIDs[pIndex] = componentLiteral;
-			pCompIndex[pIndex] = static_cast<int>(vecComponents.size());
-			
-			extractComponents(arg, vecComponents);
-		}
-	}
-}
-
-int nextFreeParentID(const std::array<int, 3>& pIDs)
-{
-	for (int index{ 0 }; index < pIDs.size(); ++index)
-		if (pIDs[index] == -1) return index;
-
-	return -1;
-}
-
-// new architecture for drawing things
+// draw objects such as Points, Vectors, Planes, etc.
 void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color, std::array<int, 3> pIDs, std::array<int, 3> pCompIndex, bool update)
 {
 	const float scale{ 0.1f };
@@ -364,7 +184,7 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 			return;
 		}
 
-		// getSphereVertices create 120960 new float => 120960 / 7 = 17280 vertices, where 7 = number of components
+		// getSphereVertices create 120960 new floats => 120960 / 7 = 17280 vertices, where 7 = number of components
 		getSphereVertices(point, color, radius, vertexData);
 
 		Object obj{ std::string(1, objectSymbols[type]++), Object::Point, GL_LINES };
@@ -381,14 +201,8 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		glm::vec3 pointA{};
 		glm::vec3 pointB{};
 
-		std::cout << pIDs[0] << "::" << pCompIndex[0] << "\n";
-		std::cout << pIDs[1] << "::" << pCompIndex[1] << "\n";
-
-		if (startA != -1 && startB != -1)
-		{
-			pointA = { vecComponents[startA], vecComponents[startA + 1], vecComponents[startA + 2] };
-			pointB = { vecComponents[startB], vecComponents[startB + 1], vecComponents[startB + 2] };
-		}
+		pointA = { vecComponents[startA], vecComponents[startA + 1], vecComponents[startA + 2] };
+		pointB = { vecComponents[startB], vecComponents[startB + 1], vecComponents[startB + 2] };
 
 		pointA *= scale;
 		pointB *= scale;
@@ -437,11 +251,41 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		updateBufferData(vertexData);
 	}
 
+	else if (type == Object::Line)
+	{
+		int startPoint { pCompIndex[0] };
+		int startVector{ pCompIndex[1] };
+
+		glm::vec3 point{};
+		glm::vec3 dVectorP0{};
+		glm::vec3 dVectorP{};
+
+		point    =  { vecComponents[startPoint], vecComponents[startPoint + 1], vecComponents[startPoint + 2] };
+		dVectorP0 = { vecComponents[startVector], vecComponents[startVector + 1], vecComponents[startVector + 2] };
+		dVectorP  = { vecComponents[startVector + 3], vecComponents[startVector + 4], vecComponents[startVector + 5] };
+
+		point     *= scale;
+		dVectorP0 *= scale;
+		dVectorP  *= scale;
+
+		const float radius{ 0.0015f };
+
+		if (update)
+		{
+			getLineVertices(point, dVectorP0, dVectorP, color, radius, vertexData);
+			return;
+		}
+		// getCilinderVertices create 144 new vertices
+		getLineVertices(point, dVectorP0, dVectorP, color, radius, vertexData);
+
+		Object obj{ std::string(1, objectSymbols[type]++), Object::Line, GL_LINES };
+		createObject(obj, 144, vecComponents, color, 2, pIDs, pCompIndex);
+
+		updateBufferData(vertexData);
+	}
+
 	else if (type == Object::Plane)
 	{
-		std::cout << pIDs[0] << "::" << pCompIndex[0] << "\n";
-		std::cout << pIDs[1] << "::" << pCompIndex[1] << "\n";
-
 		int startNormal{ pCompIndex[0] };
 		int startPoint{ pCompIndex[1] };
 

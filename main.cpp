@@ -1,7 +1,8 @@
 #include "Window.h"
 #include "Shader.h"
 #include "draw_utils.h"
-#include "Object.h"
+#include "objectCoords.h"
+#include "utilities.h"
 
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -217,78 +218,4 @@ void updateBufferData(const std::vector<float>& vertices)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
-}
-
-// new function to delete objects from vertexData
-std::vector<float> deleteObjectFromVertexData(int objIndex)
-{
-	if (vertexData.empty())
-		return {};
-
-	// 7 is the number of components for each vertice
-	// 3 position components + 4 color values
-	const auto& obj{ object[objIndex] };
-
-	int offset{ obj.getOffset() * 7 };
-	int floatCount{ obj.getVertexCount() * 7 };
-
-	std::vector<float> newVertexData{};
-
-	newVertexData.reserve(vertexData.size() - floatCount);
-
-	for (int i{ 0 }; i < vertexData.size(); ++i)
-	{
-		if (i >= offset && i < offset + floatCount)
-			continue;
-
-		newVertexData.push_back(vertexData[i]);
-	}
-
-	return newVertexData;
-}
-
-// new function to update objects
-void updateObject(int objIndex, const Object& newObj)
-{
-	object[objIndex] = newObj;
-
-	for (size_t idx{ 8 }; idx < object.size(); ++idx)
-	{
-		auto& obj = object[idx];
-		if (obj.getParentCount() > 0)
-		{
-			std::array<int, 3> currentParents = obj.getParentIDs();
-			std::array<int, 3> currentOffsets = obj.getpCompIndex();
-
-			for (int i{ 0 }; i < obj.getParentCount(); ++i)
-			{
-				if (auto pIndex = searchObjectByID(currentParents[i], object); pIndex != -1)
-				{
-					const auto& parentComps = object[pIndex].getComponents();
-					float* childCompsPtr = obj.getComponentsPointer();
-
-					for (size_t j{ 0 }; j < parentComps.size(); ++j)
-					{
-						childCompsPtr[currentOffsets[i] + j] = parentComps[j];
-					}
-				}
-			}
-		}
-	}
-
-	vertexData.clear();
-
-	getEnvironmentVertices();
-
-	for (size_t idx{ 8 }; idx < object.size(); ++idx)
-	{
-		auto& obj = object[idx];
-
-		int newOffset = static_cast<int>(vertexData.size()) / 7;
-		obj.setOffset(newOffset);
-
-		draw(obj.getType(), obj.getComponents(), obj.getColor(), obj.getParentIDs(), obj.getpCompIndex(), true);
-	}
-
-	updateBufferData(vertexData);
 }

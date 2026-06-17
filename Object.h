@@ -12,6 +12,7 @@ public:
 		Point,
 		Vector,
 		Segment,
+		Line,
 		Plane
 	};
 
@@ -63,20 +64,6 @@ private:
 	std::array<int, 3> m_pCompIndex{ -1, -1, -1 };
 	uint8_t m_parentCount{}; // max parent count. for example: a vector can have up to two parents
 };
-
-// forward declarations for functions that I don't know where to put yet
-
-int searchObjectByID(int id, const std::vector<Object>& objectRef);
-void createObject(Object obj, int vCount, const std::vector<float>& comp, const glm::vec4 color, uint8_t pCount, std::array<int, 3> pIDs = { -1, -1, -1 }, std::array<int, 3> pCompIndex = { -1, -1, -1 });
-void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color, std::array<int, 3> pIDs = { -1, -1, -1 }, std::array<int, 3> pCompIndex = {-1, -1, -1}, bool update = false);
-bool compareObjectType(const std::string& component, Object::Type expectedType);
-std::string getStringFunctionType(Object::Type type);
-std::vector<float> deleteObjectFromVertexData(int objIndex);
-void updateObject(int objIndex, const Object& newObj);
-int searchObjectIndex(const std::string& objName);
-int nextFreeParentID(const std::array<int, 3>& pIDs);
-
-extern std::vector<Object> object;
 
 #endif
 
