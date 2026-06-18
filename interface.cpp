@@ -3,7 +3,7 @@
 #include "utilities.h"
 #include "objectCoords.h"
 
-// new
+// 
 struct FunctionArgs
 {
 	std::string name{};
@@ -11,18 +11,19 @@ struct FunctionArgs
 	std::vector<Object::Type> expectedArgs{};
 };
 
-// new
+// store FunctionArgs which has name, type, and expected arguments
 std::vector<FunctionArgs> function
 {
 	{"Point(",   Object::Point,   {}                              },
 	{"Vector(",  Object::Vector,  {Object::Point,  Object::Point} },
 	{"Vector(",  Object::Vector,  {Object::Point}                 },
 	{"Segment(", Object::Segment, {Object::Point,  Object::Point} },
+	{"Line(",	 Object::Line,    {Object::Point,  Object::Point} },
 	{"Line(",    Object::Line,    {Object::Point,  Object::Vector}},
 	{"Plane(",   Object::Plane,   {Object::Vector, Object::Point} }
 };
 
-// new
+// store object symbols (default name)
 std::map<Object::Type, char> objectSymbols
 {
 	{ Object::Vector,  'u' },
@@ -73,10 +74,11 @@ void getUserInput()
 					std::vector<float> vecComponents{};
 					convertParametersToFloat(parameters, vecComponents);
 
-					draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
+					if (!scanForIdenticalObject(func.type, vecComponents))
+						draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
 				}
 
-				if (inputText.find(func.name) == 0 && args.size() == func.expectedArgs.size())
+				else if (inputText.find(func.name) == 0 && args.size() == func.expectedArgs.size())
 				{
 					bool isObjectValid{ true };
 
@@ -113,13 +115,16 @@ void getUserInput()
 
 							getObjectComponents(args, vecComponents, pIDs, pCompIndex);
 
-							draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
+							if (!scanForIdenticalObject(func.type, vecComponents))
+								draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
 						}
 
 						else
 						{
 							getObjectComponents(args, vecComponents, pIDs, pCompIndex);
-							draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
+
+							if (!scanForIdenticalObject(func.type, vecComponents))
+								draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
 						}
 					}
 				}
@@ -137,6 +142,8 @@ void getUserInput()
 
 		if (ImGui::CollapsingHeader(headerText.c_str(), ImGuiTreeNodeFlags_None))
 		{
+			if (obj.getType() == Object::Plane) ImGui::Text(getEquation(obj).c_str());
+
 			char s{ 'A' };
 			for (int increment{ 0 }; increment < obj.getComponents().size(); increment += 3)
 			{
@@ -260,9 +267,19 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		glm::vec3 dVectorP0{};
 		glm::vec3 dVectorP{};
 
-		point    =  { vecComponents[startPoint], vecComponents[startPoint + 1], vecComponents[startPoint + 2] };
-		dVectorP0 = { vecComponents[startVector], vecComponents[startVector + 1], vecComponents[startVector + 2] };
-		dVectorP  = { vecComponents[startVector + 3], vecComponents[startVector + 4], vecComponents[startVector + 5] };
+		if (vecComponents.size() == 6)
+		{
+			point	  = { vecComponents[startPoint],  vecComponents[startPoint + 1],  vecComponents[startPoint + 2] };
+			dVectorP0 = { vecComponents[startPoint],  vecComponents[startPoint + 1],  vecComponents[startPoint + 2] };
+			dVectorP  = { vecComponents[startVector], vecComponents[startVector + 1], vecComponents[startVector + 2] };
+		}
+
+		else if (vecComponents.size() == 9)
+		{
+			point     = { vecComponents[startPoint],      vecComponents[startPoint + 1],  vecComponents[startPoint + 2] };
+			dVectorP0 = { vecComponents[startVector],     vecComponents[startVector + 1], vecComponents[startVector + 2] };
+			dVectorP  = { vecComponents[startVector + 3], vecComponents[startVector + 4], vecComponents[startVector + 5] };
+		}
 
 		point     *= scale;
 		dVectorP0 *= scale;

@@ -19,6 +19,7 @@
 
 // parent ID when the object has literal components
 constexpr int componentLiteral{ -2 };
+// Objects conteiner
 extern std::vector<Object> object;
 
 // forward declarations for main.cpp

@@ -316,3 +316,109 @@ void updateObject(int objIndex, const Object& newObj)
 
 	updateBufferData(vertexData);
 }
+
+// return true if exist an object with the same type and components 
+bool scanForIdenticalObject(Object::Type type, const std::vector<float>& components)
+{
+	bool isIdentical{ true };
+	bool found{ false };
+
+	for (auto& obj : object)
+	{
+		if (obj.getType() == type)
+		{
+			if (auto cSize{ obj.getComponents().size() }; cSize == components.size())
+			{
+				found = true;
+
+				for (int i{ 0 }; i < cSize; ++i)
+				{
+					if (obj.getComponents()[i] == components[i]) continue;
+
+					isIdentical = false;
+					found = false;
+				}
+
+				if (isIdentical)
+					return isIdentical;
+			}
+		}
+	}
+
+	return found;
+}
+
+std::string getEquation(Object& obj)
+{
+	if (obj.getType() == Object::Plane)
+	{
+		int startNormal{ obj.getpCompIndex()[0] };
+		int startPoint{ obj.getpCompIndex()[1] };
+
+		glm::vec3 normal
+		{
+			obj.getComponents()[startNormal + 3] - obj.getComponents()[startNormal],
+			obj.getComponents()[startNormal + 4] - obj.getComponents()[startNormal + 1],
+			obj.getComponents()[startNormal + 5] - obj.getComponents()[startNormal + 2]
+		};
+
+		glm::vec3 point{ obj.getComponents()[startPoint], obj.getComponents()[startPoint + 1], obj.getComponents()[startPoint + 2] };
+
+		float d{ -normal.x * point.x - normal.y * point.y - normal.z * point.z };
+
+		std::stringstream ss{};
+
+		std::string sign{};
+		auto normalPointer{ &normal[0] };
+		char comp{ 'x' };
+
+		for (int i{ 0 }; i < 3; ++i)
+		{
+			float p = normalPointer[i];
+
+			if (ss.str().length() == 0 && p != 0.0f)
+			{
+				if (p == 1.0f) ss << comp;
+
+				else if (p == -1.0f)
+				{
+					sign = "-";
+					ss << sign << comp;
+				}
+
+				else ss << p << comp;
+
+				++comp;
+				
+				continue;
+			}
+				
+			if (p != 0.0f)
+			{
+				sign = (p > 0.0f ? " + " : " - ");
+				
+				if (p < 0.0f) p = -p;
+
+				if (p == 1.0f) ss << sign << comp;
+				
+				else ss << sign << p << comp;
+			}
+
+			++comp;
+		}
+
+		if (d != 0.0f)
+		{
+			sign = (d > 0.0f ? " + " : " - ");
+		
+			if (d < 0.0f) d = -d;
+			
+			ss << sign << d << " = 0";
+		}
+
+		else
+			ss << " = 0";
+
+		return ss.str();
+	}
+}
