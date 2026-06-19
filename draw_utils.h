@@ -27,6 +27,7 @@ auto vertexSpec(const std::vector<float>& vertices)		  -> void;
 auto updateBufferData(const std::vector<float>& vertices) -> void;
 
 extern std::vector<float> vertexData;
+extern bool isEnterPressed;
 
 // forward declarations for interface.cpp
 auto initializeImGui(GLFWwindow* window)																					-> void;

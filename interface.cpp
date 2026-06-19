@@ -14,13 +14,14 @@ struct FunctionArgs
 // store FunctionArgs which has name, type, and expected arguments
 std::vector<FunctionArgs> function
 {
-	{"Point(",   Object::Point,   {}                              },
-	{"Vector(",  Object::Vector,  {Object::Point,  Object::Point} },
-	{"Vector(",  Object::Vector,  {Object::Point}                 },
-	{"Segment(", Object::Segment, {Object::Point,  Object::Point} },
-	{"Line(",	 Object::Line,    {Object::Point,  Object::Point} },
-	{"Line(",    Object::Line,    {Object::Point,  Object::Vector}},
-	{"Plane(",   Object::Plane,   {Object::Vector, Object::Point} }
+	{"Point(",   Object::Point,   {}											},
+	{"Vector(",  Object::Vector,  {Object::Point,  Object::Point}				},
+	{"Vector(",  Object::Vector,  {Object::Point}								},
+	{"Segment(", Object::Segment, {Object::Point,  Object::Point}				},
+	{"Line(",	 Object::Line,    {Object::Point,  Object::Point}				},
+	{"Line(",    Object::Line,    {Object::Point,  Object::Vector}				},
+	{"Plane(",   Object::Plane,   {Object::Point,  Object::Vector}				}
+	//{"Plane(",   Object::Plane,   {Object::Point, Object::Point, Object::Point} }
 };
 
 // store object symbols (default name)
@@ -52,8 +53,8 @@ void getUserInput()
 	static char inputBuffer[128] = "";
 
 	ImGui::Begin("Input");
-	ImGui::InputTextWithHint("Input", "input", inputBuffer, IM_COUNTOF(inputBuffer));
-	if (ImGui::Button("Enter"))
+	ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
+	if (ImGui::InputTextWithHint("Input", "input", inputBuffer, IM_COUNTOF(inputBuffer), flags))
 	{
 		auto ss{ std::stringstream(inputBuffer) };
 		auto inputText{ ss.str() };
@@ -75,7 +76,10 @@ void getUserInput()
 					convertParametersToFloat(parameters, vecComponents);
 
 					if (!scanForIdenticalObject(func.type, vecComponents))
+					{
 						draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
+						inputBuffer[0] = '\0';
+					}
 				}
 
 				else if (inputText.find(func.name) == 0 && args.size() == func.expectedArgs.size())
@@ -126,6 +130,8 @@ void getUserInput()
 							if (!scanForIdenticalObject(func.type, vecComponents))
 								draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
 						}
+
+						inputBuffer[0] = '\0';
 					}
 				}
 			}
@@ -138,11 +144,11 @@ void getUserInput()
 	{
 		auto& obj{ object[i]};
 
-		std::string headerText{ obj.getName() + " : " + getStringFunctionType(obj.getType())};
+		std::string headerText{ obj.getName() + ": " + getExpression(obj) + "###" + obj.getName() };
 
 		if (ImGui::CollapsingHeader(headerText.c_str(), ImGuiTreeNodeFlags_None))
 		{
-			if (obj.getType() == Object::Plane) ImGui::Text(getEquation(obj).c_str());
+			if (obj.getType() == Object::Plane || obj.getType() == Object::Line) ImGui::Text(getEquation(obj).c_str());
 
 			char s{ 'A' };
 			for (int increment{ 0 }; increment < obj.getComponents().size(); increment += 3)
@@ -263,20 +269,18 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		int startPoint { pCompIndex[0] };
 		int startVector{ pCompIndex[1] };
 
-		glm::vec3 point{};
+		glm::vec3 point{ vecComponents[startPoint],  vecComponents[startPoint + 1],  vecComponents[startPoint + 2] };
 		glm::vec3 dVectorP0{};
 		glm::vec3 dVectorP{};
 
 		if (vecComponents.size() == 6)
 		{
-			point	  = { vecComponents[startPoint],  vecComponents[startPoint + 1],  vecComponents[startPoint + 2] };
 			dVectorP0 = { vecComponents[startPoint],  vecComponents[startPoint + 1],  vecComponents[startPoint + 2] };
 			dVectorP  = { vecComponents[startVector], vecComponents[startVector + 1], vecComponents[startVector + 2] };
 		}
 
 		else if (vecComponents.size() == 9)
 		{
-			point     = { vecComponents[startPoint],      vecComponents[startPoint + 1],  vecComponents[startPoint + 2] };
 			dVectorP0 = { vecComponents[startVector],     vecComponents[startVector + 1], vecComponents[startVector + 2] };
 			dVectorP  = { vecComponents[startVector + 3], vecComponents[startVector + 4], vecComponents[startVector + 5] };
 		}
@@ -303,8 +307,8 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 	else if (type == Object::Plane)
 	{
-		int startNormal{ pCompIndex[0] };
-		int startPoint{ pCompIndex[1] };
+		int startPoint{ pCompIndex[0] };
+		int startNormal{ pCompIndex[1] };
 
 		glm::vec3 normalP0{ vecComponents[startNormal], vecComponents[startNormal + 1], vecComponents[startNormal + 2] };
 		glm::vec3 normalP{ vecComponents[startNormal + 3], vecComponents[startNormal + 4], vecComponents[startNormal + 5] };

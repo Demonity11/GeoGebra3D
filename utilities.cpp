@@ -2,6 +2,9 @@
 #include "draw_utils.h"
 #include "objectCoords.h"
 
+#include <format>
+#include <iomanip>
+
 // convert Object::Type to std::string
 std::string getStringFunctionType(Object::Type type)
 {
@@ -156,8 +159,6 @@ void getObjectComponents(std::vector<std::string>& args, std::vector<float>& vec
 		{
 			int pIndex{ nextFreeParentIndex(pIDs) };
 
-			std::cout << "pIndex: " << pIndex << "\n";
-
 			pIDs[pIndex] = object[objIndex].getID();
 			pCompIndex[pIndex] = static_cast<int>(vecComponents.size());
 
@@ -168,8 +169,6 @@ void getObjectComponents(std::vector<std::string>& args, std::vector<float>& vec
 		else if (objIndex == -1)
 		{
 			int pIndex{ nextFreeParentIndex(pIDs) };
-
-			std::cout << "pIndex: " << pIndex << "\n";
 
 			pIDs[pIndex] = componentLiteral;
 			pCompIndex[pIndex] = static_cast<int>(vecComponents.size());
@@ -348,12 +347,83 @@ bool scanForIdenticalObject(Object::Type type, const std::vector<float>& compone
 	return found;
 }
 
+// return the content of each object
+std::string getExpression(Object& obj)
+{
+	auto type{ obj.getType() };
+
+	if (type == Object::Point)
+	{
+		std::stringstream ss{};
+		ss << "Point";
+
+		char parenthesis{ '(' };
+		auto cSize{ obj.getComponents().size() };
+
+		for (int i{ 0 }; i < cSize; ++i)
+		{
+			if (i % 3 == 0)
+			{
+				ss << parenthesis;
+				parenthesis = (parenthesis == '(' ? ')' : '(');
+			}
+
+			if (i == cSize - 1) ss << obj.getComponents()[i] << parenthesis;
+
+			else ss << obj.getComponents()[i] << ", ";
+		}
+
+		return ss.str();
+	}
+
+	else
+	{
+		std::stringstream ss{};
+		ss << getStringFunctionType(type) << "(";
+
+		auto comp{ obj.getComponents() };
+
+		int pCount{ 0 };
+
+		for (auto p : obj.getpCompIndex())
+			if (p >= 0) ++pCount;
+
+		for (int i{ 0 }; i < pCount; ++i)
+		{
+			auto pID{   obj.getParentIDs()[i] };
+			auto start{ obj.getpCompIndex()[i] };
+
+			if (pID >= 0)
+			{
+				auto parent{ object[searchObjectByID(pID, object)].getName() };
+
+				ss << parent;
+
+				if (i < pCount - 1) ss << ", ";
+			}
+
+			else ss << "(" << comp[start] << ", " << comp[start + 1] << ", " << comp[start + 2];
+
+			if (i == pCount - 1) ss << ")";
+
+			if (pID == -2) ss << "), ";
+		}
+
+		return ss.str();
+	}
+
+	return "";
+}
+
+// return the equations of planes and lines
 std::string getEquation(Object& obj)
 {
-	if (obj.getType() == Object::Plane)
+	auto type{ obj.getType() };
+
+	if (type == Object::Plane)
 	{
-		int startNormal{ obj.getpCompIndex()[0] };
-		int startPoint{ obj.getpCompIndex()[1] };
+		int startPoint{ obj.getpCompIndex()[0] };
+		int startNormal{ obj.getpCompIndex()[1] };
 
 		glm::vec3 normal
 		{
@@ -374,34 +444,34 @@ std::string getEquation(Object& obj)
 
 		for (int i{ 0 }; i < 3; ++i)
 		{
-			float p = normalPointer[i];
+			float value = normalPointer[i];
 
-			if (ss.str().length() == 0 && p != 0.0f)
+			if (ss.str().length() == 0 && value != 0.0f)
 			{
-				if (p == 1.0f) ss << comp;
+				if (value == 1.0f) ss << comp;
 
-				else if (p == -1.0f)
+				else if (value == -1.0f)
 				{
 					sign = "-";
 					ss << sign << comp;
 				}
 
-				else ss << p << comp;
+				else ss << value << comp;
 
 				++comp;
-				
+
 				continue;
 			}
-				
-			if (p != 0.0f)
-			{
-				sign = (p > 0.0f ? " + " : " - ");
-				
-				if (p < 0.0f) p = -p;
 
-				if (p == 1.0f) ss << sign << comp;
-				
-				else ss << sign << p << comp;
+			if (value != 0.0f)
+			{
+				sign = (value > 0.0f ? " + " : " - ");
+
+				if (value < 0.0f) value = -value;
+
+				if (value == 1.0f) ss << sign << comp;
+
+				else ss << sign << value << comp;
 			}
 
 			++comp;
@@ -410,15 +480,36 @@ std::string getEquation(Object& obj)
 		if (d != 0.0f)
 		{
 			sign = (d > 0.0f ? " + " : " - ");
-		
+
 			if (d < 0.0f) d = -d;
-			
+
 			ss << sign << d << " = 0";
 		}
 
-		else
-			ss << " = 0";
+		else ss << " = 0";
 
 		return ss.str();
 	}
+
+	else if (type == Object::Line)
+	{
+		auto comp{ obj.getComponents() };
+
+		glm::vec3 dVector{};
+		glm::vec3 point{ comp[0], comp[1], comp[2] };
+
+		if (comp.size() == 6)
+			dVector = { comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2] };
+
+		else if (comp.size() == 9)
+			dVector = { comp[6] - comp[3], comp[7] - comp[4], comp[8] - comp[5] };
+
+		std::stringstream ss{};
+
+		ss << "P = (" << point.x << ", " << point.y << ", " << point.z << ") + t(" << dVector.x << ", " << dVector.y << ", " << dVector.z << ")";
+
+		return ss.str();
+	}
+
+	return "";
 }

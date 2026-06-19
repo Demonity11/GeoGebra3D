@@ -26,6 +26,7 @@ float fov{ 45.0f };
 
 bool isPressingRightClick{ false };
 bool isFirstMouse{ true };
+bool isEnterPressed{ false };
 
 std::vector<float> vertexData{};
 
@@ -131,6 +132,16 @@ void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) 
 		glfwSetWindowShouldClose(window, true);
+
+	//if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+	//{
+	//	isPressingRightClick = true;
+	//}
+
+	//if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE)
+	//{
+	//	isPressingRightClick = false;
+	//}
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
