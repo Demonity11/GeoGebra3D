@@ -1,0 +1,17 @@
+Build/
+bin/
+obj/
+x64/
+Debug/
+Release/
+GeneratedFiles/
+.vs/
+
+*.vcxproj.user
+*.suo
+*.user
+
+helloCamera.cpp
+helloCamera.frag
+awesomeface.png
+container.jpg
