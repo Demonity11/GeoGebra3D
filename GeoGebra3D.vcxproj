@@ -114,6 +114,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ExternalWarningLevel>InheritWarningLevel</ExternalWarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,6 +132,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ExternalWarningLevel>InheritWarningLevel</ExternalWarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -147,6 +149,7 @@
     <ClCompile Include="..\..\..\..\..\CPP-PROJECTS\GLFW\include\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\..\..\..\..\CPP-PROJECTS\GLFW\include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\..\..\..\..\CPP-PROJECTS\GLFW\src\glad.c" />
+    <ClCompile Include="Context.cpp" />
     <ClCompile Include="objectCoords.cpp" />
     <ClCompile Include="helloCamera.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -164,6 +167,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\..\..\CPP-PROJECTS\GLFW\include\stb_image.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Context.h" />
     <ClInclude Include="draw_utils.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="objectCoords.h" />

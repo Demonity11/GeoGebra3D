@@ -3,32 +3,12 @@
 #include "draw_utils.h"
 #include "objectCoords.h"
 #include "utilities.h"
+#include "Context.h"
 
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-
-unsigned int VBO{};
-unsigned int VAO{};
-
-glm::vec3 cameraPos   { 0.0f, 0.5f,  3.0f };
-glm::vec3 cameraTarget{ 0.0f, 0.0f,  0.0f };
-glm::vec3 worldUp     { 0.0f, 1.0f,  0.0f };
-
-float lastX{ 400.0f };
-float lastY{ 300.0f };
-
-float yaw{};
-float pitch{};
-
-float fov{ 45.0f };
-
-bool isPressingRightClick{ false };
-bool isFirstMouse{ true };
-bool isEnterPressed{ false };
-
-std::vector<float> vertexData{};
 
 struct TransparentItem
 {
@@ -51,8 +31,8 @@ int main()
 	glfwSetCursorPosCallback(window.getWindow(), mouse_cursor_callback);
 	glfwSetScrollCallback(window.getWindow(), mouse_scroll_callback);
 
-	getEnvironmentVertices(true);
-	vertexSpec(vertexData);
+	getEnvironmentVertices(Context::vertexData, true);
+	vertexSpec(Context::vertexData);
 
 	initializeImGui(window.getWindow());
 
@@ -72,10 +52,10 @@ int main()
 
 		shader.use();
 
-		glm::mat4 view{ glm::lookAt(cameraPos, cameraTarget, worldUp) };
+		glm::mat4 view{ glm::lookAt(Context::cameraPos, Context::cameraTarget, Context::worldUp) };
 
 		glm::mat4 projection{};
-		projection = glm::perspective(glm::radians(fov), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.0f);
+		projection = glm::perspective(glm::radians(Context::fov), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.0f);
 
 		glm::mat4 model{ 1.0f };
 
@@ -86,16 +66,14 @@ int main()
 		shader.setMat4("projection", projection);
 		shader.setMat4("model", model);
 
-		glBindVertexArray(VAO);
+		glBindVertexArray(Context::VAO);
 
-		// new
 		std::vector<TransparentItem> transparentQueue{};
-		for (auto const& obj : object)
+		for (auto const& obj : Context::object)
 		{
 			transparentQueue.push_back({ obj.getID(), obj.getColor().w});
 		}
 
-		// new
 		std::sort(transparentQueue.begin(), transparentQueue.end(),
 			[](const TransparentItem a, const TransparentItem b)
 			{
@@ -103,17 +81,16 @@ int main()
 			}
 		);
 
-		// new
 		for (auto const& t : transparentQueue)
 		{
-			const auto& obj{ object[t.objIndex] };
+			const auto& obj{ Context::object[t.objIndex] };
 
 			glDrawArrays(obj.getPrimitive(), obj.getOffset(), obj.getVertexCount());
 		}
 
 		// render ImGui here
 		ImGui::ShowDemoWindow();
-		getUserInput();
+		getUserInput(Context::function, Context::object);
 
 		ImGui::Render();
 
@@ -150,72 +127,72 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	{
 		if (action == GLFW_PRESS)
 		{
-			isPressingRightClick = true;
-			isFirstMouse = true;
+			Context::isPressingRightClick = true;
+			Context::isFirstMouse = true;
 		}
 
 		if (action == GLFW_RELEASE)
-			isPressingRightClick = false;
+			Context::isPressingRightClick = false;
 	}
 }
 
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	if (!isPressingRightClick)
+	if (!Context::isPressingRightClick)
 		return;
 
 
-	if (isFirstMouse)
+	if (Context::isFirstMouse)
 	{
-		lastX = static_cast<float>(xpos);
-		lastY = static_cast<float>(ypos);
-		isFirstMouse = false;
+		Context::lastX = static_cast<float>(xpos);
+		Context::lastY = static_cast<float>(ypos);
+		Context::isFirstMouse = false;
 	}
 
-	float xoffset = static_cast<float>(xpos) - lastX;
-	float yoffset = static_cast<float>(ypos) - lastY;
+	float xoffset = static_cast<float>(xpos) - Context::lastX;
+	float yoffset = static_cast<float>(ypos) - Context::lastY;
 
-	lastX = static_cast<float>(xpos);
-	lastY = static_cast<float>(ypos);
+	Context::lastX = static_cast<float>(xpos);
+	Context::lastY = static_cast<float>(ypos);
 
 	const float sensitivity{ 0.01f };
 
 	xoffset *= sensitivity;
 	yoffset *= sensitivity;
 
-	yaw += xoffset;
-	pitch += yoffset;
+	Context::yaw += xoffset;
+	Context::pitch += yoffset;
 
-	if (pitch > 89.0f)
-		pitch = 89.0f;
+	if (Context::pitch > 89.0f)
+		Context::pitch = 89.0f;
 
-	if (pitch < -89.0f)
-		pitch = -89.0f;
+	if (Context::pitch < -89.0f)
+		Context::pitch = -89.0f;
 
 	const float radius{ 3.0f };
 
-	cameraPos.x = cameraTarget.x + radius * cos(yaw) * cos(pitch);
-	cameraPos.y = cameraTarget.y + radius * sin(pitch);
-	cameraPos.z = cameraTarget.z + radius * sin(yaw) * cos(pitch);
+	Context::cameraPos.x = Context::cameraTarget.x + radius * cos(Context::yaw) * cos(Context::pitch);
+	Context::cameraPos.y = Context::cameraTarget.y + radius * sin(Context::pitch);
+	Context::cameraPos.z = Context::cameraTarget.z + radius * sin(Context::yaw) * cos(Context::pitch);
 }
 
 void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	fov -= static_cast<float>(yoffset) * 1.3f;
+	Context::fov -= static_cast<float>(yoffset) * 1.3f;
 
-	if (fov < 1.0f)
-		fov = 1.0f;
-	if (fov > 45.0f)
-		fov = 45.0f;
+	if (Context::fov < 1.0f)
+		Context::fov = 1.0f;
+	if (Context::fov > 45.0f)
+		Context::fov = 45.0f;
 }
 
 void vertexSpec(const std::vector<float>& vertices)
 {
-	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
+	glGenVertexArrays(1, &Context::VAO);
+	glBindVertexArray(Context::VAO);
 
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glGenBuffers(1, &Context::VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, Context::VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
 
 	int stride{ 7 * sizeof(float) };
@@ -228,6 +205,6 @@ void vertexSpec(const std::vector<float>& vertices)
 
 void updateBufferData(const std::vector<float>& vertices)
 {
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, Context::VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
 }

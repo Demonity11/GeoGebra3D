@@ -2,37 +2,7 @@
 #include "draw_utils.h"
 #include "utilities.h"
 #include "objectCoords.h"
-
-// 
-struct FunctionArgs
-{
-	std::string name{};
-	Object::Type type{};
-	std::vector<Object::Type> expectedArgs{};
-};
-
-// store FunctionArgs which has name, type, and expected arguments
-std::vector<FunctionArgs> function
-{
-	{"Point(",   Object::Point,   {}											},
-	{"Vector(",  Object::Vector,  {Object::Point,  Object::Point}				},
-	{"Vector(",  Object::Vector,  {Object::Point}								},
-	{"Segment(", Object::Segment, {Object::Point,  Object::Point}				},
-	{"Line(",	 Object::Line,    {Object::Point,  Object::Point}				},
-	{"Line(",    Object::Line,    {Object::Point,  Object::Vector}				},
-	{"Plane(",   Object::Plane,   {Object::Point,  Object::Vector}				}
-	//{"Plane(",   Object::Plane,   {Object::Point, Object::Point, Object::Point} }
-};
-
-// store object symbols (default name)
-std::map<Object::Type, char> objectSymbols
-{
-	{ Object::Vector,  'u' },
-	{ Object::Point,   'A' },
-	{ Object::Segment, 'f' },
-	{ Object::Plane,   'p' },
-	{ Object::Line,    'r' }
-};
+#include "Context.h"
 
 // initializes ImGui context
 void initializeImGui(GLFWwindow* window)
@@ -48,7 +18,7 @@ void initializeImGui(GLFWwindow* window)
 }
 
 // captures user input through Dear ImGui interface
-void getUserInput()
+void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>& object)
 {
 	static char inputBuffer[128] = "";
 
@@ -75,7 +45,7 @@ void getUserInput()
 					std::vector<float> vecComponents{};
 					convertParametersToFloat(parameters, vecComponents);
 
-					if (!scanForIdenticalObject(func.type, vecComponents))
+					if (!scanForIdenticalObject(func.type, vecComponents, object))
 					{
 						draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
 						inputBuffer[0] = '\0';
@@ -94,7 +64,7 @@ void getUserInput()
 							break;
 						}
 
-						isObjectValid = compareObjectType(args[index], func.expectedArgs[index]);
+						isObjectValid = compareObjectType(args[index], func.expectedArgs[index], object);
 
 						if (!isObjectValid)
 						{
@@ -112,14 +82,14 @@ void getUserInput()
 
 						if (args.size() == 1)
 						{
-							pIDs[0] = componentLiteral;
+							pIDs[0] = Context::componentLiteral;
 							pCompIndex[0] = 0;
 
 							vecComponents = { 0.0f, 0.0f, 0.0f };
 
 							getObjectComponents(args, vecComponents, pIDs, pCompIndex);
 
-							if (!scanForIdenticalObject(func.type, vecComponents))
+							if (!scanForIdenticalObject(func.type, vecComponents, object))
 								draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
 						}
 
@@ -127,7 +97,7 @@ void getUserInput()
 						{
 							getObjectComponents(args, vecComponents, pIDs, pCompIndex);
 
-							if (!scanForIdenticalObject(func.type, vecComponents))
+							if (!scanForIdenticalObject(func.type, vecComponents, object))
 								draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
 						}
 
@@ -144,7 +114,7 @@ void getUserInput()
 	{
 		auto& obj{ object[i]};
 
-		std::string headerText{ obj.getName() + ": " + getExpression(obj) + "###" + obj.getName() };
+		std::string headerText{ obj.getName() + ": " + getExpression(obj, object) + "###" + obj.getName() };
 
 		if (ImGui::CollapsingHeader(headerText.c_str(), ImGuiTreeNodeFlags_None))
 		{
@@ -156,7 +126,7 @@ void getUserInput()
 				ImGui::InputFloat3((obj.getName() + "::" + s).c_str(), obj.getComponentsPointer() + increment, "%.2f");
 
 				if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
-					updateObject(i, obj);
+					updateObject(i, obj, object, Context::vertexData);
 
 				++s;
 			}
@@ -164,13 +134,13 @@ void getUserInput()
 			ImGui::InputFloat4((obj.getName() + "::Color").c_str(), obj.getColorPointer(), "%.2f");
 
 			if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
-				updateObject(i, obj);
+				updateObject(i, obj, object, Context::vertexData);
 
 			if (ImGui::Button("Delete"))
 			{
-				vertexData = deleteObjectFromVertexData(i);
+				Context::vertexData = deleteObjectFromVertexData(i, Context::vertexData, object);
 				deleteObject(i);
-				updateBufferData(vertexData);
+				updateBufferData(Context::vertexData);
 			}
 		}
 	}
@@ -193,17 +163,17 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		if (update)
 		{
-			getSphereVertices(point, color, radius, vertexData);
+			getSphereVertices(point, color, radius, Context::vertexData);
 			return;
 		}
 
 		// getSphereVertices create 120960 new floats => 120960 / 7 = 17280 vertices, where 7 = number of components
-		getSphereVertices(point, color, radius, vertexData);
+		getSphereVertices(point, color, radius, Context::vertexData);
 
-		Object obj{ std::string(1, objectSymbols[type]++), Object::Point, GL_LINES };
+		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
 		createObject(std::move(obj), 17280, vecComponents, color, 0, pIDs);
 
-		updateBufferData(vertexData);
+		updateBufferData(Context::vertexData);
 		}
 
 	else if (type == Object::Vector)
@@ -224,17 +194,17 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		if (update)
 		{
-			getCilinderVertices(pointA, pointB, color, radius, vertexData);
+			getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
 			return;
 		}
 
 		// getCilinderVertices creates 144 new vertices 
-		getCilinderVertices(pointA, pointB, color, radius, vertexData);
+		getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
 
-		Object obj{ std::string(1, objectSymbols[type]++), Object::Vector, GL_LINES};
+		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Vector, GL_LINES};
 		createObject(std::move(obj), 144, vecComponents, color, 2, pIDs, pCompIndex);
 
-		updateBufferData(vertexData);
+		updateBufferData(Context::vertexData);
 	}
 
 	else if (type == Object::Segment)
@@ -252,16 +222,16 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		if (update)
 		{
-			getCilinderVertices(pointA, pointB, color, radius, vertexData);
+			getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
 			return;
 		}
 		// getCilinderVertices create 144 new vertices
-		getCilinderVertices(pointA, pointB, color, radius, vertexData);
+		getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
 
-		Object obj{ std::string(1, objectSymbols[type]++), Object::Segment, GL_LINES };
+		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Segment, GL_LINES };
 		createObject(obj, 144, vecComponents, color, 2, pIDs, pCompIndex);
 
-		updateBufferData(vertexData);
+		updateBufferData(Context::vertexData);
 	}
 
 	else if (type == Object::Line)
@@ -293,16 +263,16 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		if (update)
 		{
-			getLineVertices(point, dVectorP0, dVectorP, color, radius, vertexData);
+			getLineVertices(point, dVectorP0, dVectorP, color, radius, Context::vertexData);
 			return;
 		}
 		// getCilinderVertices create 144 new vertices
-		getLineVertices(point, dVectorP0, dVectorP, color, radius, vertexData);
+		getLineVertices(point, dVectorP0, dVectorP, color, radius, Context::vertexData);
 
-		Object obj{ std::string(1, objectSymbols[type]++), Object::Line, GL_LINES };
+		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Line, GL_LINES };
 		createObject(obj, 144, vecComponents, color, 2, pIDs, pCompIndex);
 
-		updateBufferData(vertexData);
+		updateBufferData(Context::vertexData);
 	}
 
 	else if (type == Object::Plane)
@@ -322,16 +292,16 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		if (update)
 		{
-			getPlaneVertices(normalP0, normalP, point, color, vertexData);
+			getPlaneVertices(normalP0, normalP, point, color, Context::vertexData);
 			return;
 		}
 
 		// getCilinderVertices create 6 new vertices
-		getPlaneVertices(normalP0, normalP, point, color, vertexData);
+		getPlaneVertices(normalP0, normalP, point, color, Context::vertexData);
 
-		Object obj{ std::string(1, objectSymbols[type]++), Object::Plane, GL_TRIANGLES };
+		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Plane, GL_TRIANGLES };
 		createObject(obj, 6, vecComponents, color, 3, pIDs, pCompIndex);
 
-		updateBufferData(vertexData);
+		updateBufferData(Context::vertexData);
 	}
 }

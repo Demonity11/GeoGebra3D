@@ -1,6 +1,7 @@
 #include "utilities.h"
 #include "draw_utils.h"
 #include "objectCoords.h"
+#include "Context.h"
 
 #include <format>
 #include <iomanip>
@@ -64,7 +65,7 @@ void convertParametersToFloat(std::string& parameters, std::vector<float>& vecCo
 }
 
 // compare if the given object has the specified type
-bool compareObjectType(const std::string& objName, Object::Type expectedType)
+bool compareObjectType(const std::string& objName, Object::Type expectedType, const std::vector<Object>& object)
 {
 	for (const auto& obj : object)
 	{
@@ -131,7 +132,7 @@ std::vector<std::string> splitArgs(const std::string& argumentString)
 }
 
 // search object's index by name
-int searchObjectIndexByName(const std::string& objName)
+int searchObjectIndexByName(const std::string& objName, const std::vector<Object>& object)
 {
 	for (int index{ 0 }; index < object.size(); ++index)
 	{
@@ -153,16 +154,16 @@ void getObjectComponents(std::vector<std::string>& args, std::vector<float>& vec
 
 		//stripArg(arg);
 
-		int objIndex{ searchObjectIndexByName(arg) };
+		int objIndex{ searchObjectIndexByName(arg, Context::object) };
 
 		if (objIndex != -1)
 		{
 			int pIndex{ nextFreeParentIndex(pIDs) };
 
-			pIDs[pIndex] = object[objIndex].getID();
+			pIDs[pIndex] = Context::object[objIndex].getID();
 			pCompIndex[pIndex] = static_cast<int>(vecComponents.size());
 
-			for (const auto comp : object[objIndex].getComponents())
+			for (const auto comp : Context::object[objIndex].getComponents())
 				vecComponents.push_back(comp);
 		}
 
@@ -170,7 +171,7 @@ void getObjectComponents(std::vector<std::string>& args, std::vector<float>& vec
 		{
 			int pIndex{ nextFreeParentIndex(pIDs) };
 
-			pIDs[pIndex] = componentLiteral;
+			pIDs[pIndex] = Context::componentLiteral;
 			pCompIndex[pIndex] = static_cast<int>(vecComponents.size());
 
 			convertParametersToFloat(arg, vecComponents);
@@ -206,12 +207,12 @@ int searchObjectByID(int id, const std::vector<Object>& objectRef)
 void createObject(Object obj, int vCount, const std::vector<float>& comp, const glm::vec4 color, uint8_t pCount, std::array<int, 3> pIDs, std::array<int, 3> pCompIndex)
 {
 	int offset{ 0 };
-	int id{ static_cast<int>(object.size()) };
+	int id{ static_cast<int>(Context::object.size()) };
 
-	if (!object.empty())
+	if (!Context::object.empty())
 	{
-		int previousIndex{ static_cast<int>(object.size()) - 1 };
-		offset = object[previousIndex].getOffset() + object[previousIndex].getVertexCount();
+		int previousIndex{ static_cast<int>(Context::object.size()) - 1 };
+		offset = Context::object[previousIndex].getOffset() + Context::object[previousIndex].getVertexCount();
 	}
 
 	obj.setID(id);
@@ -227,23 +228,23 @@ void createObject(Object obj, int vCount, const std::vector<float>& comp, const 
 		obj.setpCompIndex(pCompIndex);
 	}
 
-	object.push_back(std::move(obj));
+	Context::object.push_back(std::move(obj));
 }
 
 // delete a Object with a given index from Object's vector
 void deleteObject(int objIndex)
 {
-	for (std::vector<Object>::iterator it = object.begin(); it != object.end();)
+	for (std::vector<Object>::iterator it = Context::object.begin(); it != Context::object.end();)
 	{
 		if (it->getID() == objIndex)
-			it = object.erase(it);
+			it = Context::object.erase(it);
 		else
 			++it;
 	}
 }
 
 // delete objects from vertexData
-std::vector<float> deleteObjectFromVertexData(int objIndex)
+std::vector<float> deleteObjectFromVertexData(int objIndex, std::vector<float>& vertexData, std::vector<Object>& object)
 {
 	if (vertexData.empty())
 		return {};
@@ -271,7 +272,7 @@ std::vector<float> deleteObjectFromVertexData(int objIndex)
 }
 
 // new function to update objects
-void updateObject(int objIndex, const Object& newObj)
+void updateObject(int objIndex, const Object& newObj, std::vector<Object>& object, std::vector<float>& vertexData)
 {
 	object[objIndex] = newObj;
 
@@ -301,7 +302,7 @@ void updateObject(int objIndex, const Object& newObj)
 
 	vertexData.clear();
 
-	getEnvironmentVertices();
+	getEnvironmentVertices(vertexData);
 
 	for (size_t idx{ 8 }; idx < object.size(); ++idx)
 	{
@@ -317,7 +318,7 @@ void updateObject(int objIndex, const Object& newObj)
 }
 
 // return true if exist an object with the same type and components 
-bool scanForIdenticalObject(Object::Type type, const std::vector<float>& components)
+bool scanForIdenticalObject(Object::Type type, const std::vector<float>& components, std::vector<Object>& object)
 {
 	bool isIdentical{ true };
 	bool found{ false };
@@ -348,7 +349,7 @@ bool scanForIdenticalObject(Object::Type type, const std::vector<float>& compone
 }
 
 // return the content of each object
-std::string getExpression(Object& obj)
+std::string getExpression(Object& obj, std::vector<Object>& object)
 {
 	auto type{ obj.getType() };
 

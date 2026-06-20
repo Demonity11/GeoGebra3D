@@ -3,12 +3,7 @@
 #include "Window.h"
 #include "Object.h"
 #include "utilities.h"
-
-// Objects conteiner
-std::vector<Object> object{};
-
-// free IDs conteiner
-std::vector<int> freeIDs{};
+#include "Context.h"
 
 void getNewCoordSystem(glm::vec3& direction, glm::vec3& right, glm::vec3& up)
 {
@@ -285,7 +280,7 @@ void getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, gl
 	}
 }
 
-void getGridVertices()
+void getGridVertices(std::vector<float>& vertexData)
 {
 	glm::vec3 p0Horizontal{ -1.0f, 0.0f, -1.0f };
 	glm::vec3 pHorizontal {  1.0f, 0.0f, -1.0f };
@@ -341,7 +336,7 @@ void getGridVertices()
 	}
 }
 
-void getEnvironmentVertices(bool firstRun)
+void getEnvironmentVertices(std::vector<float>& vertexData, bool firstRun)
 {
 	std::vector planeVertices
 	{
@@ -434,7 +429,7 @@ void getEnvironmentVertices(bool firstRun)
 
 
 	// this execution does 21 * 28 = 588 pushbacks
-	getGridVertices();
+	getGridVertices(vertexData);
 
 	if (firstRun)
 	{

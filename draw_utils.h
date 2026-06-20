@@ -17,21 +17,20 @@
 
 #include "Object.h"
 
-// parent ID when the object has literal components
-constexpr int componentLiteral{ -2 };
-// Objects conteiner
-extern std::vector<Object> object;
+struct FunctionArgs
+{
+	std::string name{};
+	Object::Type type{};
+	std::vector<Object::Type> expectedArgs{};
+};
 
 // forward declarations for main.cpp
 auto vertexSpec(const std::vector<float>& vertices)		  -> void;
 auto updateBufferData(const std::vector<float>& vertices) -> void;
 
-extern std::vector<float> vertexData;
-extern bool isEnterPressed;
-
 // forward declarations for interface.cpp
 auto initializeImGui(GLFWwindow* window)																					-> void;
-auto getUserInput()																											-> void;
+auto getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>& object)									-> void;
 void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color, std::array<int, 3> pIDs = { -1, -1, -1 }, std::array<int, 3> pCompIndex = { -1, -1, -1 }, bool update = false);
 
 #endif
