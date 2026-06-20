@@ -164,18 +164,19 @@ void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos)
 	if (!isPressingRightClick)
 		return;
 
+
 	if (isFirstMouse)
 	{
-		lastX = xpos;
-		lastY = ypos;
+		lastX = static_cast<float>(xpos);
+		lastY = static_cast<float>(ypos);
 		isFirstMouse = false;
 	}
 
-	float xoffset = xpos - lastX;
-	float yoffset = ypos - lastY;
+	float xoffset = static_cast<float>(xpos) - lastX;
+	float yoffset = static_cast<float>(ypos) - lastY;
 
-	lastX = xpos;
-	lastY = ypos;
+	lastX = static_cast<float>(xpos);
+	lastY = static_cast<float>(ypos);
 
 	const float sensitivity{ 0.01f };
 

@@ -37,7 +37,7 @@ void convertParametersToFloat(std::string& parameters, std::vector<float>& vecCo
 
 		catch (const std::invalid_argument& e)
 		{
-			std::cerr << "ERROR::STRING_IS_NOT_A_NUMBER\n";
+			std::cerr << "ERROR::" << e.what() << "\n";
 			return;
 		}
 
@@ -54,7 +54,7 @@ void convertParametersToFloat(std::string& parameters, std::vector<float>& vecCo
 
 			catch (const std::invalid_argument& e)
 			{
-				std::cerr << "ERROR::STRING_IS_NOT_A_NUMBER\n";
+				std::cerr << "ERROR::" << e.what() << "\n";
 				return;
 			}
 
