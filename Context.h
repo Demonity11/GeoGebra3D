@@ -27,8 +27,6 @@ namespace Context
 	extern std::vector<float> vertexData;
 	// Objects conteiner
 	extern std::vector<Object> object;
-	// free IDs conteiner
-	extern std::vector<int> freeIDs;
 	// store FunctionArgs which has name, type, and expected arguments
 	extern std::vector<FunctionArgs> function;
 	// store object symbols (default name)

@@ -232,15 +232,39 @@ void createObject(Object obj, int vCount, const std::vector<float>& comp, const 
 }
 
 // delete a Object with a given index from Object's vector
-void deleteObject(int objIndex)
+void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>& vertexData)
 {
-	for (std::vector<Object>::iterator it = Context::object.begin(); it != Context::object.end();)
+	int parentID{ object[objIndex].getID() };
+	std::vector<int> childIndex{};
+
+	for (int i{ 0 }; i < static_cast<int>(object.size()); ++i)
 	{
-		if (it->getID() == objIndex)
-			it = Context::object.erase(it);
-		else
-			++it;
+		const auto& obj{ object[i] };
+
+		for (int j{ 0 }; j < obj.getParentCount(); ++j)
+		{
+			if (obj.getParentIDs()[j] == parentID)
+			{
+				childIndex.push_back(i);
+			}
+		}
 	}
+
+	std::sort(childIndex.begin(), childIndex.end(),
+		[](const int a, const int b)
+		{
+			return a > b;
+		}
+	);
+
+	for (auto i : childIndex)
+	{
+		vertexData = deleteObjectFromVertexData(i, vertexData, object);
+		object.erase(object.begin() + i);
+	}
+
+	vertexData = deleteObjectFromVertexData(objIndex, vertexData, object);
+	object.erase(object.begin() + objIndex);
 }
 
 // delete objects from vertexData

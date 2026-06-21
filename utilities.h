@@ -15,7 +15,7 @@ auto splitArgs(const std::string& argumentString)																									  -> s
 auto getStringFunctionType(Object::Type type)																										  -> std::string;
 auto stripArg(std::string& arg)																														  -> void;
 auto deleteObjectFromVertexData(int objIndex, std::vector<float>& vertexData, std::vector<Object>& object)											  -> std::vector<float>;
-auto deleteObject(int objIndex)																														  -> void;
+auto deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>& vertexData)														  -> void;
 auto updateObject(int objIndex, const Object& newObj, std::vector<Object>& object, std::vector<float>& vertexData)									  -> void;
 auto scanForIdenticalObject(Object::Type type, const std::vector<float>& components, std::vector<Object>& object)									  -> bool;
 auto getExpression(Object& obj, std::vector<Object>& object)																						  -> std::string;

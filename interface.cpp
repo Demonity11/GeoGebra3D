@@ -138,8 +138,7 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 
 			if (ImGui::Button("Delete"))
 			{
-				Context::vertexData = deleteObjectFromVertexData(i, Context::vertexData, object);
-				deleteObject(i);
+				deleteObject(i, object, Context::vertexData);
 				updateBufferData(Context::vertexData);
 			}
 		}

@@ -24,8 +24,6 @@ namespace Context
 	std::vector<float> vertexData{};
 	// Objects conteiner
 	std::vector<Object> object{};
-	// free IDs conteiner
-	std::vector<int> freeIDs{};
 
 	// store FunctionArgs which has name, type, and expected arguments
 	std::vector<FunctionArgs> function
