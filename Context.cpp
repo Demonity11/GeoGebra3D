@@ -28,13 +28,14 @@ namespace Context
 	// store FunctionArgs which has name, type, and expected arguments
 	std::vector<FunctionArgs> function
 	{
-		{"Point(",   Object::Point,   {}											},
-		{"Vector(",  Object::Vector,  {Object::Point,  Object::Point}				},
-		{"Vector(",  Object::Vector,  {Object::Point}								},
-		{"Segment(", Object::Segment, {Object::Point,  Object::Point}				},
-		{"Line(",	 Object::Line,    {Object::Point,  Object::Point}				},
-		{"Line(",    Object::Line,    {Object::Point,  Object::Vector}				},
-		{"Plane(",   Object::Plane,   {Object::Point,  Object::Vector}				}
+		{"Point(",     Object::Point,   {}											  },
+		{"Vector(",    Object::Vector,  {Object::Point,  Object::Point}				  },
+		{"Vector(",    Object::Vector,  {Object::Point}								  },
+		{"Segment(",   Object::Segment, {Object::Point,  Object::Point}				  },
+		{"Line(",	   Object::Line,    {Object::Point,  Object::Point}				  },
+		{"Line(",      Object::Line,    {Object::Point,  Object::Vector}			  },
+		{"Plane(",     Object::Plane,   {Object::Point,  Object::Vector}			  },
+		{"Intersect(", Object::Point,   {Object::Line,   Object::Plane }              }
 		//{"Plane(",   Object::Plane,   {Object::Point, Object::Point, Object::Point} }
 	};
 

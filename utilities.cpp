@@ -229,6 +229,11 @@ void createObject(Object obj, int vCount, const std::vector<float>& comp, const 
 	}
 
 	Context::object.push_back(std::move(obj));
+
+	for (const auto& obj : Context::object)
+	{
+		std::cout << obj.getName() << "::" << obj.getID() << "\n";
+	}
 }
 
 // delete a Object with a given index from Object's vector
@@ -537,4 +542,27 @@ std::string getEquation(Object& obj)
 	}
 
 	return "";
+}
+
+// return the intersection of a plane and a line, if it exist
+// return (-9999,-9999,-9999) if not
+glm::vec3 intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::vec3 planeNormal, float d)
+{
+	float divisor{ glm::dot(planeNormal, lineVector) };
+	float t{};
+
+	const float epsilon{ 0.001f };
+	if (glm::abs(divisor) < epsilon)
+	{
+		if (glm::abs(glm::dot(planeNormal, linePoint) + d) < epsilon)
+			return linePoint;
+
+		return glm::vec3(-9999.0f, -9999.0f, -9999.0f);
+	}
+	else	
+		t = -(glm::dot(planeNormal, linePoint) + d) / divisor;
+
+	glm::vec3 intersection{ linePoint + t * lineVector };
+
+	return intersection;
 }

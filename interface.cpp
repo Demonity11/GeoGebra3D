@@ -152,7 +152,97 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 {
 	const float scale{ 0.1f };
 
-	if (type == Object::Point)
+	// intersection
+	if (type == Object::Point && pIDs[0] != -1)
+	{
+		Object arg1{};
+		Object arg2{};
+
+		for (int i{ 0 }; i < pIDs.size(); ++i)
+		{
+			if (pIDs[i] >= 0)
+			{
+				int index{ searchObjectByID(pIDs[i], Context::object) };
+				const auto& obj{ Context::object[index] };
+
+				if (arg1.getID() == -1)
+					arg1 = obj;
+				else
+					arg2 = obj;
+			}
+		}
+
+		if (arg1.getType() == Object::Line && arg2.getType() == Object::Plane)
+		{
+			// line
+			glm::vec3 lPoint{};
+			glm::vec3 lVector{};
+
+			int parentIndex1{ searchObjectByID(arg1.getParentIDs()[0], Context::object) };
+			auto comp{ Context::object[parentIndex1].getComponents() };
+
+			lPoint = { comp[0], comp[1], comp[2] };
+
+			int parentIndex2{ searchObjectByID(arg1.getParentIDs()[1], Context::object) };
+			comp = Context::object[parentIndex2].getComponents();
+
+			if (Context::object[parentIndex2].getType() == Object::Vector)
+				lVector = { comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2] };
+
+			else if (Context::object[parentIndex2].getType() == Object::Point)
+				lVector = { comp[0], comp[1], comp[2] };
+
+			// plane
+			glm::vec3 pPoint{};
+			glm::vec3 pNormal{};
+
+			parentIndex1 = searchObjectByID(arg2.getParentIDs()[0], Context::object);
+			comp = Context::object[parentIndex1].getComponents();
+
+			pPoint = { comp[0], comp[1], comp[2] };
+
+			parentIndex2 = searchObjectByID(arg2.getParentIDs()[1], Context::object);
+			comp = Context::object[parentIndex2].getComponents();
+
+			pNormal = { comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2] };
+
+			float d{ -glm::dot(pPoint, pNormal) };
+
+			//std::cout << "Line Point: " << pPoint.x << ", " << lPoint.y << ", " << lPoint.z << "\n";
+			//std::cout << "Line Vector: " << lVector.x << ", " << lVector.y << ", " << lVector.z << "\n";
+			//std::cout << "Plane Point: " << pPoint.x << ", " << pPoint.y << ", " << pPoint.z << "\n";
+			//std::cout << "Plane Normal: " << pNormal.x << ", " << pNormal.y << ", " << pNormal.z << "\n";
+			//std::cout << "d: " << d << "\n";
+
+			glm::vec3 intersection{ intersectionLinePlane(lPoint, lVector, pNormal, d) };
+
+			if (intersection == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
+			{
+				std::cout << "Intersection doesn't exist. Handle later.\n";
+				return;
+			}
+
+			std::vector components{ intersection.x, intersection.y, intersection.z };
+
+			intersection *= scale;
+
+			const float radius{ 0.005f };
+
+			getSphereVertices(intersection, color, radius, Context::vertexData);
+
+			Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
+			createObject(std::move(obj), 17280, components, color, 0, pIDs);
+
+			std::cout << "Parent#1: " << pIDs[0] << "\n";
+			std::cout << "Parent#2: " << pIDs[1] << "\n";
+			
+			updateBufferData(Context::vertexData);
+
+			//std::cout << "Intersection: " << intersection.x << ", " << intersection.y << ", " << intersection.z << "\n";
+		}
+	}
+
+	else if (type == Object::Point)
 	{
 		glm::vec3 point{ vecComponents[0], vecComponents[1], vecComponents[2] };
 

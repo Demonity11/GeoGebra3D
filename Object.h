@@ -22,6 +22,10 @@ public:
 		, m_primitive{ primitive }
 	{ }
 
+	Object()
+		: m_id{ -1 }
+	{ }
+
 	int						  getID() const          { return m_id; }
 	const std::string&		  getName() const        { return m_name; }
 	Type				      getType() const        { return m_type; }

@@ -20,6 +20,8 @@ auto updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 auto scanForIdenticalObject(Object::Type type, const std::vector<float>& components, std::vector<Object>& object)									  -> bool;
 auto getExpression(Object& obj, std::vector<Object>& object)																						  -> std::string;
 auto getEquation(Object& obj)																														  -> std::string;
+auto intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::vec3 planeNormal, float d)												  -> glm::vec3;
+
 
 void createObject(Object obj, int vCount, const std::vector<float>& comp, const glm::vec4 color, uint8_t pCount, std::array<int, 3> pIDs = { -1, -1, -1 }, std::array<int, 3> pCompIndex = { -1, -1, -1 });
 
