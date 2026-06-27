@@ -35,7 +35,7 @@ public:
 	std::vector<float>&		  getComponents()		 { return m_components; }
 	const glm::vec4&          getColor() const		 { return m_color; }
 	const std::array<int, 3>& getParentIDs() const   { return m_parentIDs; }
-	uint8_t			          getParentCount() const { return m_parentCount; }
+	int					      getParentCount() const { return m_parentCount; }
 	const std::array<int, 3>& getpCompIndex() const  { return m_pCompIndex; }
 
 

@@ -232,8 +232,10 @@ void createObject(Object obj, int vCount, const std::vector<float>& comp, const 
 
 	for (const auto& obj : Context::object)
 	{
-		std::cout << obj.getName() << "::" << obj.getID() << "\n";
+		std::cout << obj.getName() << "::" << obj.getID() << "::" << static_cast<int>(obj.getParentCount()) << "\n";
 	}
+
+	std::cout << "\n";
 }
 
 // delete a Object with a given index from Object's vector
@@ -245,15 +247,41 @@ void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>&
 	for (int i{ 0 }; i < static_cast<int>(object.size()); ++i)
 	{
 		const auto& obj{ object[i] };
+		bool alreadyMarked{ false };
 
 		for (int j{ 0 }; j < obj.getParentCount(); ++j)
 		{
-			if (obj.getParentIDs()[j] == parentID)
+			if (alreadyMarked) break;
+
+			int pID{ obj.getParentIDs()[j] };
+			if (pID == parentID)
 			{
 				childIndex.push_back(i);
+				alreadyMarked = true;
+				continue;
+			}
+
+			if (pID == Context::componentLiteral || pID == -1) continue;
+
+			int pIndex{ searchObjectByID(pID, object) };
+
+			if (pIndex == -1) continue;
+
+			std::cout << object[pIndex].getName() << '\n';
+
+			for (int k{ 0 }; k < object[pIndex].getParentCount(); ++k)
+			{
+				if (object[pIndex].getParentIDs()[k] == parentID)
+				{
+					childIndex.push_back(i);
+					alreadyMarked = true;
+					break;
+				}
 			}
 		}
 	}
+
+	childIndex.push_back(objIndex);
 
 	std::sort(childIndex.begin(), childIndex.end(),
 		[](const int a, const int b)
@@ -261,15 +289,31 @@ void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>&
 			return a > b;
 		}
 	);
-
+	
 	for (auto i : childIndex)
 	{
-		vertexData = deleteObjectFromVertexData(i, vertexData, object);
+		std::cout << i << " ";
 		object.erase(object.begin() + i);
 	}
 
-	vertexData = deleteObjectFromVertexData(objIndex, vertexData, object);
-	object.erase(object.begin() + objIndex);
+	std::cout << "\n";
+
+	vertexData.clear();
+
+	getEnvironmentVertices(vertexData);
+
+	for (size_t idx{ 8 }; idx < object.size(); ++idx)
+	{
+		auto& obj = object[idx];
+
+		int newOffset = static_cast<int>(vertexData.size()) / 7;
+		obj.setOffset(newOffset);
+
+		draw(obj.getType(), obj.getComponents(), obj.getColor(), obj.getParentIDs(), obj.getpCompIndex(), true);
+	}
+
+	updateBufferData(vertexData);
+	std::cout << "executei\n";
 }
 
 // delete objects from vertexData
@@ -346,35 +390,45 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 	updateBufferData(vertexData);
 }
 
-// return true if exist an object with the same type and components 
-bool scanForIdenticalObject(Object::Type type, const std::vector<float>& components, std::vector<Object>& object)
+void updateOffsets(std::vector<Object>& object)
 {
-	bool isIdentical{ true };
-	bool found{ false };
+	int newOffset{ object[0].getOffset() };
 
 	for (auto& obj : object)
 	{
-		if (obj.getType() == type)
+		obj.setOffset(newOffset);
+		newOffset = obj.getVertexCount();
+	}
+}
+
+// return true if exist an object with the same type and components 
+bool scanForIdenticalObject(Object::Type type, const std::vector<float>& components, std::vector<Object>& object)
+{
+	const float epsilon{ 0.001f };
+
+	for (auto& obj : object)
+	{
+		if (obj.getType() != type) continue;
+
+		const auto& objComponents{ obj.getComponents() };
+		if (objComponents.size() != components.size()) continue;
+
+		bool isIdentical{ true };
+
+		for (std::size_t i{ 0 }; i < components.size(); ++i)
 		{
-			if (auto cSize{ obj.getComponents().size() }; cSize == components.size())
+			if (glm::abs(objComponents[i] - components[i]) >= epsilon)
 			{
-				found = true;
-
-				for (int i{ 0 }; i < cSize; ++i)
-				{
-					if (obj.getComponents()[i] == components[i]) continue;
-
-					isIdentical = false;
-					found = false;
-				}
-
-				if (isIdentical)
-					return isIdentical;
+				isIdentical = false;
+				break;
 			}
 		}
+
+		if (isIdentical)
+			return true;
 	}
 
-	return found;
+	return false;
 }
 
 // return the content of each object
@@ -551,6 +605,15 @@ glm::vec3 intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::
 	float divisor{ glm::dot(planeNormal, lineVector) };
 	float t{};
 
+	// t = -(a.x1 + b.y1 + c.z1 + d) / n.v
+	// where
+	// A(x1, y1, z1) is a point of the line
+	// v is the direction vector of the line
+	// n = (a, b, c) is the normal vector of the plane
+	// 
+	// d = -(a.x0 + b.y0 + c.z0)
+	// B(x0, y0, z0) is a point of the plane
+
 	const float epsilon{ 0.001f };
 	if (glm::abs(divisor) < epsilon)
 	{
@@ -565,4 +628,25 @@ glm::vec3 intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::
 	glm::vec3 intersection{ linePoint + t * lineVector };
 
 	return intersection;
+}
+
+std::vector<std::string> testInput(std::string input)
+{
+	std::vector<std::string> inputArray{};
+
+	std::string str{};
+	for (auto c : input)
+	{
+		if (c == '\n')
+		{
+			inputArray.push_back(str);
+			str.clear();
+		}
+		else
+		{
+			str += c;
+		}
+	}
+
+	return inputArray;
 }

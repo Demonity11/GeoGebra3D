@@ -24,10 +24,21 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 
 	ImGui::Begin("Input");
 	ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
+
+	static auto inputArray{ testInput("Point(0,1,0)\nVector(A)\nPlane(A,u)\nPoint(1,-2,3)\nPoint(2,2.5,-3)\nVector(B,C)\nLine(B, v)\nIntersect(r,p)\n") };
+	//static auto inputArray{ testInput("") };
+
 	if (ImGui::InputTextWithHint("Input", "input", inputBuffer, IM_COUNTOF(inputBuffer), flags))
 	{
 		auto ss{ std::stringstream(inputBuffer) };
 		auto inputText{ ss.str() };
+
+		// types input faster for testing
+		if (!inputArray.empty())
+		{
+			inputText = inputArray[0];
+			inputArray.erase(inputArray.begin());
+		}
 
 		for (const auto& func : function)
 		{
@@ -136,10 +147,11 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 			if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
 				updateObject(i, obj, object, Context::vertexData);
 
-			if (ImGui::Button("Delete"))
+			std::string deleteText{ "Delete###" + std::to_string(obj.getID()) };
+
+			if (ImGui::Button(deleteText.c_str()))
 			{
 				deleteObject(i, object, Context::vertexData);
-				updateBufferData(Context::vertexData);
 			}
 		}
 	}
@@ -190,7 +202,7 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 				lVector = { comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2] };
 
 			else if (Context::object[parentIndex2].getType() == Object::Point)
-				lVector = { comp[0], comp[1], comp[2] };
+				lVector = { comp[0] - lPoint.x, comp[1] - lPoint.y, comp[2] - lPoint.z };
 
 			// plane
 			glm::vec3 pPoint{};
@@ -208,21 +220,21 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 			float d{ -glm::dot(pPoint, pNormal) };
 
-			//std::cout << "Line Point: " << pPoint.x << ", " << lPoint.y << ", " << lPoint.z << "\n";
-			//std::cout << "Line Vector: " << lVector.x << ", " << lVector.y << ", " << lVector.z << "\n";
-			//std::cout << "Plane Point: " << pPoint.x << ", " << pPoint.y << ", " << pPoint.z << "\n";
-			//std::cout << "Plane Normal: " << pNormal.x << ", " << pNormal.y << ", " << pNormal.z << "\n";
-			//std::cout << "d: " << d << "\n";
-
 			glm::vec3 intersection{ intersectionLinePlane(lPoint, lVector, pNormal, d) };
 
 			if (intersection == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
 			{
-				std::cout << "Intersection doesn't exist. Handle later.\n";
+				std::cerr << "Intersection doesn't exist. Handle later.\n";
 				return;
 			}
 
 			std::vector components{ intersection.x, intersection.y, intersection.z };
+
+			if (scanForIdenticalObject(type, components, Context::object))
+			{
+				std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
+				return;
+			}
 
 			intersection *= scale;
 
@@ -230,15 +242,11 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 			getSphereVertices(intersection, color, radius, Context::vertexData);
 
-			Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
-			createObject(std::move(obj), 17280, components, color, 0, pIDs);
 
-			std::cout << "Parent#1: " << pIDs[0] << "\n";
-			std::cout << "Parent#2: " << pIDs[1] << "\n";
+			Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
+			createObject(std::move(obj), 17280, components, color, 2, pIDs);
 			
 			updateBufferData(Context::vertexData);
-
-			//std::cout << "Intersection: " << intersection.x << ", " << intersection.y << ", " << intersection.z << "\n";
 		}
 	}
 

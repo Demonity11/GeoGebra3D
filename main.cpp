@@ -69,9 +69,12 @@ int main()
 		glBindVertexArray(Context::VAO);
 
 		std::vector<TransparentItem> transparentQueue{};
-		for (auto const& obj : Context::object)
+
+		for (int i{ 0 }; i < Context::object.size(); ++i)
 		{
-			transparentQueue.push_back({ obj.getID(), obj.getColor().w});
+			const auto& obj{ Context::object[i] };
+
+			transparentQueue.push_back({ i, obj.getColor().w });
 		}
 
 		std::sort(transparentQueue.begin(), transparentQueue.end(),
@@ -148,6 +151,9 @@ void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos)
 		Context::lastY = static_cast<float>(ypos);
 		Context::isFirstMouse = false;
 	}
+
+	std::cout << "xpos: " << xpos << "\n";
+	std::cout << "ypos: " << ypos << "\n";
 
 	float xoffset = static_cast<float>(xpos) - Context::lastX;
 	float yoffset = static_cast<float>(ypos) - Context::lastY;

@@ -178,6 +178,7 @@
   <ItemGroup>
     <None Include="helloCamera.frag" />
     <None Include="helloCamera.vert" />
+    <None Include="README.md" />
     <None Include="shader.frag" />
     <None Include="shader.vert" />
   </ItemGroup>
