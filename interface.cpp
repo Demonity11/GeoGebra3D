@@ -134,7 +134,11 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 			char s{ 'A' };
 			for (int increment{ 0 }; increment < obj.getComponents().size(); increment += 3)
 			{
-				ImGui::InputFloat3((obj.getName() + "::" + s).c_str(), obj.getComponentsPointer() + increment, "%.2f");
+				ImGuiInputFlags textFlags{};
+
+				if (!obj.isMutable()) textFlags |= ImGuiInputTextFlags_ReadOnly;
+					
+				ImGui::InputFloat3((obj.getName() + "::" + s).c_str(), obj.getComponentsPointer() + increment, "%.2f", textFlags);
 
 				if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
 					updateObject(i, obj, object, Context::vertexData);
@@ -230,21 +234,27 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 			std::vector components{ intersection.x, intersection.y, intersection.z };
 
+			intersection *= scale;
+
+			const float radius{ 0.005f };
+
+			if (update)
+			{
+				getSphereVertices(intersection, color, radius, Context::vertexData);
+				return;
+			}
+
 			if (scanForIdenticalObject(type, components, Context::object))
 			{
 				std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
 				return;
 			}
 
-			intersection *= scale;
-
-			const float radius{ 0.005f };
-
 			getSphereVertices(intersection, color, radius, Context::vertexData);
 
-
 			Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
-			createObject(std::move(obj), 17280, components, color, 2, pIDs);
+			obj.setMutable(false);
+			createObject(std::move(obj), 17280, components, color, 2, pIDs, pCompIndex);
 			
 			updateBufferData(Context::vertexData);
 		}

@@ -354,6 +354,10 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 		auto& obj = object[idx];
 		if (obj.getParentCount() > 0)
 		{
+			// intersection has parents which causes the program to crash when updating the color of the intersection
+			// this prevents this crash
+			if (obj.getType() == Object::Point) continue;
+
 			std::array<int, 3> currentParents = obj.getParentIDs();
 			std::array<int, 3> currentOffsets = obj.getpCompIndex();
 
@@ -388,17 +392,6 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 	}
 
 	updateBufferData(vertexData);
-}
-
-void updateOffsets(std::vector<Object>& object)
-{
-	int newOffset{ object[0].getOffset() };
-
-	for (auto& obj : object)
-	{
-		obj.setOffset(newOffset);
-		newOffset = obj.getVertexCount();
-	}
 }
 
 // return true if exist an object with the same type and components 

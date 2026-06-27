@@ -152,8 +152,8 @@ void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos)
 		Context::isFirstMouse = false;
 	}
 
-	std::cout << "xpos: " << xpos << "\n";
-	std::cout << "ypos: " << ypos << "\n";
+	//std::cout << "xpos: " << xpos << "\n";
+	//std::cout << "ypos: " << ypos << "\n";
 
 	float xoffset = static_cast<float>(xpos) - Context::lastX;
 	float yoffset = static_cast<float>(ypos) - Context::lastY;

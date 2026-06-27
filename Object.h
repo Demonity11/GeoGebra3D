@@ -52,6 +52,9 @@ public:
 	float* getComponentsPointer() { return m_components.data(); }
 	float* getColorPointer()	  { return &m_color[0]; }
 
+	bool isMutable() const		 { return m_isMutable; }
+	void setMutable(bool status) { m_isMutable = status; }
+
 private:
 	int m_id{};
 	std::string m_name{};
@@ -67,6 +70,8 @@ private:
 	std::array<int, 3> m_parentIDs{ -1, -1, -1 }; // default values to a object that has no parent
 	std::array<int, 3> m_pCompIndex{ -1, -1, -1 };
 	uint8_t m_parentCount{}; // max parent count. for example: a vector can have up to two parents
+
+	bool m_isMutable{ true };
 };
 
 #endif
