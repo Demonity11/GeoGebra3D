@@ -229,13 +229,6 @@ void createObject(Object obj, int vCount, const std::vector<float>& comp, const 
 	}
 
 	Context::object.push_back(std::move(obj));
-
-	for (const auto& obj : Context::object)
-	{
-		std::cout << obj.getName() << "::" << obj.getID() << "::" << static_cast<int>(obj.getParentCount()) << "\n";
-	}
-
-	std::cout << "\n";
 }
 
 // delete a Object with a given index from Object's vector
@@ -356,7 +349,7 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 		{
 			// intersection has parents which causes the program to crash when updating the color of the intersection
 			// this prevents this crash
-			if (obj.getType() == Object::Point) continue;
+			if (!obj.isMutable()) continue;
 
 			std::array<int, 3> currentParents = obj.getParentIDs();
 			std::array<int, 3> currentOffsets = obj.getpCompIndex();
@@ -469,6 +462,20 @@ std::string getExpression(Object& obj, std::vector<Object>& object)
 	else
 	{
 		std::stringstream ss{};
+
+		if (type == Object::Line)
+		{
+			if (!obj.isMutable())
+			{
+				ss << "Intersect(";
+				ss << object[searchObjectByID(obj.getParentIDs()[0], object)].getName() << ", ";
+				ss << object[searchObjectByID(obj.getParentIDs()[1], object)].getName();
+				ss << ")";
+
+				return ss.str();
+			}
+		}
+
 		ss << getStringFunctionType(type) << "(";
 
 		auto comp{ obj.getComponents() };
@@ -636,6 +643,8 @@ glm::vec3 intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::
 	return intersection;
 }
 
+// return the intersection of a line and a line, if it exist
+// return (-9999,-9999,-9999) if not
 glm::vec3 intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::vec3 vt)
 {
 	// s: P = ps + s * vs
@@ -643,8 +652,8 @@ glm::vec3 intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::ve
 
 	const float epsilon{ 0.001f }; // for float comparison purposes
 	auto cross{ glm::cross(vs, vt) };
-	bool isParallel{ true };
 
+	bool isParallel{ true };
 	for (int i{ 0 }; i < 3; ++i)
 	{
 		if (glm::abs(cross[i]) >= epsilon)
@@ -654,17 +663,17 @@ glm::vec3 intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::ve
 		}
 	}
 
+	auto w0{ pt - ps };
+	
 	bool isSuperimposed{ false };
 	if (isParallel)
 	{
+		auto separationCross{ glm::cross(w0, vt) };
+
 		isSuperimposed = true;
-
-		auto tStart{ (ps[0] - pt[0]) / vt[0] };
-		for (int i{ 1 }; i < 3; ++i)
+		for (int i{ 0 }; i < 3; ++i)
 		{
-			auto t{ (ps[i] - pt[i]) / vt[i] };
-
-			if (glm::abs(tStart - t) >= epsilon)
+			if (glm::abs(separationCross[i]) >= epsilon)
 			{
 				isSuperimposed = false;
 				break;
@@ -674,8 +683,6 @@ glm::vec3 intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::ve
 
 	if (isSuperimposed)
 		return ps;
-
-	auto w0{ pt - ps };
 
 	auto crossDot{ glm::dot(cross, w0) };
 
@@ -694,6 +701,89 @@ glm::vec3 intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::ve
 	float s{ Ds / D };
 	
 	glm::vec3 intersection{ ps + s * vs };
+
+	return intersection;
+}
+
+std::array<glm::vec3, 2> intersectionPlanePlane(glm::vec3 p1, glm::vec3 n1, glm::vec3 p2, glm::vec3 n2)
+{
+	const float epsilon{ 0.001f };
+	auto dVec{ glm::cross(n1, n2) };
+
+	float d1{ -glm::dot(n1, p1) };
+	float d2{ -glm::dot(n2, p2) };
+
+	std::array<glm::vec3, 2> intersection{};
+
+	// parallel planes
+	bool isSuperimposed{ false };
+	bool isParallel{ false };
+	if (glm::length(dVec) < epsilon)
+	{
+		isParallel = true;
+
+		float pointTest{ glm::dot(n2, p1) + d2 };
+		if (glm::abs(pointTest) < epsilon)
+		{
+			isSuperimposed = true;
+			isParallel = false;
+		}
+	}
+
+	if (isSuperimposed)
+	{
+		std::cerr << "The planes are the same. Handle later.\n";
+		return intersection;
+	}
+	else if (isParallel)
+	{
+		std::cerr << "The intersection doesn't exist. Handle later.\n";
+		return intersection;
+	}
+
+	if (glm::abs(dVec.x) >= glm::abs(dVec.y) && glm::abs(dVec.x) >= glm::abs(dVec.z))
+	{
+		float D{ dVec.x };
+		float Dy{ -d1 * n2.z + d2 * n1.z };
+		float Dz{ -n1.y * d2 + n2.y * d1 };
+
+		float x{ 0.0f };
+		float y{ Dy / D };
+		float z{ Dz / D };
+
+		intersection[0] = glm::vec3(x, y, z);
+	}
+	else if (glm::abs(dVec.y) >= glm::abs(dVec.z))
+	{
+		float D{ dVec.y };
+		float Dx{ -n1.z * d2 + n2.z * d1 };
+		float Dz{ -d1 * n2.x + d2 * n1.x }; 
+
+		float x{ Dx / D };
+		float y{ 0.0f };
+		float z{ Dz / D };
+
+		intersection[0] = glm::vec3(x, y, z);
+	}
+	else
+	{
+		float D{ dVec.z };
+		float Dx{ -d1 * n2.y + d2 * n1.y };
+		float Dy{ -n1.x * d2 + n2.x * d1 };
+
+		float x{ Dx / D };
+		float y{ Dy / D };
+		float z{ 0.0f };
+
+		intersection[0] = glm::vec3(x, y, z);
+	}
+
+	intersection[1] = dVec;
+
+	for (const auto& i : intersection)
+	{
+		std::cout << i.x << " " << i.y << " " << i.z << "\n";
+	}
 
 	return intersection;
 }

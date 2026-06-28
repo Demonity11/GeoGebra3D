@@ -26,9 +26,20 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 	ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
 
 	//static auto inputArray{ testInput("Point(0,1,0)\nVector(A)\nPlane(A,u)\nPoint(1,-2,3)\nPoint(2,2.5,-3)\nVector(B,C)\nLine(B, v)\nIntersect(p,r)\n") };
-	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nLine(A,B)\nPoint(3,3,5)\nPoint(3,3,7)\nLine(C,D)\nIntersect(r,s)\n") };
+	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nLine(A,B)\nPoint(3,3,5)\nPoint(3,3,7)\nLine(C,D)\nIntersect(r,s)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nLine(A,B)\nPoint(3,3,5)\nPoint(3,2,7)\nLine(C,D)\nIntersect(r,s)\n") };
 	//static auto inputArray{ testInput("") };
+
+	static auto inputArray{ testInput(
+		"Point(0,0,0)\n"  
+		"Point(1,0,0)\n"   
+		"Vector(B)\n"       
+		"Plane(A,u)\n"       
+		"Point(0,1,-1)\n"      
+		"Vector(C)\n"          
+		"Plane(A,v)\n"         
+		"Intersect(p,q)\n"   
+	)};
 
 	if (ImGui::InputTextWithHint("Input", "input", inputBuffer, IM_COUNTOF(inputBuffer), flags))
 	{
@@ -265,7 +276,8 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		intersection *= scale;
 
 		const float radius{ 0.005f };
-		color = { 0.7f, 0.3f, 0.0f, 1.0f };
+		if (color == glm::vec4{0.0f, 0.0f, 0.0f, 1.0f})
+			color = { 0.7f, 0.3f, 0.0f, 1.0f };
 
 		if (update)
 		{
@@ -367,6 +379,72 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		createObject(obj, 144, vecComponents, color, 2, pIDs, pCompIndex);
 
 		updateBufferData(Context::vertexData);
+	}
+
+	else if (type == Object::Line && Context::object[searchObjectByID(pIDs[0], Context::object)].getType() == Object::Plane)
+	{
+		auto plane1{ Context::object[searchObjectByID(pIDs[0], Context::object)] };
+		auto plane2{ Context::object[searchObjectByID(pIDs[1], Context::object)] };
+
+		// plane 1 components extraction
+		int startP1{ plane1.getpCompIndex()[0] };
+		int startN1{ plane1.getpCompIndex()[1] };
+
+		auto comp1{ plane1.getComponents() };
+
+		glm::vec3 p1{ comp1[startP1], comp1[startP1 + 1], comp1[startP1 + 2] };
+		glm::vec3 n1{ comp1[startN1 + 3] - comp1[startN1], comp1[startN1 + 4] - comp1[startN1 + 1], comp1[startN1 + 5] - comp1[startN1 + 2] };
+
+		// plane 2 components extraction
+		int startP2{ plane2.getpCompIndex()[0] };
+		int startN2{ plane2.getpCompIndex()[1] };
+
+		auto comp2{ plane2.getComponents() };
+
+		glm::vec3 p2{ comp2[startP2], comp2[startP2 + 1], comp2[startP2 + 2] };
+		glm::vec3 n2{ comp2[startN2 + 3] - comp2[startN2], comp2[startN2 + 4] - comp2[startN2 + 1], comp2[startN2 + 5] - comp2[startN2 + 2] };
+
+		auto intersection{ intersectionPlanePlane(p1, n1, p2, n2) };
+
+		if (glm::length(intersection[1]) < 0.001f)
+		{
+			std::cerr << "Intersection doesn't exist.\n";
+			return;
+		}
+
+		std::vector components
+		{
+			intersection[0].x, intersection[0].y, intersection[0].z,
+			intersection[1].x, intersection[1].y, intersection[1].z
+		};
+
+		intersection[0] *= scale;
+		intersection[1] *= scale;
+
+		const float radius{ 0.0015f };
+		if (color == glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f })
+			color = { 0.7f, 0.3f, 0.0f, 1.0f };
+
+		if (update)
+		{
+			getLineVertices(intersection[0], {0.0f, 0.0f, 0.0f}, intersection[1], color, radius, Context::vertexData);
+			return;
+		}
+
+		if (scanForIdenticalObject(type, components, Context::object))
+		{
+			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
+			return;
+		}
+
+		getLineVertices(intersection[0], { 0.0f, 0.0f, 0.0f }, intersection[1], color, radius, Context::vertexData);
+
+		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Line, GL_LINES };
+		obj.setMutable(false);
+		createObject(std::move(obj), 144, components, color, 2, pIDs, pCompIndex);
+
+		updateBufferData(Context::vertexData);
+
 	}
 
 	else if (type == Object::Line)

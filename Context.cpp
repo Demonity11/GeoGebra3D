@@ -38,6 +38,7 @@ namespace Context
 		{"Intersect(", Object::Point,   {Object::Line,   Object::Plane}			      },
 		{"Intersect(", Object::Point,   {Object::Plane,  Object::Line}			      },
 		{"Intersect(", Object::Point,   {Object::Line,   Object::Line}			      },
+		{"Intersect(", Object::Line,    {Object::Plane,  Object::Plane}				  }
 		//{"Plane(",   Object::Plane,   {Object::Point, Object::Point, Object::Point} }
 	};
 
