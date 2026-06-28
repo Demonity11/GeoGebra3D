@@ -432,25 +432,38 @@ std::string getExpression(Object& obj, std::vector<Object>& object)
 	if (type == Object::Point)
 	{
 		std::stringstream ss{};
-		ss << "Point";
-
-		char parenthesis{ '(' };
-		auto cSize{ obj.getComponents().size() };
-
-		for (int i{ 0 }; i < cSize; ++i)
+		
+		if (!obj.isMutable())
 		{
-			if (i % 3 == 0)
+			ss << "Intersect(";
+			ss << object[searchObjectByID(obj.getParentIDs()[0], object)].getName() << ", ";
+			ss << object[searchObjectByID(obj.getParentIDs()[1], object)].getName();
+			ss << ")";
+
+			return ss.str();
+		}
+		else 
+		{
+			ss << "Point";
+			char parenthesis{ '(' };
+			auto cSize{ obj.getComponents().size() };
+
+			for (int i{ 0 }; i < cSize; ++i)
 			{
-				ss << parenthesis;
-				parenthesis = (parenthesis == '(' ? ')' : '(');
+				if (i % 3 == 0)
+				{
+					ss << parenthesis;
+					parenthesis = (parenthesis == '(' ? ')' : '(');
+				}
+
+				if (i == cSize - 1) ss << obj.getComponents()[i] << parenthesis;
+
+				else ss << obj.getComponents()[i] << ", ";
 			}
 
-			if (i == cSize - 1) ss << obj.getComponents()[i] << parenthesis;
-
-			else ss << obj.getComponents()[i] << ", ";
+			return ss.str();
 		}
 
-		return ss.str();
 	}
 
 	else
@@ -619,6 +632,68 @@ glm::vec3 intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::
 		t = -(glm::dot(planeNormal, linePoint) + d) / divisor;
 
 	glm::vec3 intersection{ linePoint + t * lineVector };
+
+	return intersection;
+}
+
+glm::vec3 intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::vec3 vt)
+{
+	// s: P = ps + s * vs
+	// t: P = pt + t * vt
+
+	const float epsilon{ 0.001f }; // for float comparison purposes
+	auto cross{ glm::cross(vs, vt) };
+	bool isParallel{ true };
+
+	for (int i{ 0 }; i < 3; ++i)
+	{
+		if (glm::abs(cross[i]) >= epsilon)
+		{
+			isParallel = false;
+			break;
+		}
+	}
+
+	bool isSuperimposed{ false };
+	if (isParallel)
+	{
+		isSuperimposed = true;
+
+		auto tStart{ (ps[0] - pt[0]) / vt[0] };
+		for (int i{ 1 }; i < 3; ++i)
+		{
+			auto t{ (ps[i] - pt[i]) / vt[i] };
+
+			if (glm::abs(tStart - t) >= epsilon)
+			{
+				isSuperimposed = false;
+				break;
+			}
+		}
+	}
+
+	if (isSuperimposed)
+		return ps;
+
+	auto w0{ pt - ps };
+
+	auto crossDot{ glm::dot(cross, w0) };
+
+	if (glm::abs(crossDot) >= epsilon)
+		return glm::vec3(-9999.0f, -9999.0f, -9999.0f); // intersection doesn't exist
+
+	float a{ glm::dot(vs, vs) };
+	float b{ glm::dot(vs, vt) };
+	float c{ glm::dot(vt, vt) };
+	float d{ glm::dot(w0, vs) };
+	float e{ glm::dot(w0, vt) };
+
+	float D{ a * (-c) + b * b };
+	float Ds{ -d * c + e * b };
+
+	float s{ Ds / D };
+	
+	glm::vec3 intersection{ ps + s * vs };
 
 	return intersection;
 }

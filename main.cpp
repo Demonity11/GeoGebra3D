@@ -36,6 +36,10 @@ int main()
 
 	initializeImGui(window.getWindow());
 
+	auto intersection{ intersectionLineLine({1.0f,1.0f,1.0f}, {1.0f,1.0f,1.0f}, {3.0f,3.0f,5.0f}, {0.0f, 0.0f, 2.0f}) };
+
+	std::cout << intersection.x << " " << intersection.y << " " << intersection.z << "\n";
+
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 

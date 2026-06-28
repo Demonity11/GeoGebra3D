@@ -25,7 +25,9 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 	ImGui::Begin("Input");
 	ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
 
-	static auto inputArray{ testInput("Point(0,1,0)\nVector(A)\nPlane(A,u)\nPoint(1,-2,3)\nPoint(2,2.5,-3)\nVector(B,C)\nLine(B, v)\nIntersect(r,p)\n") };
+	//static auto inputArray{ testInput("Point(0,1,0)\nVector(A)\nPlane(A,u)\nPoint(1,-2,3)\nPoint(2,2.5,-3)\nVector(B,C)\nLine(B, v)\nIntersect(p,r)\n") };
+	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nLine(A,B)\nPoint(3,3,5)\nPoint(3,3,7)\nLine(C,D)\nIntersect(r,s)\n") };
+	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nLine(A,B)\nPoint(3,3,5)\nPoint(3,2,7)\nLine(C,D)\nIntersect(r,s)\n") };
 	//static auto inputArray{ testInput("") };
 
 	if (ImGui::InputTextWithHint("Input", "input", inputBuffer, IM_COUNTOF(inputBuffer), flags))
@@ -171,8 +173,7 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 	// intersection
 	if (type == Object::Point && pIDs[0] != -1)
 	{
-		Object arg1{};
-		Object arg2{};
+		std::array<Object, 2> args{};
 
 		for (int i{ 0 }; i < pIDs.size(); ++i)
 		{
@@ -181,83 +182,110 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 				int index{ searchObjectByID(pIDs[i], Context::object) };
 				const auto& obj{ Context::object[index] };
 
-				if (arg1.getID() == -1)
-					arg1 = obj;
-				else
-					arg2 = obj;
+				args[i] = obj;
 			}
 		}
 
-		if (arg1.getType() == Object::Line && arg2.getType() == Object::Plane)
+		int lineCount{ 0 };
+
+		std::array<glm::vec3, 2> points{};
+		std::array<glm::vec3, 2> vectors{};
+		std::array<Object::Type, 2> types{};
+
+		for (int i{ 0 }; i < args.size(); ++i)
 		{
-			// line
-			glm::vec3 lPoint{};
-			glm::vec3 lVector{};
+			const auto& arg{ args[i] };
 
-			int parentIndex1{ searchObjectByID(arg1.getParentIDs()[0], Context::object) };
-			auto comp{ Context::object[parentIndex1].getComponents() };
-
-			lPoint = { comp[0], comp[1], comp[2] };
-
-			int parentIndex2{ searchObjectByID(arg1.getParentIDs()[1], Context::object) };
-			comp = Context::object[parentIndex2].getComponents();
-
-			if (Context::object[parentIndex2].getType() == Object::Vector)
-				lVector = { comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2] };
-
-			else if (Context::object[parentIndex2].getType() == Object::Point)
-				lVector = { comp[0] - lPoint.x, comp[1] - lPoint.y, comp[2] - lPoint.z };
-
-			// plane
-			glm::vec3 pPoint{};
-			glm::vec3 pNormal{};
-
-			parentIndex1 = searchObjectByID(arg2.getParentIDs()[0], Context::object);
-			comp = Context::object[parentIndex1].getComponents();
-
-			pPoint = { comp[0], comp[1], comp[2] };
-
-			parentIndex2 = searchObjectByID(arg2.getParentIDs()[1], Context::object);
-			comp = Context::object[parentIndex2].getComponents();
-
-			pNormal = { comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2] };
-
-			float d{ -glm::dot(pPoint, pNormal) };
-
-			glm::vec3 intersection{ intersectionLinePlane(lPoint, lVector, pNormal, d) };
-
-			if (intersection == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
+			if (arg.getType() == Object::Line)
 			{
-				std::cerr << "Intersection doesn't exist. Handle later.\n";
-				return;
+				int parentIndex1{ searchObjectByID(arg.getParentIDs()[0], Context::object) };
+				auto comp{ Context::object[parentIndex1].getComponents() };
+
+				points[i] = { comp[0], comp[1], comp[2] };
+
+				int parentIndex2{ searchObjectByID(arg.getParentIDs()[1], Context::object) };
+				comp = Context::object[parentIndex2].getComponents();
+
+				if (Context::object[parentIndex2].getType() == Object::Vector)
+					vectors[i] = {comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2]};
+
+				else if (Context::object[parentIndex2].getType() == Object::Point)
+					vectors[i] = {comp[0] - points[i].x, comp[1] - points[i].y, comp[2] - points[i].z};
+
+				++lineCount;
+				types[i] = Object::Line;
 			}
 
-			std::vector components{ intersection.x, intersection.y, intersection.z };
-
-			intersection *= scale;
-
-			const float radius{ 0.005f };
-
-			if (update)
+			else if (arg.getType() == Object::Plane)
 			{
-				getSphereVertices(intersection, color, radius, Context::vertexData);
-				return;
+				int parentIndex1 = searchObjectByID(arg.getParentIDs()[0], Context::object);
+				auto comp{ Context::object[parentIndex1].getComponents() };
+
+				points[i] = { comp[0], comp[1], comp[2] };
+
+				int parentIndex2{ searchObjectByID(arg.getParentIDs()[1], Context::object) };
+				comp = Context::object[parentIndex2].getComponents();
+
+				points[i] = {comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2]};
+
+				types[i] = Object::Plane;
 			}
-
-			if (scanForIdenticalObject(type, components, Context::object))
-			{
-				std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
-				return;
-			}
-
-			getSphereVertices(intersection, color, radius, Context::vertexData);
-
-			Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
-			obj.setMutable(false);
-			createObject(std::move(obj), 17280, components, color, 2, pIDs, pCompIndex);
-			
-			updateBufferData(Context::vertexData);
 		}
+
+		glm::vec3 intersection{};
+
+		if (lineCount == 2)
+		{
+			intersection = intersectionLineLine(points[0], vectors[0], points[1], vectors[1]);
+		}
+
+		else
+		{
+			float d{};
+			if (types[0] == Object::Plane) 
+			{
+				d = -glm::dot(points[0], vectors[0]);
+				intersection = intersectionLinePlane(points[1], vectors[1], points[0], d);
+			}
+			else 
+			{
+				d = -glm::dot(points[1], vectors[1]);
+				intersection = intersectionLinePlane(points[0], vectors[0], points[1], d);
+			}
+		}
+
+		if (intersection == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
+		{
+			std::cerr << "Intersection doesn't exist. Handle later.\n";
+			return;
+		}
+
+		std::vector components{ intersection.x, intersection.y, intersection.z };
+
+		intersection *= scale;
+
+		const float radius{ 0.005f };
+		color = { 0.7f, 0.3f, 0.0f, 1.0f };
+
+		if (update)
+		{
+			getSphereVertices(intersection, color, radius, Context::vertexData);
+			return;
+		}
+
+		if (scanForIdenticalObject(type, components, Context::object))
+		{
+			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
+			return;
+		}
+
+		getSphereVertices(intersection, color, radius, Context::vertexData);
+
+		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
+		obj.setMutable(false);
+		createObject(std::move(obj), 17280, components, color, 2, pIDs, pCompIndex);
+			
+		updateBufferData(Context::vertexData);
 	}
 
 	else if (type == Object::Point)
