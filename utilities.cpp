@@ -260,8 +260,6 @@ void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>&
 
 			if (pIndex == -1) continue;
 
-			std::cout << object[pIndex].getName() << '\n';
-
 			for (int k{ 0 }; k < object[pIndex].getParentCount(); ++k)
 			{
 				if (object[pIndex].getParentIDs()[k] == parentID)
@@ -285,11 +283,8 @@ void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>&
 	
 	for (auto i : childIndex)
 	{
-		std::cout << i << " ";
 		object.erase(object.begin() + i);
 	}
-
-	std::cout << "\n";
 
 	vertexData.clear();
 
@@ -306,7 +301,6 @@ void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>&
 	}
 
 	updateBufferData(vertexData);
-	std::cout << "executei\n";
 }
 
 // delete objects from vertexData
@@ -337,19 +331,26 @@ std::vector<float> deleteObjectFromVertexData(int objIndex, std::vector<float>& 
 	return newVertexData;
 }
 
-// new function to update objects
+// function to update objects
 void updateObject(int objIndex, const Object& newObj, std::vector<Object>& object, std::vector<float>& vertexData)
 {
 	object[objIndex] = newObj;
+	std::vector<int> toBeDeleted{};
 
 	for (size_t idx{ 8 }; idx < object.size(); ++idx)
 	{
 		auto& obj = object[idx];
 		if (obj.getParentCount() > 0)
 		{
+			bool isIntersectionALive{ true };
 			// intersection has parents which causes the program to crash when updating the color of the intersection
 			// this prevents this crash
-			if (!obj.isMutable()) continue;
+			if (!obj.isMutable()) 
+			{
+				isIntersectionALive = recalculateIntersect(obj, object);
+				if (!isIntersectionALive) toBeDeleted.push_back(static_cast<int>(idx));
+				continue;
+			}
 
 			std::array<int, 3> currentParents = obj.getParentIDs();
 			std::array<int, 3> currentOffsets = obj.getpCompIndex();
@@ -367,6 +368,21 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 					}
 				}
 			}
+		}
+	}
+
+	if (!toBeDeleted.empty())
+	{
+		std::sort(toBeDeleted.begin(), toBeDeleted.end(),
+			[](const int a, const int b)
+			{
+				return a > b;
+			}
+		);
+
+		for (int index : toBeDeleted)
+		{
+			deleteObject(index, object, vertexData);
 		}
 	}
 
@@ -780,11 +796,6 @@ std::array<glm::vec3, 2> intersectionPlanePlane(glm::vec3 p1, glm::vec3 n1, glm:
 
 	intersection[1] = dVec;
 
-	for (const auto& i : intersection)
-	{
-		std::cout << i.x << " " << i.y << " " << i.z << "\n";
-	}
-
 	return intersection;
 }
 
@@ -807,4 +818,135 @@ std::vector<std::string> testInput(std::string input)
 	}
 
 	return inputArray;
+}
+
+// return true if the intersection persists
+// return false if the intersection ceases to exist
+bool recalculateIntersect(const Object& obj, std::vector<Object>& object)
+{
+	auto type{ obj.getType() };
+	auto pIDs{ obj.getParentIDs() };
+
+	if (type == Object::Line)
+	{
+		auto plane1{ object[searchObjectByID(pIDs[0], object)] };
+		auto plane2{ object[searchObjectByID(pIDs[1], object)] };
+
+		// plane 1 components extraction
+		int startP1{ plane1.getpCompIndex()[0] };
+		int startN1{ plane1.getpCompIndex()[1] };
+
+		auto comp1{ plane1.getComponents() };
+
+		glm::vec3 p1{ comp1[startP1], comp1[startP1 + 1], comp1[startP1 + 2] };
+		glm::vec3 n1{ comp1[startN1 + 3] - comp1[startN1], comp1[startN1 + 4] - comp1[startN1 + 1], comp1[startN1 + 5] - comp1[startN1 + 2] };
+
+		// plane 2 components extraction
+		int startP2{ plane2.getpCompIndex()[0] };
+		int startN2{ plane2.getpCompIndex()[1] };
+
+		auto comp2{ plane2.getComponents() };
+
+		glm::vec3 p2{ comp2[startP2], comp2[startP2 + 1], comp2[startP2 + 2] };
+		glm::vec3 n2{ comp2[startN2 + 3] - comp2[startN2], comp2[startN2 + 4] - comp2[startN2 + 1], comp2[startN2 + 5] - comp2[startN2 + 2] };
+
+		auto intersection{ intersectionPlanePlane(p1, n1, p2, n2) };
+
+		if (glm::length(intersection[1]) < 0.001f)
+		{
+			std::cerr << "Intersection doesn't exist.\n";
+			return false;
+		}
+	}
+
+	else if (type == Object::Point)
+	{
+		std::array<Object, 2> args{};
+
+		for (int i{ 0 }; i < pIDs.size(); ++i)
+		{
+			if (pIDs[i] >= 0)
+			{
+				int index{ searchObjectByID(pIDs[i], object) };
+				const auto& obj{ object[index] };
+
+				args[i] = obj;
+			}
+		}
+
+		int lineCount{ 0 };
+
+		std::array<glm::vec3, 2> points{};
+		std::array<glm::vec3, 2> vectors{};
+		std::array<Object::Type, 2> types{};
+
+		for (int i{ 0 }; i < args.size(); ++i)
+		{
+			const auto& arg{ args[i] };
+
+			if (arg.getType() == Object::Line)
+			{
+				int parentIndex1{ searchObjectByID(arg.getParentIDs()[0], object) };
+				auto comp{ object[parentIndex1].getComponents() };
+
+				points[i] = { comp[0], comp[1], comp[2] };
+
+				int parentIndex2{ searchObjectByID(arg.getParentIDs()[1], object) };
+				comp = object[parentIndex2].getComponents();
+
+				if (object[parentIndex2].getType() == Object::Vector)
+					vectors[i] = { comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2] };
+
+				else if (object[parentIndex2].getType() == Object::Point)
+					vectors[i] = { comp[0] - points[i].x, comp[1] - points[i].y, comp[2] - points[i].z };
+
+				++lineCount;
+				types[i] = Object::Line;
+			}
+
+			else if (arg.getType() == Object::Plane)
+			{
+				int parentIndex1 = searchObjectByID(arg.getParentIDs()[0], object);
+				auto comp{ object[parentIndex1].getComponents() };
+
+				points[i] = { comp[0], comp[1], comp[2] };
+
+				int parentIndex2{ searchObjectByID(arg.getParentIDs()[1], object) };
+				comp = object[parentIndex2].getComponents();
+
+				vectors[i] = { comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2] };
+
+				types[i] = Object::Plane;
+			}
+		}
+
+		glm::vec3 intersection{};
+
+		if (lineCount == 2)
+		{
+			intersection = intersectionLineLine(points[0], vectors[0], points[1], vectors[1]);
+		}
+
+		else
+		{
+			float d{};
+			if (types[0] == Object::Plane)
+			{
+				d = -glm::dot(points[0], vectors[0]);
+				intersection = intersectionLinePlane(points[1], vectors[1], points[0], d);
+			}
+			else
+			{
+				d = -glm::dot(points[1], vectors[1]);
+				intersection = intersectionLinePlane(points[0], vectors[0], points[1], d);
+			}
+		}
+
+		if (intersection == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
+		{
+			return false;
+		}
+	}
+
+	return true;
 }

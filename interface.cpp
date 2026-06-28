@@ -25,21 +25,7 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 	ImGui::Begin("Input");
 	ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
 
-	//static auto inputArray{ testInput("Point(0,1,0)\nVector(A)\nPlane(A,u)\nPoint(1,-2,3)\nPoint(2,2.5,-3)\nVector(B,C)\nLine(B, v)\nIntersect(p,r)\n") };
-	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nLine(A,B)\nPoint(3,3,5)\nPoint(3,3,7)\nLine(C,D)\nIntersect(r,s)\n") };
-	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nLine(A,B)\nPoint(3,3,5)\nPoint(3,2,7)\nLine(C,D)\nIntersect(r,s)\n") };
-	//static auto inputArray{ testInput("") };
-
-	static auto inputArray{ testInput(
-		"Point(0,0,0)\n"  
-		"Point(1,0,0)\n"   
-		"Vector(B)\n"       
-		"Plane(A,u)\n"       
-		"Point(0,1,-1)\n"      
-		"Vector(C)\n"          
-		"Plane(A,v)\n"         
-		"Intersect(p,q)\n"   
-	)};
+	static auto inputArray{ testInput("") };
 
 	if (ImGui::InputTextWithHint("Input", "input", inputBuffer, IM_COUNTOF(inputBuffer), flags))
 	{
@@ -237,7 +223,7 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 				int parentIndex2{ searchObjectByID(arg.getParentIDs()[1], Context::object) };
 				comp = Context::object[parentIndex2].getComponents();
 
-				points[i] = {comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2]};
+				vectors[i] = {comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2]};
 
 				types[i] = Object::Plane;
 			}
@@ -268,7 +254,6 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		if (intersection == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
 		{
 			std::cerr << "Intersection doesn't exist. Handle later.\n";
-			return;
 		}
 
 		std::vector components{ intersection.x, intersection.y, intersection.z };
