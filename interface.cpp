@@ -71,6 +71,13 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 						if (func.expectedArgs.size() != args.size())
 						{
 							isObjectValid = false;
+							if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
+							{
+								ImGui::Text("The following synxtax is not supported.");
+								if (ImGui::Button("Close"))
+									ImGui::CloseCurrentPopup();
+								ImGui::EndPopup();
+							}
 							break;
 						}
 
@@ -79,6 +86,13 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 						if (!isObjectValid)
 						{
 							isObjectValid = false;
+							if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
+							{
+								ImGui::Text("The following synxtax is not supported.");
+								if (ImGui::Button("Close"))
+									ImGui::CloseCurrentPopup();
+								ImGui::EndPopup();
+							}
 							break;
 						}
 					}
@@ -128,6 +142,8 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 
 		if (ImGui::CollapsingHeader(headerText.c_str(), ImGuiTreeNodeFlags_None))
 		{
+			static ImGuiColorEditFlags colorFlags = ImGuiColorEditFlags_None;
+
 			if (obj.getType() == Object::Plane || obj.getType() == Object::Line) ImGui::Text(getEquation(obj).c_str());
 
 			char s{ 'A' };
@@ -145,7 +161,8 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 				++s;
 			}
 
-			ImGui::InputFloat4((obj.getName() + "::Color").c_str(), obj.getColorPointer(), "%.2f");
+			//ImGui::InputFloat4((obj.getName() + "::Color").c_str(), obj.getColorPointer(), "%.2f");
+			ImGui::ColorEdit4((obj.getName() + "::Color").c_str(), obj.getColorPointer(), ImGuiColorEditFlags_Float | colorFlags);
 
 			if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
 				updateObject(i, obj, object, Context::vertexData);
