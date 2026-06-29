@@ -39,6 +39,7 @@ void convertParametersToFloat(std::string& parameters, std::vector<float>& vecCo
 		catch (const std::invalid_argument& e)
 		{
 			std::cerr << "ERROR::" << e.what() << "\n";
+			vecComponents = { -9999.0f, -9999.0f, -9999.0f };
 			return;
 		}
 
@@ -56,6 +57,7 @@ void convertParametersToFloat(std::string& parameters, std::vector<float>& vecCo
 			catch (const std::invalid_argument& e)
 			{
 				std::cerr << "ERROR::" << e.what() << "\n";
+				vecComponents = { -9999.0f, -9999.0f, -9999.0f };
 				return;
 			}
 

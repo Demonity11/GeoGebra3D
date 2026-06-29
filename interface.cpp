@@ -12,7 +12,7 @@ struct AutocompleteContext
 
 int AutocompleteCallback(ImGuiInputTextCallbackData* data) 
 {
-	AutocompleteContext* ctx = (AutocompleteContext*)data->UserData;
+	AutocompleteContext* ctx{ (AutocompleteContext*)data->UserData };
 
 	if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) 
 	{
@@ -269,11 +269,17 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 				std::vector<float> vecComponents{};
 				convertParametersToFloat(parameters, vecComponents);
 
-				if (!scanForIdenticalObject(func.type, vecComponents, object))
+				if (vecComponents[0] == -9999.0f && vecComponents[2] == -9999.0f)
+					std::cerr << "ERROR::COULDNT_CONVERT\n";
+				else
 				{
-					draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
-					inputBuffer[0] = '\0';
+					if (!scanForIdenticalObject(func.type, vecComponents, object))
+					{
+						draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
+						inputBuffer[0] = '\0';
+					}
 				}
+
 			}
 
 			else if (inputText.find(func.name) == 0 && args.size() == func.expectedArgs.size())
