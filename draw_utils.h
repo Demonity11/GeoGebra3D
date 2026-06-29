@@ -29,8 +29,9 @@ auto vertexSpec(const std::vector<float>& vertices)		  -> void;
 auto updateBufferData(const std::vector<float>& vertices) -> void;
 
 // forward declarations for interface.cpp
-auto initializeImGui(GLFWwindow* window)																					-> void;
-auto getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>& object)									-> void;
+auto initializeImGui(GLFWwindow* window)																		 -> void;
+auto getUserInput(std::vector<Object>& object)																	 -> void;
+auto processInput(char inputBuffer[128], const std::vector<FunctionArgs>& function, std::vector<Object>& object) -> void;
 void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color, std::array<int, 3> pIDs = { -1, -1, -1 }, std::array<int, 3> pCompIndex = { -1, -1, -1 }, bool update = false);
 
 #endif

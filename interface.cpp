@@ -4,6 +4,38 @@
 #include "objectCoords.h"
 #include "Context.h"
 
+struct AutocompleteContext 
+{
+	bool textWasEdited = false;
+	std::string textToInject{};
+};
+
+int AutocompleteCallback(ImGuiInputTextCallbackData* data) 
+{
+	AutocompleteContext* ctx = (AutocompleteContext*)data->UserData;
+
+	if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) 
+	{
+		ctx->textWasEdited = true;
+	}
+
+	if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways && !ctx->textToInject.empty())
+	{
+		data->DeleteChars(0, data->BufTextLen);
+		data->InsertChars(0, ctx->textToInject.c_str());
+		data->BufDirty = true;
+
+		if (data->BufTextLen > 0 && data->Buf[data->BufTextLen - 1] == ')')
+		{
+			data->CursorPos = data->BufTextLen - 1;
+		}
+
+		ctx->textToInject = "";
+	}
+
+	return 0;
+}
+
 // initializes ImGui context
 void initializeImGui(GLFWwindow* window)
 {
@@ -18,118 +50,146 @@ void initializeImGui(GLFWwindow* window)
 }
 
 // captures user input through Dear ImGui interface
-void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>& object)
+void getUserInput(std::vector<Object>& object)
 {
-	static char inputBuffer[128] = "";
+	constexpr std::size_t bufferSize{ 128 };
+	static char inputBuffer[bufferSize] = "";
 
-	ImGui::Begin("Input");
-	ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
+	static ImGuiID activePopupID{ 0 };
+	static int selectedIndex{ -1 };
+	static bool showDropdown{ false };
 
-	static auto inputArray{ testInput("") };
+	static AutocompleteContext context;
+	static bool focusNextFrame{ false };
 
-	if (ImGui::InputTextWithHint("Input", "input", inputBuffer, IM_COUNTOF(inputBuffer), flags))
+	ImGuiInputTextFlags inputFlags
+	{ 
+		ImGuiInputTextFlags_EnterReturnsTrue | 
+		ImGuiInputTextFlags_CallbackEdit |
+		ImGuiInputTextFlags_CallbackAlways
+	};
+	
+	ImGui::Begin("InputWindow");
+
+	ImGuiID inputID{ ImGui::GetID("Input") };
+
+	if (focusNextFrame)
 	{
-		auto ss{ std::stringstream(inputBuffer) };
-		auto inputText{ ss.str() };
+		ImGui::SetKeyboardFocusHere(0);
+		focusNextFrame = false;
+	}
 
-		// types input faster for testing
-		if (!inputArray.empty())
+	bool isEnterPressed{ ImGui::InputTextWithHint("Input", "input", inputBuffer, IM_COUNTOF(inputBuffer), inputFlags, AutocompleteCallback, &context) };
+
+	bool isInputActive{ ImGui::IsItemActive() };
+	bool isInputFocused{ ImGui::IsItemFocused() };
+
+	if (isInputActive || isInputFocused) {
+		activePopupID = inputID;
+	}
+
+	if (context.textWasEdited && activePopupID == inputID) {
+		showDropdown = true;
+	}
+
+	std::string currentText(inputBuffer);
+	std::vector<FunctionArgs> matches{};
+
+	if (showDropdown && !currentText.empty() && activePopupID == inputID)
+	{
+		for (const auto& func : Context::function)
 		{
-			inputText = inputArray[0];
-			inputArray.erase(inputArray.begin());
+			if (func.name.rfind(currentText, 0) == 0 && func.name != currentText)
+				matches.push_back(func);
 		}
+	}
 
-		for (const auto& func : function)
+	if (!matches.empty() && activePopupID == inputID && showDropdown)
+	{
+		ImVec2 inputPosMin{ ImGui::GetItemRectMin() };
+		ImVec2 inputPosMax{ ImGui::GetItemRectMax() };
+
+		ImGui::SetNextWindowPos(ImVec2(inputPosMin.x, inputPosMax.y));
+		ImGui::SetNextWindowSize(ImVec2(inputPosMax.x - inputPosMin.x, 0));
+
+		ImGuiWindowFlags flags
 		{
-			auto funcOpenParenthesisPos{ inputText.find("(") };
-			auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoFocusOnAppearing |
+			ImGuiWindowFlags_ChildWindow
+		};
 
-			if (funcCloseParenthesisPos > funcOpenParenthesisPos)
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
+		
+		if (ImGui::Begin("##AutocompletePopup", nullptr, flags))
+		{
+			if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) { selectedIndex++; }
+			if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) { selectedIndex--; }
+
+			if (selectedIndex < 0) selectedIndex = static_cast<int>(matches.size() - 1);
+			if (selectedIndex >= static_cast<int>(matches.size())) selectedIndex = 0;
+
+			for (int i{ 0 }; i < static_cast<int>(matches.size()); ++i) 
 			{
-				std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
+				const bool isSelected{ (i == selectedIndex) };
 
-				std::vector<std::string> args{ splitArgs(parameters) };
+				const auto& match{ matches[i] };
 
-				if (func.type == Object::Point && args.size() == 3)
+				std::string func{ match.name + "(" };
+
+				if (match.name == "Point")
+					func += ")";
+
+				for (std::size_t i{ 0 }; i < match.expectedArgs.size(); ++i)
 				{
-					std::vector<float> vecComponents{};
-					convertParametersToFloat(parameters, vecComponents);
+					const auto arg{ getStringFunctionType(match.expectedArgs[i]) };
 
-					if (!scanForIdenticalObject(func.type, vecComponents, object))
-					{
-						draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
-						inputBuffer[0] = '\0';
-					}
+					if (i < match.expectedArgs.size() - 1)
+						func += arg + ", ";
+					else
+						func += arg + ")";
 				}
 
-				else if (inputText.find(func.name) == 0 && args.size() == func.expectedArgs.size())
+				if (ImGui::Selectable(func.c_str(), isSelected))
 				{
-					bool isObjectValid{ true };
+					context.textToInject = matches[i].name + "()";
+					context.textWasEdited = false;
+					showDropdown = false;
+					selectedIndex = -1;
+					focusNextFrame = true;
+				}
 
-					for (int index{ 0 }; index < args.size(); ++index)
-					{
-						if (func.expectedArgs.size() != args.size())
-						{
-							isObjectValid = false;
-							if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
-							{
-								ImGui::Text("The following synxtax is not supported.");
-								if (ImGui::Button("Close"))
-									ImGui::CloseCurrentPopup();
-								ImGui::EndPopup();
-							}
-							break;
-						}
-
-						isObjectValid = compareObjectType(args[index], func.expectedArgs[index], object);
-
-						if (!isObjectValid)
-						{
-							isObjectValid = false;
-							if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
-							{
-								ImGui::Text("The following synxtax is not supported.");
-								if (ImGui::Button("Close"))
-									ImGui::CloseCurrentPopup();
-								ImGui::EndPopup();
-							}
-							break;
-						}
-					}
-
-					if (isObjectValid)
-					{
-						std::array<int, 3> pIDs{ -1, -1, -1 };
-						std::array<int, 3> pCompIndex{ -1, -1, -1 };
-
-						std::vector<float> vecComponents{};
-
-						if (args.size() == 1)
-						{
-							pIDs[0] = Context::componentLiteral;
-							pCompIndex[0] = 0;
-
-							vecComponents = { 0.0f, 0.0f, 0.0f };
-
-							getObjectComponents(args, vecComponents, pIDs, pCompIndex);
-
-							if (!scanForIdenticalObject(func.type, vecComponents, object))
-								draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
-						}
-
-						else
-						{
-							getObjectComponents(args, vecComponents, pIDs, pCompIndex);
-
-							if (!scanForIdenticalObject(func.type, vecComponents, object))
-								draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
-						}
-
-						inputBuffer[0] = '\0';
-					}
+				if (isSelected && ImGui::IsKeyPressed(ImGuiKey_Tab))
+				{
+					context.textToInject = matches[i].name + "()";
+					context.textWasEdited = false;
+					showDropdown = false;
+					selectedIndex = -1;
+					focusNextFrame = true;
 				}
 			}
 		}
+
+		if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) && ImGui::IsMouseClicked(0)) 
+		{
+			showDropdown = false;
+			selectedIndex = -1;
+		}
+
+		ImGui::EndChild();
+		ImGui::PopStyleVar();
+	}
+
+	if (isEnterPressed) 
+	{
+		showDropdown = false;
+		selectedIndex = -1;
+
+		processInput(inputBuffer, Context::function, object);
+
+		ImGui::SetKeyboardFocusHere(-1);
 	}
 
 	ImGui::SeparatorText("Variables");
@@ -177,6 +237,99 @@ void getUserInput(const std::vector<FunctionArgs>& function, std::vector<Object>
 	}
 
 	ImGui::End();
+}
+
+void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& function, std::vector<Object>& object)
+{
+	auto ss{ std::stringstream(inputBuffer) };
+	auto inputText{ ss.str() };
+
+	static auto inputArray{ testInput("") };
+
+	// types input faster for testing
+	if (!inputArray.empty())
+	{
+		inputText = inputArray[0];
+		inputArray.erase(inputArray.begin());
+	}
+
+	for (const auto& func : function)
+	{
+		auto funcOpenParenthesisPos{ inputText.find("(") };
+		auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
+
+		if (funcCloseParenthesisPos > funcOpenParenthesisPos)
+		{
+			std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
+
+			std::vector<std::string> args{ splitArgs(parameters) };
+
+			if (func.type == Object::Point && args.size() == 3)
+			{
+				std::vector<float> vecComponents{};
+				convertParametersToFloat(parameters, vecComponents);
+
+				if (!scanForIdenticalObject(func.type, vecComponents, object))
+				{
+					draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
+					inputBuffer[0] = '\0';
+				}
+			}
+
+			else if (inputText.find(func.name) == 0 && args.size() == func.expectedArgs.size())
+			{
+				bool isObjectValid{ true };
+
+				for (int index{ 0 }; index < args.size(); ++index)
+				{
+					if (func.expectedArgs.size() != args.size())
+					{
+						isObjectValid = false;
+						break;
+					}
+
+					isObjectValid = compareObjectType(args[index], func.expectedArgs[index], object);
+
+					if (!isObjectValid)
+					{
+						isObjectValid = false;
+						break;
+					}
+				}
+
+				if (isObjectValid)
+				{
+					std::array<int, 3> pIDs{ -1, -1, -1 };
+					std::array<int, 3> pCompIndex{ -1, -1, -1 };
+
+					std::vector<float> vecComponents{};
+
+					if (args.size() == 1)
+					{
+						pIDs[0] = Context::componentLiteral;
+						pCompIndex[0] = 0;
+
+						vecComponents = { 0.0f, 0.0f, 0.0f };
+
+						getObjectComponents(args, vecComponents, pIDs, pCompIndex);
+
+						if (!scanForIdenticalObject(func.type, vecComponents, object))
+							draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
+					}
+
+					else
+					{
+						getObjectComponents(args, vecComponents, pIDs, pCompIndex);
+
+						if (!scanForIdenticalObject(func.type, vecComponents, object))
+							draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
+					}
+
+					inputBuffer[0] = '\0';
+				}
+			}
+		}
+	}
 }
 
 // draw objects such as Points, Vectors, Planes, etc.

@@ -93,7 +93,7 @@ int main()
 
 		// render ImGui here
 		ImGui::ShowDemoWindow();
-		getUserInput(Context::function, Context::object);
+		getUserInput(Context::object);
 
 		ImGui::Render();
 

@@ -28,18 +28,18 @@ namespace Context
 	// store FunctionArgs which has name, type, and expected arguments
 	std::vector<FunctionArgs> function
 	{
-		{"Point(",     Object::Point,   {}											  },
-		{"Vector(",    Object::Vector,  {Object::Point,  Object::Point}				  },
-		{"Vector(",    Object::Vector,  {Object::Point}								  },
-		{"Segment(",   Object::Segment, {Object::Point,  Object::Point}				  },
-		{"Line(",	   Object::Line,    {Object::Point,  Object::Point}				  },
-		{"Line(",      Object::Line,    {Object::Point,  Object::Vector}			  },
-		{"Plane(",     Object::Plane,   {Object::Point,  Object::Vector}			  },
-		{"Intersect(", Object::Point,   {Object::Line,   Object::Plane}			      },
-		{"Intersect(", Object::Point,   {Object::Plane,  Object::Line}			      },
-		{"Intersect(", Object::Point,   {Object::Line,   Object::Line}			      },
-		{"Intersect(", Object::Line,    {Object::Plane,  Object::Plane}				  }
-		//{"Plane(",   Object::Plane,   {Object::Point, Object::Point, Object::Point} }
+		{"Point",     Object::Point,   {}											  },
+		{"Vector",    Object::Vector,  {Object::Point,  Object::Point}				  },
+		{"Vector",    Object::Vector,  {Object::Point}								  },
+		{"Segment",   Object::Segment, {Object::Point,  Object::Point}				  },
+		{"Line",	  Object::Line,    {Object::Point,  Object::Point}				  },
+		{"Line",      Object::Line,    {Object::Point,  Object::Vector}				  },
+		{"Plane",     Object::Plane,   {Object::Point,  Object::Vector}				  },
+		{"Intersect", Object::Point,   {Object::Line,   Object::Plane}			      },
+		{"Intersect", Object::Point,   {Object::Plane,  Object::Line}			      },
+		{"Intersect", Object::Point,   {Object::Line,   Object::Line}			      },
+		{"Intersect", Object::Line,    {Object::Plane,  Object::Plane}				  }
+		//{"Plane",   Object::Plane,   {Object::Point, Object::Point, Object::Point} }
 	};
 
 	// store object symbols (default name)
