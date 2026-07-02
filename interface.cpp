@@ -279,7 +279,6 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 						inputBuffer[0] = '\0';
 					}
 				}
-
 			}
 
 			else if (inputText.find(func.name) == 0 && args.size() == func.expectedArgs.size())
@@ -498,19 +497,29 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		pointA *= scale;
 		pointB *= scale;
 
+		const float cilinderLength{ glm::length(pointB - pointA) };
+
 		const float radius{ 0.0015f };
+		const float coneRadius{ radius * 4.0f };
+
+		const glm::vec3 direction{ glm::normalize(pointB - pointA) };
+		const float coneHeight{ 0.025f };
+		
+		auto newPointB{ pointA + (cilinderLength - coneHeight) * direction };
 
 		if (update)
 		{
-			getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
+			getCilinderVertices(pointA, newPointB, color, radius, Context::vertexData);
+			getConeVertices(direction, pointB, color, coneRadius, coneHeight, Context::vertexData);
 			return;
 		}
 
 		// getCilinderVertices creates 144 new vertices 
-		getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
+		getCilinderVertices(pointA, newPointB, color, radius, Context::vertexData);
+		getConeVertices(direction, pointB, color, coneRadius, coneHeight, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Vector, GL_LINES};
-		createObject(std::move(obj), 144, vecComponents, color, 2, pIDs, pCompIndex);
+		createObject(std::move(obj), 144 + 256, vecComponents, color, 2, pIDs, pCompIndex);
 
 		updateBufferData(Context::vertexData);
 	}

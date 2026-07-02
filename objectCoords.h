@@ -11,5 +11,6 @@ auto getEnvironmentVertices(std::vector<float>& vertexData, bool firstRun = fals
 auto getNewCoordSystem(glm::vec3& direction, glm::vec3& right, glm::vec3& up)															-> void;
 auto getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, glm::vec4 color, std::vector<float>& vertexData)			-> void;
 auto getLineVertices(glm::vec3 point, glm::vec3 dVecP0, glm::vec3 dVecP, glm::vec4 color, float radius, std::vector<float>& vertexData) -> void;
+auto getConeVertices(glm::vec3 direction, glm::vec3 apex, glm::vec4 color, float radius, float height, std::vector<float>& vertexData)  -> void;
 
 #endif

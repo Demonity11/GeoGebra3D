@@ -40,12 +40,17 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radiu
 
 	getNewCoordSystem(direction, right, up);
 
-	const float linesDensity{ 360.0f / 72.0f };
+	constexpr int maxLines{ 72 };
+	constexpr float linesDensity{ 360.0f / static_cast<float>(maxLines) };
 
-	// this loop does 72 * 14 = 1008 pushbacks
-	for (float angle{ 0.0f }; angle < 360.0f; angle += linesDensity)
+	vertexData.reserve(vertexData.size() + static_cast<size_t>(maxLines * 14));
+
+	// this loop does maxLines * 14
+	// for maxLines = 72, 72 * 14 = 1008 pushbacks 
+	// vertexCount = 1008 / 7 = 144
+	for (int line{ 0 }; line < maxLines; ++line)
 	{
-		float rad{ glm::radians(angle) };
+		float rad{ glm::radians(static_cast<float>(line) * linesDensity) };
 
 		glm::vec3 a{ p0 + radius * cos(rad) * right + radius * sin(rad) * up };
 		glm::vec3 b{ a + length * direction };
@@ -68,6 +73,79 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radiu
 	}
 }
 
+void getConeVertices(glm::vec3 direction, glm::vec3 apex, glm::vec4 color, float radius, float height, std::vector<float>& vertexData)
+{
+	glm::vec3 right{};
+	glm::vec3 up{};
+
+	getNewCoordSystem(direction, right, up);
+
+	glm::vec3 baseCenter{ apex - direction * height };
+
+	auto transformToWorld = [&](const glm::vec3 localP) -> glm::vec3
+		{
+			return baseCenter + (localP.x * right) + (localP.y * direction) + (localP.z * up);
+		};
+
+	const int N{ 64 };
+
+	glm::vec3 apexLocal{ 0.0f, height, 0.0f };
+
+	glm::vec3 apexWorld{ transformToWorld(apexLocal) };
+
+	vertexData.reserve(vertexData.size() + static_cast<size_t>(N * 28));
+
+	// this loop does 28 * N pushbacks
+	// for N = 64, 1792 pushbacks
+	// vertexCount = 1792 / 7 = 256
+	for (int i{ 0 }; i < N; ++i)
+	{
+		float angle{ i * glm::radians(360.0f) / static_cast<float>(N) };
+		glm::vec3 pBaseLocal{ radius * cos(angle), 0.0f, radius * sin(angle) };
+		
+		int iNext{ i + 1 };
+		float angleNext{ iNext * glm::radians(360.0f) / static_cast<float>(N) };
+		glm::vec3 pBaseNextLocal{ radius * cos(angleNext), 0.0f, radius * sin(angleNext) };
+
+		glm::vec3 pBaseWorld{ transformToWorld(pBaseLocal) };
+		glm::vec3 pBaseNextWorld{ transformToWorld(pBaseNextLocal) };
+
+		// side lines
+		vertexData.push_back(apexWorld.x);
+		vertexData.push_back(apexWorld.y);
+		vertexData.push_back(apexWorld.z);
+		vertexData.push_back(color.x);
+		vertexData.push_back(color.y);
+		vertexData.push_back(color.z);
+		vertexData.push_back(color.w);
+
+		vertexData.push_back(pBaseWorld.x);
+		vertexData.push_back(pBaseWorld.y);
+		vertexData.push_back(pBaseWorld.z);
+		vertexData.push_back(color.x);
+		vertexData.push_back(color.y);
+		vertexData.push_back(color.z);
+		vertexData.push_back(color.w);
+
+		// base lines
+		vertexData.push_back(pBaseWorld.x);
+		vertexData.push_back(pBaseWorld.y);
+		vertexData.push_back(pBaseWorld.z);
+		vertexData.push_back(color.x);
+		vertexData.push_back(color.y);
+		vertexData.push_back(color.z);
+		vertexData.push_back(color.w);
+
+		vertexData.push_back(pBaseNextWorld.x);
+		vertexData.push_back(pBaseNextWorld.y);
+		vertexData.push_back(pBaseNextWorld.z);
+		vertexData.push_back(color.x);
+		vertexData.push_back(color.y);
+		vertexData.push_back(color.z);
+		vertexData.push_back(color.w);
+	}
+}
+
 void getLineVertices(glm::vec3 point, glm::vec3 dVecP0, glm::vec3 dVecP, glm::vec4 color, float radius, std::vector<float>& vertexData)
 {
 	glm::vec3 direction{ dVecP - dVecP0 };
@@ -82,12 +160,17 @@ void getLineVertices(glm::vec3 point, glm::vec3 dVecP0, glm::vec3 dVecP, glm::ve
 
 	getNewCoordSystem(direction, right, up);
 
-	const float linesDensity{ 360.0f / 72.0f };
+	constexpr int maxLines{ 72 };
+	constexpr float linesDensity{ 360.0f / static_cast<float>(maxLines) };
 
-	// this loop does 72 * 14 = 1008 pushbacks
-	for (float angle{ 0.0f }; angle < 360.0f; angle += linesDensity)
+	vertexData.reserve(vertexData.size() + static_cast<size_t>(maxLines * 14));
+
+	// this loop does maxLines * 14
+	// for maxLines = 72, 72 * 14 = 1008 pushbacks 
+	// vertexCount = 1008 / 7 = 144
+	for (int line{ 0 }; line < maxLines; ++line)
 	{
-		float rad{ glm::radians(angle) };
+		float rad{ glm::radians(static_cast<float>(line) * linesDensity) };
 
 		glm::vec3 a{ point + radius * cos(rad) * right + radius * sin(rad) * up }; a -= direction * length * 7.0f;
 		glm::vec3 b{ a + length * direction * 14.0f};
@@ -124,19 +207,25 @@ void getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<fl
 
 	getNewCoordSystem(direction, right, up);
 
-	const float linesDensity{ 360.0f / 72.0f };
-	const float ringRadius{ 0.002f };
-	float stride{ 0.1f };
-	const int ringCount{ 20 };
+	constexpr int maxLines{ 72 };
+	constexpr float linesDensity{ 360.0f / static_cast<float>(maxLines) };
+	constexpr float ringRadius{ 0.002f };
+	constexpr float stride{ 0.1f };
+	constexpr int ringCount{ 20 };
 
+	vertexData.reserve(vertexData.size() + static_cast<size_t>(ringCount * maxLines * 14));
+
+	// this loop does ringCount * (360 / linesDensity) * 14
+	// for ringCount = 20, linesDensity = 5
 	// this loop does 20 * 72 * 14 = 20160 pushbacks
+	// vertexCount = 20160 / 7 = 2880
 	for (int i{ 0 }; i < ringCount; ++i)
 	{
 		p0 += direction * stride;
 
-		for (float angle{ 0.0f }; angle < 360.0f; angle += linesDensity)
+		for (int line{ 0 }; line < maxLines; ++line)
 		{
-			float rad{ glm::radians(angle) };
+			float rad{ glm::radians(static_cast<int>(line) * linesDensity) };
 
 			glm::vec3 a{ p0 + ringRadius * cos(rad) * right + ringRadius * sin(rad) * up };
 			glm::vec3 b{ a + ringWidth * direction };
@@ -162,20 +251,26 @@ void getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<fl
 
 void getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std::vector<float>& vertexData)
 {
-	const float deltaPhi{ 180.f / 60.0f };
+	constexpr int maxStacks{ 60 };
+	constexpr int maxSlices{ 72 };
 
-	const float deltaTheta{ 360.0f / 72.0f };
+	constexpr float deltaPhi{ glm::radians(180.f / static_cast<float>(maxStacks)) };
+
+	constexpr float deltaTheta{ glm::radians(360.f / static_cast<float>(maxSlices)) };
+
+	vertexData.reserve(vertexData.size() + static_cast<size_t>(maxStacks * maxSlices * 28));
 
 	// this loop does 60 * 72 * 28 = 120960 pushbacks
-	for (float i{ 0.0f }; i <= 180.0f - deltaPhi; i += deltaPhi)
+	// vertexCount = 120960 / 7 = 17280
+	for (int stack{ 0 }; stack < maxStacks; ++stack)
 	{
-		float phi{ glm::radians(i) };
-		float phiNext{ glm::radians(i + deltaPhi) };
+		float phi{ static_cast<float>(stack) * deltaPhi};
+		float phiNext{ static_cast<float>(stack + 1) * deltaPhi };
 
-		for (float j{ 0.0f }; j <= 360.0f - deltaTheta; j += deltaTheta)
+		for (int slice{ 0 }; slice < maxSlices; ++slice)
 		{
-			float theta{ glm::radians(j) };
-			float thetaNext{ glm::radians(j + deltaTheta) };
+			float theta{ static_cast<float>(slice) * deltaTheta };
+			float thetaNext{ static_cast<float>(slice + 1) * deltaTheta };
 
 			glm::vec3 p0
 			{
@@ -198,36 +293,39 @@ void getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std
 				translation.z + radius * sin(phiNext) * sin(theta)
 			};
 
-			vertexData.push_back(p0.x);
-			vertexData.push_back(p0.y);
+			if (stack > 0)
+			{
+				vertexData.push_back(p0.x); 
+				vertexData.push_back(p0.y); 
+				vertexData.push_back(p0.z);
+				vertexData.push_back(color.x); 
+				vertexData.push_back(color.y); 
+				vertexData.push_back(color.z); 
+				vertexData.push_back(color.w);
+
+				vertexData.push_back(pRight.x); 
+				vertexData.push_back(pRight.y); 
+				vertexData.push_back(pRight.z);
+				vertexData.push_back(color.x); 
+				vertexData.push_back(color.y); 
+				vertexData.push_back(color.z); 
+				vertexData.push_back(color.w);
+			}
+
+			vertexData.push_back(p0.x); 
+			vertexData.push_back(p0.y); 
 			vertexData.push_back(p0.z);
-			vertexData.push_back(color.x);
-			vertexData.push_back(color.y);
-			vertexData.push_back(color.z);
+			vertexData.push_back(color.x); 
+			vertexData.push_back(color.y); 
+			vertexData.push_back(color.z); 
 			vertexData.push_back(color.w);
 
-			vertexData.push_back(pRight.x);
-			vertexData.push_back(pRight.y);
-			vertexData.push_back(pRight.z);
-			vertexData.push_back(color.x);
-			vertexData.push_back(color.y);
-			vertexData.push_back(color.z);
-			vertexData.push_back(color.w);
-
-			vertexData.push_back(p0.x);
-			vertexData.push_back(p0.y);
-			vertexData.push_back(p0.z);
-			vertexData.push_back(color.x);
-			vertexData.push_back(color.y);
-			vertexData.push_back(color.z);
-			vertexData.push_back(color.w);
-
-			vertexData.push_back(pBottom.x);
+			vertexData.push_back(pBottom.x); 
 			vertexData.push_back(pBottom.y);
 			vertexData.push_back(pBottom.z);
-			vertexData.push_back(color.x);
-			vertexData.push_back(color.y);
-			vertexData.push_back(color.z);
+			vertexData.push_back(color.x); 
+			vertexData.push_back(color.y); 
+			vertexData.push_back(color.z); 
 			vertexData.push_back(color.w);
 		}
 	}
@@ -260,6 +358,10 @@ void getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, gl
 		-1.0f, 0.0f, -1.0f
 	};
 
+	vertexData.reserve(vertexData.size() + static_cast<size_t>(6 * 7));
+
+	// this loop does 6 * 7 = 42 pushbacks
+	// vertexCount = 6
 	for (int i{ 0 }; i < planeVertices.size(); i += 3)
 	{
 		glm::vec3 p
@@ -290,10 +392,13 @@ void getGridVertices(std::vector<float>& vertexData)
 
 	glm::vec4 color{ 0.0f, 0.0f, 0.0f, 0.5f };
 
-	const float stride{ 0.1f };
-	const int lineCount{ 21 };
+	constexpr float stride{ 0.1f };
+	constexpr int lineCount{ 21 };
+	
+	vertexData.reserve(vertexData.size() + static_cast<size_t>(lineCount * 28));
 
 	// this loop does 21 * 28 = 588 pushbacks
+	// vertexCount = 84
 	for (int i{ 0 }; i < lineCount; ++i)
 	{
 		vertexData.push_back(p0Horizontal.x);
@@ -426,7 +531,6 @@ void getEnvironmentVertices(std::vector<float>& vertexData, bool firstRun)
 			++axis;
 		}
 	}
-
 
 	// this execution does 21 * 28 = 588 pushbacks
 	getGridVertices(vertexData);
