@@ -26,21 +26,20 @@ void getNewCoordSystem(glm::vec3& direction, glm::vec3& right, glm::vec3& up)
 	up = glm::cross(right, direction);
 }
 
-void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radius, std::vector<float>& vertexData)
+int getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radius, std::vector<float>& vertexData)
 {
+	size_t verticesBefore{ vertexData.size() / 7 };
+
 	glm::vec3 direction{ p - p0 };
 
 	float length{ glm::length(direction) };
-
-	if (length == 0.0f)
-		return;
 
 	glm::vec3 right{};
 	glm::vec3 up{};
 
 	getNewCoordSystem(direction, right, up);
 
-	constexpr int maxLines{ 72 };
+	constexpr int maxLines{ 360 };
 	constexpr float linesDensity{ 360.0f / static_cast<float>(maxLines) };
 
 	vertexData.reserve(vertexData.size() + static_cast<size_t>(maxLines * 14));
@@ -71,10 +70,16 @@ void getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radiu
 		vertexData.push_back(color.z);
 		vertexData.push_back(color.w);
 	}
+
+	size_t verticesAfter{ vertexData.size() / 7 };
+
+	return static_cast<int>(verticesAfter - verticesBefore);
 }
 
-void getConeVertices(glm::vec3 direction, glm::vec3 apex, glm::vec4 color, float radius, float height, std::vector<float>& vertexData)
+int getConeVertices(glm::vec3 direction, glm::vec3 apex, glm::vec4 color, float radius, float height, std::vector<float>& vertexData)
 {
+	size_t verticesBefore{ vertexData.size() / 7 };
+
 	glm::vec3 right{};
 	glm::vec3 up{};
 
@@ -87,7 +92,7 @@ void getConeVertices(glm::vec3 direction, glm::vec3 apex, glm::vec4 color, float
 			return baseCenter + (localP.x * right) + (localP.y * direction) + (localP.z * up);
 		};
 
-	const int N{ 64 };
+	constexpr int N{ 360 };
 
 	glm::vec3 apexLocal{ 0.0f, height, 0.0f };
 
@@ -144,23 +149,26 @@ void getConeVertices(glm::vec3 direction, glm::vec3 apex, glm::vec4 color, float
 		vertexData.push_back(color.z);
 		vertexData.push_back(color.w);
 	}
+
+	size_t verticesAfter{ vertexData.size() / 7 };
+
+	return static_cast<int>(verticesAfter - verticesBefore);
 }
 
-void getLineVertices(glm::vec3 point, glm::vec3 dVecP0, glm::vec3 dVecP, glm::vec4 color, float radius, std::vector<float>& vertexData)
+int getLineVertices(glm::vec3 point, glm::vec3 dVecP0, glm::vec3 dVecP, glm::vec4 color, float radius, std::vector<float>& vertexData)
 {
+	size_t verticesBefore{ vertexData.size() / 7 };
+
 	glm::vec3 direction{ dVecP - dVecP0 };
 
 	float length{ glm::length(direction) };
-
-	if (length == 0.0f)
-		return;
 
 	glm::vec3 right{};
 	glm::vec3 up{};
 
 	getNewCoordSystem(direction, right, up);
 
-	constexpr int maxLines{ 72 };
+	constexpr int maxLines{ 360 };
 	constexpr float linesDensity{ 360.0f / static_cast<float>(maxLines) };
 
 	vertexData.reserve(vertexData.size() + static_cast<size_t>(maxLines * 14));
@@ -191,27 +199,30 @@ void getLineVertices(glm::vec3 point, glm::vec3 dVecP0, glm::vec3 dVecP, glm::ve
 		vertexData.push_back(color.z);
 		vertexData.push_back(color.w);
 	}
+
+	size_t verticesAfter{ vertexData.size() / 7 };
+
+	return static_cast<int>(verticesAfter - verticesBefore);
 }
 
-void getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<float>& vertexData)
+int getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<float>& vertexData)
 {
+	size_t verticesBefore{ vertexData.size() / 7 };
+
 	glm::vec3 direction{ p - p0 };
 
 	float ringWidth{ glm::length(direction) };
-
-	if (ringWidth == 0.0f)
-		return;
 
 	glm::vec3 right{};
 	glm::vec3 up{};
 
 	getNewCoordSystem(direction, right, up);
 
-	constexpr int maxLines{ 72 };
+	constexpr int maxLines{ 360 };
 	constexpr float linesDensity{ 360.0f / static_cast<float>(maxLines) };
-	constexpr float ringRadius{ 0.002f };
+	constexpr float ringRadius{ 0.0011f };
 	constexpr float stride{ 0.1f };
-	constexpr int ringCount{ 20 };
+	constexpr int ringCount{ 19 };
 
 	vertexData.reserve(vertexData.size() + static_cast<size_t>(ringCount * maxLines * 14));
 
@@ -222,6 +233,11 @@ void getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<fl
 	for (int i{ 0 }; i < ringCount; ++i)
 	{
 		p0 += direction * stride;
+		
+		if (i == ringCount + 1 / 2)
+		{
+			continue;
+		}
 
 		for (int line{ 0 }; line < maxLines; ++line)
 		{
@@ -247,12 +263,18 @@ void getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<fl
 			vertexData.push_back(color.w);
 		}
 	}
+
+	size_t verticesAfter{ vertexData.size() / 7 };
+
+	return static_cast<int>(verticesAfter - verticesBefore);
 }
 
-void getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std::vector<float>& vertexData)
+int getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std::vector<float>& vertexData)
 {
-	constexpr int maxStacks{ 60 };
-	constexpr int maxSlices{ 72 };
+	size_t verticesBefore{ vertexData.size() / 7 };
+
+	constexpr int maxStacks{ 120 };
+	constexpr int maxSlices{ 144 };
 
 	constexpr float deltaPhi{ glm::radians(180.f / static_cast<float>(maxStacks)) };
 
@@ -329,16 +351,19 @@ void getSphereVertices(glm::vec3 translation, glm::vec4 color, float radius, std
 			vertexData.push_back(color.w);
 		}
 	}
+
+	size_t verticesAfter{ vertexData.size() / 7 };
+
+	return static_cast<int>(verticesAfter - verticesBefore);
 }
 
-void getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, glm::vec4 color, std::vector<float>& vertexData)
+int getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, glm::vec4 color, std::vector<float>& vertexData)
 {
+	size_t verticesBefore{ vertexData.size() / 7 };
+
 	glm::vec3 direction{ normalP - normalP0 };
 
-	float length{ glm::length(direction) };
-
-	if (length == 0.0f)
-		return;
+	const float length{ glm::length(direction) };
 
 	glm::vec3 right{};
 	glm::vec3 up{};
@@ -380,10 +405,16 @@ void getPlaneVertices(glm::vec3 normalP0, glm::vec3 normalP, glm::vec3 point, gl
 		vertexData.push_back(color.z);
 		vertexData.push_back(color.w);
 	}
+
+	size_t verticesAfter{ vertexData.size() / 7 };
+
+	return static_cast<int>(verticesAfter - verticesBefore);
 }
 
-void getGridVertices(std::vector<float>& vertexData)
+int getGridVertices(std::vector<float>& vertexData)
 {
+	size_t verticesBefore{ vertexData.size() / 7 };
+
 	glm::vec3 p0Horizontal{ -1.0f, 0.0f, -1.0f };
 	glm::vec3 pHorizontal {  1.0f, 0.0f, -1.0f };
 
@@ -439,6 +470,10 @@ void getGridVertices(std::vector<float>& vertexData)
 		p0Vertical.x += stride;
 		pVertical.x += stride;
 	}
+
+	size_t verticesAfter{ vertexData.size() / 7 };
+
+	return static_cast<int>(verticesAfter - verticesBefore);
 }
 
 void getEnvironmentVertices(std::vector<float>& vertexData, bool firstRun)
@@ -481,25 +516,37 @@ void getEnvironmentVertices(std::vector<float>& vertexData, bool firstRun)
 	char axis{ 'X' };
 
 	std::vector<float> axisPos{ 0.0f, 0.5f, 0.0f };
+	const glm::vec4 coneColor{ 0.8f, 0.5f, 0.0f, 1.0f };
 
 	// this loop does 3 * 1008 = 3024 pushbacks
 	for (int v{ 0 }, c{ 0 }; v < axisVertices.size(); v += 6, c += 4)
 	{
-		glm::vec3 a{ axisVertices[v], axisVertices[v + 1], axisVertices[v + 2] };
-		glm::vec3 b(axisVertices[v + 3], axisVertices[v + 4], axisVertices[v + 5]);
+		glm::vec3 a    { axisVertices[v], axisVertices[v + 1], axisVertices[v + 2] };
+		glm::vec3 b    { axisVertices[v + 3], axisVertices[v + 4], axisVertices[v + 5] };
 		glm::vec4 color{ axisColors[c], axisColors[c + 1], axisColors[c + 2], axisColors[c + 3] };
 
-		getCilinderVertices(a, b, color, 0.001f, vertexData);
-		
+		const float cilinderLength{ glm::length(b - a) };
+
+		glm::vec3 direction{ glm::normalize(b - a) };
+
+		constexpr float radius{ 0.001f };
+		constexpr float coneRadius{ radius * 4.0f };
+		constexpr float coneHeight{ 0.025f };
+
+		auto newB{ a + (cilinderLength - coneHeight) * direction };
+
+		int vCountCilinder{ getCilinderVertices(a, newB, color, radius, vertexData) };
+		int vCountCone{ getConeVertices(direction, b, coneColor, coneRadius, coneHeight, vertexData) };
+
 		if (firstRun)
 		{
 			Object obj{ std::string(1, axis) + "_AXIS", Object::Segment, GL_LINES };
-			createObject(std::move(obj), 144, axisPos, color, 0);
+			createObject(std::move(obj), vCountCilinder + vCountCone, axisPos, color, 0);
 			++axis;
 		}
 	}
 
-	float ringWidth{ 0.002f };
+	constexpr float ringWidth{ 0.002f };
 	std::vector ringVertices
 	{
 		-1.0f, 0.0f, 0.0f,
@@ -522,22 +569,22 @@ void getEnvironmentVertices(std::vector<float>& vertexData, bool firstRun)
 		glm::vec3 a{ ringVertices[v], ringVertices[v + 1], ringVertices[v + 2] };
 		glm::vec3 b(ringVertices[v + 3], ringVertices[v + 4], ringVertices[v + 5]);
 
-		getRingsVertices(a, b, ringColor, vertexData);
+		int vCountRing{ getRingsVertices(a, b, ringColor, vertexData) };
 
 		if (firstRun)
 		{
 			Object obj{ std::string(1, axis) + "_AXIS_RINGS", Object::Segment, GL_LINES };
-			createObject(std::move(obj), 2880, axisPos, ringColor, 0);
+			createObject(std::move(obj), vCountRing, axisPos, ringColor, 0);
 			++axis;
 		}
 	}
 
 	// this execution does 21 * 28 = 588 pushbacks
-	getGridVertices(vertexData);
+	int vCountGrid{ getGridVertices(vertexData) };
 
 	if (firstRun)
 	{
 		Object obj{ "GRID_LINES", Object::Segment, GL_LINES };
-		createObject(std::move(obj), 84, {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f), 0);
+		createObject(std::move(obj), vCountGrid, {}, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f), 0);
 	}
 }

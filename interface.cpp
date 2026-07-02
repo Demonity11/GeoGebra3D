@@ -439,9 +439,11 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		if (color == glm::vec4{0.0f, 0.0f, 0.0f, 1.0f})
 			color = { 0.7f, 0.3f, 0.0f, 1.0f };
 
+		int vCountSphere{};
+
 		if (update)
 		{
-			getSphereVertices(intersection, color, radius, Context::vertexData);
+			vCountSphere = getSphereVertices(intersection, color, radius, Context::vertexData);
 			return;
 		}
 
@@ -451,11 +453,11 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 			return;
 		}
 
-		getSphereVertices(intersection, color, radius, Context::vertexData);
+		vCountSphere = getSphereVertices(intersection, color, radius, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
 		obj.setMutable(false);
-		createObject(std::move(obj), 17280, components, color, 2, pIDs, pCompIndex);
+		createObject(std::move(obj), vCountSphere, components, color, 2, pIDs, pCompIndex);
 			
 		updateBufferData(Context::vertexData);
 	}
@@ -468,17 +470,19 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		const float radius{ 0.005f };
 
+		int vCountSphere{};
+
 		if (update)
 		{
-			getSphereVertices(point, color, radius, Context::vertexData);
+			vCountSphere = getSphereVertices(point, color, radius, Context::vertexData);
 			return;
 		}
 
 		// getSphereVertices create 120960 new floats => 120960 / 7 = 17280 vertices, where 7 = number of components
-		getSphereVertices(point, color, radius, Context::vertexData);
+		vCountSphere = getSphereVertices(point, color, radius, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
-		createObject(std::move(obj), 17280, vecComponents, color, 0, pIDs);
+		createObject(std::move(obj), vCountSphere, vecComponents, color, 0, pIDs);
 
 		updateBufferData(Context::vertexData);
 		}
@@ -494,32 +498,40 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		pointA = { vecComponents[startA], vecComponents[startA + 1], vecComponents[startA + 2] };
 		pointB = { vecComponents[startB], vecComponents[startB + 1], vecComponents[startB + 2] };
 
+		constexpr float epsilon{ 0.001f };
+
+		if (glm::length(pointB - pointA) < epsilon)
+			return;
+
 		pointA *= scale;
 		pointB *= scale;
 
 		const float cilinderLength{ glm::length(pointB - pointA) };
 
-		const float radius{ 0.0015f };
-		const float coneRadius{ radius * 4.0f };
+		constexpr float radius{ 0.0015f };
+		constexpr float coneRadius{ radius * 4.0f };
 
 		const glm::vec3 direction{ glm::normalize(pointB - pointA) };
-		const float coneHeight{ 0.025f };
+		constexpr float coneHeight{ 0.025f };
 		
 		auto newPointB{ pointA + (cilinderLength - coneHeight) * direction };
 
+		int vCountCilinder{};
+		int vCountCone{};
+
 		if (update)
 		{
-			getCilinderVertices(pointA, newPointB, color, radius, Context::vertexData);
-			getConeVertices(direction, pointB, color, coneRadius, coneHeight, Context::vertexData);
+			vCountCilinder = getCilinderVertices(pointA, newPointB, color, radius, Context::vertexData);
+			vCountCone     = getConeVertices(direction, pointB, color, coneRadius, coneHeight, Context::vertexData);
 			return;
 		}
 
 		// getCilinderVertices creates 144 new vertices 
-		getCilinderVertices(pointA, newPointB, color, radius, Context::vertexData);
-		getConeVertices(direction, pointB, color, coneRadius, coneHeight, Context::vertexData);
+		vCountCilinder = getCilinderVertices(pointA, newPointB, color, radius, Context::vertexData);
+		vCountCone	   = getConeVertices(direction, pointB, color, coneRadius, coneHeight, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Vector, GL_LINES};
-		createObject(std::move(obj), 144 + 256, vecComponents, color, 2, pIDs, pCompIndex);
+		createObject(std::move(obj), vCountCilinder + vCountCone, vecComponents, color, 2, pIDs, pCompIndex);
 
 		updateBufferData(Context::vertexData);
 	}
@@ -537,16 +549,18 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		const float radius{ 0.0015f };
 
+		int vCountCilinder{};
+
 		if (update)
 		{
-			getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
+			vCountCilinder = getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
 			return;
 		}
-		// getCilinderVertices create 144 new vertices
-		getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
+
+		vCountCilinder = getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Segment, GL_LINES };
-		createObject(obj, 144, vecComponents, color, 2, pIDs, pCompIndex);
+		createObject(obj, vCountCilinder, vecComponents, color, 2, pIDs, pCompIndex);
 
 		updateBufferData(Context::vertexData);
 	}
@@ -595,9 +609,11 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		if (color == glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f })
 			color = { 0.7f, 0.3f, 0.0f, 1.0f };
 
+		int vCountLine{};
+
 		if (update)
 		{
-			getLineVertices(intersection[0], {0.0f, 0.0f, 0.0f}, intersection[1], color, radius, Context::vertexData);
+			vCountLine = getLineVertices(intersection[0], {0.0f, 0.0f, 0.0f}, intersection[1], color, radius, Context::vertexData);
 			return;
 		}
 
@@ -607,11 +623,11 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 			return;
 		}
 
-		getLineVertices(intersection[0], { 0.0f, 0.0f, 0.0f }, intersection[1], color, radius, Context::vertexData);
+		vCountLine = getLineVertices(intersection[0], { 0.0f, 0.0f, 0.0f }, intersection[1], color, radius, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Line, GL_LINES };
 		obj.setMutable(false);
-		createObject(std::move(obj), 144, components, color, 2, pIDs, pCompIndex);
+		createObject(std::move(obj), vCountLine, components, color, 2, pIDs, pCompIndex);
 
 		updateBufferData(Context::vertexData);
 
@@ -644,16 +660,18 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		const float radius{ 0.0015f };
 
+		int vCountLine{};
+
 		if (update)
 		{
-			getLineVertices(point, dVectorP0, dVectorP, color, radius, Context::vertexData);
+			vCountLine = getLineVertices(point, dVectorP0, dVectorP, color, radius, Context::vertexData);
 			return;
 		}
-		// getCilinderVertices create 144 new vertices
-		getLineVertices(point, dVectorP0, dVectorP, color, radius, Context::vertexData);
+		
+		vCountLine = getLineVertices(point, dVectorP0, dVectorP, color, radius, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Line, GL_LINES };
-		createObject(obj, 144, vecComponents, color, 2, pIDs, pCompIndex);
+		createObject(obj, vCountLine, vecComponents, color, 2, pIDs, pCompIndex);
 
 		updateBufferData(Context::vertexData);
 	}
@@ -673,17 +691,19 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		color.w = 0.2f;
 
+		int vCountPlane{};
+
 		if (update)
 		{
-			getPlaneVertices(normalP0, normalP, point, color, Context::vertexData);
+			vCountPlane = getPlaneVertices(normalP0, normalP, point, color, Context::vertexData);
 			return;
 		}
 
-		// getCilinderVertices create 6 new vertices
-		getPlaneVertices(normalP0, normalP, point, color, Context::vertexData);
+		// getPlaneVertices create 6 new vertices
+		vCountPlane = getPlaneVertices(normalP0, normalP, point, color, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Plane, GL_TRIANGLES };
-		createObject(obj, 6, vecComponents, color, 3, pIDs, pCompIndex);
+		createObject(obj, vCountPlane, vecComponents, color, 3, pIDs, pCompIndex);
 
 		updateBufferData(Context::vertexData);
 	}
