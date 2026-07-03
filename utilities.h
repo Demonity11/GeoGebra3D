@@ -23,7 +23,7 @@ auto getEquation(Object& obj)																														  -> std::string;
 auto intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::vec3 planeNormal, float d)												  -> glm::vec3;
 auto intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::vec3 vt)																	  -> glm::vec3;
 auto intersectionPlanePlane(glm::vec3 p1, glm::vec3 n1, glm::vec3 p2, glm::vec3 n2)																	  -> std::array<glm::vec3, 2>;
-auto recalculateIntersect(const Object& obj, std::vector<Object>& object)																			  -> bool;
+auto recalculateIntersect(Object& obj, std::vector<Object>& object)																			  -> bool;
 auto testInput(std::string input)																													  -> std::vector<std::string>;
 
 bool projectWorldToScreen

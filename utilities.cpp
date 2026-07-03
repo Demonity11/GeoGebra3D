@@ -824,7 +824,7 @@ std::vector<std::string> testInput(std::string input)
 
 // return true if the intersection persists
 // return false if the intersection ceases to exist
-bool recalculateIntersect(const Object& obj, std::vector<Object>& object)
+bool recalculateIntersect(Object& obj, std::vector<Object>& object)
 {
 	auto type{ obj.getType() };
 	auto pIDs{ obj.getParentIDs() };
@@ -837,7 +837,6 @@ bool recalculateIntersect(const Object& obj, std::vector<Object>& object)
 		// plane 1 components extraction
 		int startP1{ plane1.getpCompIndex()[0] };
 		int startN1{ plane1.getpCompIndex()[1] };
-
 		auto comp1{ plane1.getComponents() };
 
 		glm::vec3 p1{ comp1[startP1], comp1[startP1 + 1], comp1[startP1 + 2] };
@@ -846,7 +845,6 @@ bool recalculateIntersect(const Object& obj, std::vector<Object>& object)
 		// plane 2 components extraction
 		int startP2{ plane2.getpCompIndex()[0] };
 		int startN2{ plane2.getpCompIndex()[1] };
-
 		auto comp2{ plane2.getComponents() };
 
 		glm::vec3 p2{ comp2[startP2], comp2[startP2 + 1], comp2[startP2 + 2] };
@@ -859,6 +857,13 @@ bool recalculateIntersect(const Object& obj, std::vector<Object>& object)
 			std::cerr << "Intersection doesn't exist.\n";
 			return false;
 		}
+
+		obj.getComponents()[0] = intersection[0].x;
+		obj.getComponents()[1] = intersection[0].y;
+		obj.getComponents()[2] = intersection[0].z;
+		obj.getComponents()[3] = intersection[1].x;
+		obj.getComponents()[4] = intersection[1].y;
+		obj.getComponents()[5] = intersection[1].z;
 	}
 
 	else if (type == Object::Point)
@@ -935,19 +940,24 @@ bool recalculateIntersect(const Object& obj, std::vector<Object>& object)
 			if (types[0] == Object::Plane)
 			{
 				d = -glm::dot(points[0], vectors[0]);
-				intersection = intersectionLinePlane(points[1], vectors[1], points[0], d);
+				intersection = intersectionLinePlane(points[1], vectors[1], vectors[0], d);
 			}
 			else
 			{
 				d = -glm::dot(points[1], vectors[1]);
-				intersection = intersectionLinePlane(points[0], vectors[0], points[1], d);
+				intersection = intersectionLinePlane(points[0], vectors[0], vectors[1], d);
 			}
 		}
 
 		if (intersection == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
 		{
+			std::cerr << "Intersection doesn't exist.\n";
 			return false;
 		}
+
+		obj.getComponents()[0] = intersection[0];
+		obj.getComponents()[1] = intersection[1];
+		obj.getComponents()[2] = intersection[2];
 	}
 
 	return true;

@@ -252,10 +252,10 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(3,3,3)\nSegment(A,B)\nVector(A)\nLine(A,u)\nPlane(A,u)\n") };
 	static auto inputArray{ testInput(
-		"Point(0,0,0)\n"   // Cria o ponto A
+		"Point(0,1,0)\n"   // Cria o ponto A
 		"Point(1,0,0)\n"   // Cria o ponto B
 		"Vector(B)\n"      // Cria o vetor u -> Assinatura: {Object::Point}
-		"Point(0,1,0)\n"   // Cria o ponto C
+		"Point(0,-1,0)\n"   // Cria o ponto C
 		"Vector(C)\n"      // Cria o vetor v -> Assinatura: {Object::Point}
 		"Point(0,0,1)\n"   // Cria o ponto D
 		"Vector(D)\n"      // Cria o vetor w -> Assinatura: {Object::Point}
@@ -788,7 +788,7 @@ void drawObjectLabels
 			ImVec2 adjustedPos{ screenPos.x - (textWidth * 0.5f), screenPos.y };
 
 			drawList->AddText(Context::spaceFont, Context::fontSize, ImVec2{ adjustedPos.x + 1.0f, adjustedPos.y + 1.0f }, ImColor{ 0, 0, 0, 255 }, label.c_str());
-			drawList->AddText(Context::spaceFont, Context::fontSize, adjustedPos, ImColor{ 255, 255, 255, 255 }, label.c_str());
+			drawList->AddText(Context::spaceFont, Context::fontSize, adjustedPos, ImColor{ 0, 80, 255, 255 }, label.c_str());
 		}
 	}
 }
