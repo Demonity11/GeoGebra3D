@@ -234,7 +234,7 @@ int getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<flo
 	{
 		p0 += direction * stride;
 		
-		if (i == ringCount + 1 / 2)
+		if (i + 1 == (ringCount + 1) / 2)
 		{
 			continue;
 		}
@@ -516,7 +516,6 @@ void getEnvironmentVertices(std::vector<float>& vertexData, bool firstRun)
 	char axis{ 'X' };
 
 	std::vector<float> axisPos{ 0.0f, 0.5f, 0.0f };
-	const glm::vec4 coneColor{ 0.8f, 0.5f, 0.0f, 1.0f };
 
 	// this loop does 3 * 1008 = 3024 pushbacks
 	for (int v{ 0 }, c{ 0 }; v < axisVertices.size(); v += 6, c += 4)
@@ -536,7 +535,7 @@ void getEnvironmentVertices(std::vector<float>& vertexData, bool firstRun)
 		auto newB{ a + (cilinderLength - coneHeight) * direction };
 
 		int vCountCilinder{ getCilinderVertices(a, newB, color, radius, vertexData) };
-		int vCountCone{ getConeVertices(direction, b, coneColor, coneRadius, coneHeight, vertexData) };
+		int vCountCone{ getConeVertices(direction, b, color, coneRadius, coneHeight, vertexData) };
 
 		if (firstRun)
 		{
@@ -564,7 +563,7 @@ void getEnvironmentVertices(std::vector<float>& vertexData, bool firstRun)
 	axis = 'X';
 
 	// this loop does 3 * 20160 = 60480 pushbacks
-	for (int v{ 0 }; v < axisVertices.size(); v += 6)
+	for (size_t v{ 0 }; v < axisVertices.size(); v += 6)
 	{
 		glm::vec3 a{ ringVertices[v], ringVertices[v + 1], ringVertices[v + 2] };
 		glm::vec3 b(ringVertices[v + 3], ringVertices[v + 4], ringVertices[v + 5]);

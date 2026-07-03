@@ -952,3 +952,35 @@ bool recalculateIntersect(const Object& obj, std::vector<Object>& object)
 
 	return true;
 }
+
+bool projectWorldToScreen
+(
+	const glm::vec3& worldPos,			  
+	const glm::mat4& viewMatrix,			  
+	const glm::mat4& projectionMatrix,	  
+	const glm::mat4& modelMatrix,
+	const glm::vec2& viewportPos,  
+	const glm::vec2& viewportSize,	        
+		  glm::vec2& outScreenPos
+)
+{
+	glm::vec4 clipSpacePos{ projectionMatrix * viewMatrix * modelMatrix * glm::vec4(worldPos, 1.0f) };
+	float wc{ clipSpacePos.w };
+	
+	if (wc <= 0.0f)
+	{
+		return false;
+	}
+
+	glm::vec3 ndc{ glm::vec3(clipSpacePos) / clipSpacePos.w };
+
+	if (ndc.x < -1.0f || ndc.x > 1.0f || ndc.y < -1.0f || ndc.y > 1.0f)
+	{
+		return false;
+	}
+
+	outScreenPos.x = ((ndc.x + 1.0f) * 0.5f) * viewportSize.x + viewportPos.x;
+	outScreenPos.y = ((-ndc.y + 1.0f) * 0.5f) * viewportSize.y + viewportPos.y;
+
+	return true;
+}

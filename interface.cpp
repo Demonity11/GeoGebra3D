@@ -41,7 +41,13 @@ void initializeImGui(GLFWwindow* window)
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); static_cast<void>(io);
+	ImGuiIO& io = ImGui::GetIO(); 
+
+	io.Fonts->AddFontDefault();
+
+	Context::spaceFont = io.Fonts->AddFontFromFileTTF("fonts/Inter_24pt-Bold.ttf", Context::fontSize);
+
+	static_cast<void>(io);
 
 	ImGui::StyleColorsDark();
 
@@ -244,7 +250,7 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	auto ss{ std::stringstream(inputBuffer) };
 	auto inputText{ ss.str() };
 
-	static auto inputArray{ testInput("") };
+	static auto inputArray{ testInput("Point(1,1,1)\nPoint(3,3,3)\nSegment(A,B)\nVector(A)\nLine(A,u)\nPlane(A,u)\n") };
 
 	// types input faster for testing
 	if (!inputArray.empty())
@@ -706,5 +712,159 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		createObject(obj, vCountPlane, vecComponents, color, 3, pIDs, pCompIndex);
 
 		updateBufferData(Context::vertexData);
+	}
+}
+
+void drawObjectLabels
+(
+	std::vector<Object>& object,
+	const glm::mat4& viewMatrix,
+	const glm::mat4& projectionMatrix,
+	const glm::mat4& modelMatrix,
+	const glm::vec2& viewportPos,
+	const glm::vec2& viewportSize
+)
+{
+	ImDrawList* drawList{ ImGui::GetBackgroundDrawList() };
+
+	constexpr float scale{ 0.1f };
+
+	for (size_t idx{ 8 }; idx < object.size(); ++idx)
+	{
+		auto& obj{ object[idx] };
+		auto type{ obj.getType() };
+
+		if (type == Object::Line || type == Object::Plane)
+			continue;
+
+		glm::vec3 targetWorldPos{};
+		auto comp{ obj.getComponents() };
+
+		if (type == Object::Vector)
+		{
+			int startB{ obj.getpCompIndex()[1] };
+
+			targetWorldPos = { comp[startB], comp[startB + 1], comp[startB + 2] };
+			targetWorldPos *= scale;
+			targetWorldPos += glm::vec3{ 0.0f, 0.03f, 0.0f };
+		}
+
+		else if (type == Object::Point)
+		{
+			targetWorldPos = { comp[0], comp[1], comp[2] };
+			targetWorldPos *= scale;
+			targetWorldPos += glm::vec3{ 0.0f, 0.015f, 0.0f };
+		}
+
+		else if (type == Object::Segment)
+		{
+			targetWorldPos = { (comp[0] + comp[3]) * 0.5f, (comp[1] + comp[4]) * 0.5f, (comp[2] + comp[5]) * 0.5f };
+			targetWorldPos *= scale;
+		}
+
+		glm::vec2 screenPos{};
+
+		if (projectWorldToScreen(targetWorldPos, viewMatrix, projectionMatrix, modelMatrix, viewportPos, viewportSize, screenPos))
+		{
+			std::string label{ obj.getName() };
+
+			float textWidth{ Context::spaceFont->CalcTextSizeA(Context::fontSize, FLT_MAX, 0.0f, label.c_str()).x };
+			ImVec2 adjustedPos{ screenPos.x - (textWidth * 0.5f), screenPos.y };
+
+			drawList->AddText(Context::spaceFont, Context::fontSize, ImVec2{ adjustedPos.x + 1.0f, adjustedPos.y + 1.0f }, ImColor{ 0, 0, 0, 255 }, label.c_str());
+			drawList->AddText(Context::spaceFont, Context::fontSize, adjustedPos, ImColor{ 255, 255, 255, 255 }, label.c_str());
+		}
+	}
+}
+
+void drawAxisLabels
+(
+	std::vector<Object>& object,
+	const glm::mat4& viewMatrix,
+	const glm::mat4& projectionMatrix,
+	const glm::mat4& modelMatrix,
+	const glm::vec2& viewportPos,
+	const glm::vec2& viewportSize
+)
+{
+	// ring start vertices
+	std::vector ringVertices
+	{
+		-1.0f,  0.0f,  0.0f,
+		 1.0f,  0.0f,  0.0f,
+
+		 0.0f, -1.0f,  0.0f,
+		 0.0f,  1.0f,  0.0f,
+		  
+		 0.0f,  0.0f, -1.0f,
+		 0.0f,  0.0f,  1.0f,
+	};
+
+	std::vector<ImColor> axisColors
+	{
+		{255, 0, 0, 255},
+		{0, 255, 0, 255},
+		{0, 0, 255, 255}
+	};
+
+	ImDrawList* drawList{ ImGui::GetBackgroundDrawList() };
+
+	constexpr float stride{ 0.1f };
+	constexpr int ringCount{ 21 };
+	constexpr float axisSpacing{ -0.0085f };
+
+	bool isZeroDrawn{ false };
+	bool isColorWhite{ true };
+
+	for (size_t ringStart{ 0 }, c{ 0 }; ringStart < ringVertices.size(); ringStart += 6, ++c)
+	{
+		glm::vec3 ringPos{ ringVertices[ringStart], ringVertices[ringStart + 1], ringVertices[ringStart + 2] };
+		glm::vec3 direction{ glm::normalize(glm::vec3
+		(
+			ringVertices[ringStart + 3] - ringVertices[ringStart],
+			ringVertices[ringStart + 4] - ringVertices[ringStart + 1],
+			ringVertices[ringStart + 5] - ringVertices[ringStart + 2]
+		)) };
+
+		if (ringStart == 0) ringPos  += glm::vec3{ 0.0f, axisSpacing, axisSpacing };
+		if (ringStart == 6) ringPos  += glm::vec3{ axisSpacing, 0.0f, axisSpacing };
+		if (ringStart == 12) ringPos += glm::vec3{ axisSpacing, axisSpacing, 0.0f };
+
+		ImColor color{};
+
+		for (int ring{ 0 }, count{ -10 }; ring < ringCount; ++ring, ++count)
+		{
+			if (count == 0 && isZeroDrawn)
+			{
+				ringPos += direction * stride;
+				continue;
+			}
+
+			glm::vec2 screenPos{};
+
+			if (projectWorldToScreen(ringPos, viewMatrix, projectionMatrix, modelMatrix, viewportPos, viewportSize, screenPos))
+			{
+				if (count == 0 && isColorWhite) 
+				{
+					isZeroDrawn = true;
+					isColorWhite = false;
+					color = ImColor{ 255, 255, 255, 255 };
+				}
+				else
+				{
+					color = axisColors[c];
+				}
+
+				std::string label{ std::to_string(count) };
+
+				float textWidth{ Context::spaceFont->CalcTextSizeA(Context::fontSize, FLT_MAX, 0.0f, label.c_str()).x };
+				ImVec2 adjustedPos{ screenPos.x - (textWidth * 0.5f), screenPos.y };
+
+				drawList->AddText(Context::spaceFont, Context::fontSize, ImVec2{ adjustedPos.x + 1.0f, adjustedPos.y + 1.0f }, ImColor{ 0, 0, 0, 255 }, label.c_str());
+				drawList->AddText(Context::spaceFont, Context::fontSize, adjustedPos, color, label.c_str());
+			}
+
+			ringPos += direction * stride;
+		}
 	}
 }

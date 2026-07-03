@@ -33,6 +33,10 @@ namespace Context
 	extern std::map<Object::Type, char> objectSymbols;
 	// parent ID when the object has literal components
 	inline constexpr int componentLiteral{ -2 };
+
+	inline ImFont* spaceFont{ nullptr };
+
+	constexpr float fontSize{ 16.0f };
 }
 
 #endif

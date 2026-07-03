@@ -108,4 +108,8 @@
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <Font Include="fonts\Inter_24pt-Bold.ttf" />
+    <Font Include="fonts\Inter-VariableFont_opsz,wght.ttf" />
+  </ItemGroup>
 </Project>

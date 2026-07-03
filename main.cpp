@@ -95,6 +95,16 @@ int main()
 		ImGui::ShowDemoWindow();
 		getUserInput(Context::object);
 
+		int width{};
+		int height{};
+		glfwGetWindowSize(window.getWindow(), &width, &height);
+
+		glm::vec2 viewportPos{ 0.0f, 0.0f }; 
+		glm::vec2 viewportSize{ static_cast<float>(width), static_cast<float>(height) };
+
+		drawObjectLabels(Context::object, view, projection, model, viewportPos, viewportSize);
+		drawAxisLabels(Context::object, view, projection, model, viewportPos, viewportSize);
+
 		ImGui::Render();
 
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

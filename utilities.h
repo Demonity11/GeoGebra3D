@@ -23,8 +23,19 @@ auto getEquation(Object& obj)																														  -> std::string;
 auto intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::vec3 planeNormal, float d)												  -> glm::vec3;
 auto intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::vec3 vt)																	  -> glm::vec3;
 auto intersectionPlanePlane(glm::vec3 p1, glm::vec3 n1, glm::vec3 p2, glm::vec3 n2)																	  -> std::array<glm::vec3, 2>;
-auto recalculateIntersect(const Object& obj, std::vector<Object>& object)																		  -> bool;
+auto recalculateIntersect(const Object& obj, std::vector<Object>& object)																			  -> bool;
 auto testInput(std::string input)																													  -> std::vector<std::string>;
+
+bool projectWorldToScreen
+(
+	const glm::vec3& worldPos,
+	const glm::mat4& viewMatrix,
+	const glm::mat4& projectionMatrix,
+	const glm::mat4& modelMatrix,
+	const glm::vec2& viewportPos,
+	const glm::vec2& viewportSize,
+	glm::vec2& outScreenPos
+);
 
 void createObject(Object obj, int vCount, const std::vector<float>& comp, const glm::vec4 color, uint8_t pCount, std::array<int, 3> pIDs = { -1, -1, -1 }, std::array<int, 3> pCompIndex = { -1, -1, -1 });
 
