@@ -250,7 +250,22 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	auto ss{ std::stringstream(inputBuffer) };
 	auto inputText{ ss.str() };
 
-	static auto inputArray{ testInput("Point(1,1,1)\nPoint(3,3,3)\nSegment(A,B)\nVector(A)\nLine(A,u)\nPlane(A,u)\n") };
+	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(3,3,3)\nSegment(A,B)\nVector(A)\nLine(A,u)\nPlane(A,u)\n") };
+	static auto inputArray{ testInput(
+		"Point(0,0,0)\n"   // Cria o ponto A
+		"Point(1,0,0)\n"   // Cria o ponto B
+		"Vector(B)\n"      // Cria o vetor u -> Assinatura: {Object::Point}
+		"Point(0,1,0)\n"   // Cria o ponto C
+		"Vector(C)\n"      // Cria o vetor v -> Assinatura: {Object::Point}
+		"Point(0,0,1)\n"   // Cria o ponto D
+		"Vector(D)\n"      // Cria o vetor w -> Assinatura: {Object::Point}
+		"Plane(A,w)\n"     // Cria o plano p -> Assinatura: {Object::Point, Object::Vector}
+		"Plane(A,v)\n"     // Cria o plano q -> Assinatura: {Object::Point, Object::Vector}
+		"Intersect(p,q)\n" // Cria a reta r  -> Casa com: {"Intersect", Object::Line, {Object::Plane, Object::Plane}}
+		"Point(2,2,2)\n"   // Cria o ponto E
+		"Line(E,w)\n"      // Cria a reta s  -> Casa com: {"Line", Object::Line, {Object::Point, Object::Vector}}
+		"Intersect(s,p)\n" // Cria o ponto F -> Casa com: {"Intersect", Object::Point, {Object::Line, Object::Plane}}
+	) };
 
 	// types input faster for testing
 	if (!inputArray.empty())
@@ -423,12 +438,12 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 			if (types[0] == Object::Plane) 
 			{
 				d = -glm::dot(points[0], vectors[0]);
-				intersection = intersectionLinePlane(points[1], vectors[1], points[0], d);
+				intersection = intersectionLinePlane(points[1], vectors[1], vectors[0], d);
 			}
 			else 
 			{
 				d = -glm::dot(points[1], vectors[1]);
-				intersection = intersectionLinePlane(points[0], vectors[0], points[1], d);
+				intersection = intersectionLinePlane(points[0], vectors[0], vectors[1], d);
 			}
 		}
 
@@ -455,6 +470,7 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		if (scanForIdenticalObject(type, components, Context::object))
 		{
+			std::cout << components[0] << ", " << components[1] << ", " << components[2] << "\n";
 			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
 			return;
 		}
@@ -802,9 +818,9 @@ void drawAxisLabels
 
 	std::vector<ImColor> axisColors
 	{
-		{255, 0, 0, 255},
-		{0, 255, 0, 255},
-		{0, 0, 255, 255}
+		{ 255, 0, 0, 255 },
+		{ 0, 255, 0, 255 },
+		{ 0, 0, 255, 255 }
 	};
 
 	ImDrawList* drawList{ ImGui::GetBackgroundDrawList() };
