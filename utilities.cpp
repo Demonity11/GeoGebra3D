@@ -21,6 +21,17 @@ std::string getStringFunctionType(Object::Type type)
 	return "???";
 }
 
+Object::Type getObjectTypeFromString(const std::string& funcName)
+{
+	if		(funcName == "Point")   return Object::Point;
+	else if (funcName == "Vector")  return Object::Vector;
+	else if (funcName == "Segment") return Object::Segment;
+	else if (funcName == "Line")    return Object::Line;
+	else if (funcName == "Plane")   return Object::Plane;
+
+	return Object::Null;
+}
+
 // convert std::string parameters to float
 void convertParametersToFloat(std::string& parameters, std::vector<float>& vecComponents)
 {
@@ -282,7 +293,7 @@ void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>&
 			return a > b;
 		}
 	);
-	
+
 	for (auto i : childIndex)
 	{
 		object.erase(object.begin() + i);
@@ -294,7 +305,7 @@ void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>&
 
 	for (size_t idx{ 8 }; idx < object.size(); ++idx)
 	{
-		auto& obj = object[idx];
+		auto& obj{ object[idx] };
 
 		int newOffset = static_cast<int>(vertexData.size()) / 7;
 		obj.setOffset(newOffset);
@@ -303,34 +314,6 @@ void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>&
 	}
 
 	updateBufferData(vertexData);
-}
-
-// delete objects from vertexData
-std::vector<float> deleteObjectFromVertexData(int objIndex, std::vector<float>& vertexData, std::vector<Object>& object)
-{
-	if (vertexData.empty())
-		return {};
-
-	// 7 is the number of components for each vertice
-	// 3 position components + 4 color values
-	const auto& obj{ object[objIndex] };
-
-	int offset{ obj.getOffset() * 7 };
-	int floatCount{ obj.getVertexCount() * 7 };
-
-	std::vector<float> newVertexData{};
-
-	newVertexData.reserve(vertexData.size() - floatCount);
-
-	for (int i{ 0 }; i < vertexData.size(); ++i)
-	{
-		if (i >= offset && i < offset + floatCount)
-			continue;
-
-		newVertexData.push_back(vertexData[i]);
-	}
-
-	return newVertexData;
 }
 
 // function to update objects

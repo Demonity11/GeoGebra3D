@@ -9,6 +9,7 @@ class Object
 public:
 	enum Type
 	{
+		Null,
 		Point,
 		Vector,
 		Segment,

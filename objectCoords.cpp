@@ -180,8 +180,8 @@ int getLineVertices(glm::vec3 point, glm::vec3 dVecP0, glm::vec3 dVecP, glm::vec
 	{
 		float rad{ glm::radians(static_cast<float>(line) * linesDensity) };
 
-		glm::vec3 a{ point + radius * cos(rad) * right + radius * sin(rad) * up }; a -= direction * length * 7.0f;
-		glm::vec3 b{ a + length * direction * 14.0f};
+		glm::vec3 a{ point + radius * cos(rad) * right + radius * sin(rad) * up }; a -= direction * length * 10.0f;
+		glm::vec3 b{ a + length * direction * 20.0f};
 
 		vertexData.push_back(a.x);
 		vertexData.push_back(a.y);

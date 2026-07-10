@@ -35,6 +35,7 @@ namespace Context
 		{"Line",	  Object::Line,    {Object::Point,  Object::Point}				  },
 		{"Line",      Object::Line,    {Object::Point,  Object::Vector}				  },
 		{"Plane",     Object::Plane,   {Object::Point,  Object::Vector}				  },
+		{"Plane",     Object::Plane,   {Object::Point,  Object::Point, Object::Point} },
 		{"Intersect", Object::Point,   {Object::Line,   Object::Plane}			      },
 		{"Intersect", Object::Point,   {Object::Plane,  Object::Line}			      },
 		{"Intersect", Object::Point,   {Object::Line,   Object::Line}			      },

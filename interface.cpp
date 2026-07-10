@@ -251,21 +251,7 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	auto inputText{ ss.str() };
 
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(3,3,3)\nSegment(A,B)\nVector(A)\nLine(A,u)\nPlane(A,u)\n") };
-	static auto inputArray{ testInput(
-		"Point(0,1,0)\n"   // Cria o ponto A
-		"Point(1,0,0)\n"   // Cria o ponto B
-		"Vector(B)\n"      // Cria o vetor u -> Assinatura: {Object::Point}
-		"Point(0,-1,0)\n"   // Cria o ponto C
-		"Vector(C)\n"      // Cria o vetor v -> Assinatura: {Object::Point}
-		"Point(0,0,1)\n"   // Cria o ponto D
-		"Vector(D)\n"      // Cria o vetor w -> Assinatura: {Object::Point}
-		"Plane(A,w)\n"     // Cria o plano p -> Assinatura: {Object::Point, Object::Vector}
-		"Plane(A,v)\n"     // Cria o plano q -> Assinatura: {Object::Point, Object::Vector}
-		"Intersect(p,q)\n" // Cria a reta r  -> Casa com: {"Intersect", Object::Line, {Object::Plane, Object::Plane}}
-		"Point(2,2,2)\n"   // Cria o ponto E
-		"Line(E,w)\n"      // Cria a reta s  -> Casa com: {"Line", Object::Line, {Object::Point, Object::Vector}}
-		"Intersect(s,p)\n" // Cria o ponto F -> Casa com: {"Intersect", Object::Point, {Object::Line, Object::Plane}}
-	) };
+	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\n") };
 
 	// types input faster for testing
 	if (!inputArray.empty())
@@ -285,19 +271,25 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 
 			std::vector<std::string> args{ splitArgs(parameters) };
 
-			if (func.type == Object::Point && args.size() == 3)
+			std::cout << inputText.substr(0, funcOpenParenthesisPos);
+			Object::Type funcType{ getObjectTypeFromString(inputText.substr(0, funcOpenParenthesisPos)) };
+			if (funcType == Object::Point && args.size() == 3)
 			{
 				std::vector<float> vecComponents{};
 				convertParametersToFloat(parameters, vecComponents);
 
 				if (vecComponents[0] == -9999.0f && vecComponents[2] == -9999.0f)
+				{
 					std::cerr << "ERROR::COULDNT_CONVERT\n";
+					return;
+				}
 				else
 				{
 					if (!scanForIdenticalObject(func.type, vecComponents, object))
 					{
-						draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
+						draw(funcType, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
 						inputBuffer[0] = '\0';
+						return;
 					}
 				}
 			}
@@ -700,16 +692,53 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 	else if (type == Object::Plane)
 	{
-		int startPoint{ pCompIndex[0] };
-		int startNormal{ pCompIndex[1] };
+		int pIndex1{ searchObjectByID(pIDs[1], Context::object) };
+		Object::Type pType1{ Context::object[pIndex1].getType() };
 
-		glm::vec3 normalP0{ vecComponents[startNormal], vecComponents[startNormal + 1], vecComponents[startNormal + 2] };
-		glm::vec3 normalP{ vecComponents[startNormal + 3], vecComponents[startNormal + 4], vecComponents[startNormal + 5] };
-		glm::vec3 point{ vecComponents[startPoint], vecComponents[startPoint + 1], vecComponents[startPoint + 2] };
+		std::array<glm::vec3, 3> comp{};
 
-		normalP0 *= scale;
-		normalP *= scale;
-		point *= scale;
+		if (pType1 == Object::Vector)
+		{
+			int startPoint{ pCompIndex[0] };
+			int startNormal{ pCompIndex[1] };
+
+			glm::vec3 normalP0{ vecComponents[startNormal], vecComponents[startNormal + 1], vecComponents[startNormal + 2] };
+			glm::vec3 normalP{ vecComponents[startNormal + 3], vecComponents[startNormal + 4], vecComponents[startNormal + 5] };
+			glm::vec3 point{ vecComponents[startPoint], vecComponents[startPoint + 1], vecComponents[startPoint + 2] };
+
+			normalP0 *= scale;
+			normalP  *= scale;
+			point    *= scale;
+
+			comp[0] = normalP0;
+			comp[1] = normalP;
+			comp[2] = point;
+		}
+
+		else if (pType1 == Object::Point)
+		{
+			int startPointA{ pCompIndex[0] };
+			int startPointB{ pCompIndex[1] };
+			int startPointC{ pCompIndex[2] };
+
+			glm::vec3 A{ vecComponents[startPointA], vecComponents[startPointA + 1], vecComponents[startPointA + 2] };
+			glm::vec3 B{ vecComponents[startPointB], vecComponents[startPointB + 1], vecComponents[startPointB + 2] };
+			glm::vec3 C{ vecComponents[startPointC], vecComponents[startPointC + 1], vecComponents[startPointC + 2] };
+
+			glm::vec3 u{ B - A };
+			glm::vec3 v{ C - A };
+
+			glm::vec3 normal{ glm::cross(u, v) };
+
+			std::cout << normal.x << normal.y << normal.z << "\n";
+
+			A	   *= scale;
+			normal *= scale;
+
+			comp[0] = glm::vec3(0.0f, 0.0f, 0.0f);
+			comp[1] = normal;
+			comp[2] = A;
+		}
 
 		color.w = 0.2f;
 
@@ -717,12 +746,12 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		if (update)
 		{
-			vCountPlane = getPlaneVertices(normalP0, normalP, point, color, Context::vertexData);
+			vCountPlane = getPlaneVertices(comp[0], comp[1], comp[2], color, Context::vertexData);
 			return;
 		}
 
 		// getPlaneVertices create 6 new vertices
-		vCountPlane = getPlaneVertices(normalP0, normalP, point, color, Context::vertexData);
+		vCountPlane = getPlaneVertices(comp[0], comp[1], comp[2], color, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Plane, GL_TRIANGLES };
 		createObject(obj, vCountPlane, vecComponents, color, 3, pIDs, pCompIndex);
