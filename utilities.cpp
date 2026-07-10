@@ -529,17 +529,42 @@ std::string getEquation(Object& obj)
 
 	if (type == Object::Plane)
 	{
-		int startPoint{ obj.getpCompIndex()[0] };
-		int startNormal{ obj.getpCompIndex()[1] };
+		int pIndex1{ searchObjectByID(obj.getParentIDs()[1], Context::object) };
+		int pType1{ Context::object[pIndex1].getType() };
 
-		glm::vec3 normal
+		glm::vec3 normal{};
+		glm::vec3 point {};
+
+		const auto& vecComp{ obj.getComponents() };
+
+		if (pType1 == Object::Vector)
 		{
-			obj.getComponents()[startNormal + 3] - obj.getComponents()[startNormal],
-			obj.getComponents()[startNormal + 4] - obj.getComponents()[startNormal + 1],
-			obj.getComponents()[startNormal + 5] - obj.getComponents()[startNormal + 2]
-		};
+			int startPoint{ obj.getpCompIndex()[0] };
+			int startNormal{ obj.getpCompIndex()[1] };
 
-		glm::vec3 point{ obj.getComponents()[startPoint], obj.getComponents()[startPoint + 1], obj.getComponents()[startPoint + 2] };
+			normal = 
+			{
+				vecComp[startNormal + 3] - vecComp[startNormal],
+				vecComp[startNormal + 4] - vecComp[startNormal + 1],
+				vecComp[startNormal + 5] - vecComp[startNormal + 2]
+			};
+
+			point = { vecComp[startPoint], vecComp[startPoint + 1], vecComp[startPoint + 2] };
+		}
+
+		else if (pType1 == Object::Point)
+		{
+			int startA{ obj.getpCompIndex()[0] };
+			int startB{ obj.getpCompIndex()[1] };
+			int startC{ obj.getpCompIndex()[2] };
+
+			glm::vec3 A{ vecComp[startA], vecComp[startA + 1], vecComp[startA + 2] };
+			glm::vec3 B{ vecComp[startB], vecComp[startB + 1], vecComp[startB + 2] };
+			glm::vec3 C{ vecComp[startC], vecComp[startC + 1], vecComp[startC + 2] };
+
+			normal = glm::cross(B - A, C - A);
+			point = A;
+		}
 
 		float d{ -normal.x * point.x - normal.y * point.y - normal.z * point.z };
 
