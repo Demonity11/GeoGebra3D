@@ -548,21 +548,8 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 			glm::vec3 cross{ glm::cross(u, v) };
 
-			std::cout << cross << "\n";
-
 			comp[0] = glm::vec3(0.0f, 0.0f, 0.0f);
 			comp[1] = cross;
-
-			//vecComponents.clear();
-			//vecComponents.push_back(comp[0].x);
-			//vecComponents.push_back(comp[0].y);
-			//vecComponents.push_back(comp[0].z);
-			//vecComponents.push_back(comp[1].x);
-			//vecComponents.push_back(comp[1].y);
-			//vecComponents.push_back(comp[1].z);
-
-			//pCompIndex[0] = 0;
-			//pCompIndex[1] = 3;
 		}
 
 		auto [pointA, pointB] = comp;
@@ -875,6 +862,7 @@ void drawObjectLabels
 				int startB{ obj.getpCompIndex()[1] };
 				targetWorldPos = { comp[startB], comp[startB + 1], comp[startB + 2] };
 			}
+
 			targetWorldPos *= scale;
 			targetWorldPos += glm::vec3{ 0.0f, 0.03f, 0.0f };
 		}

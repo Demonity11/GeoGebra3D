@@ -3,7 +3,6 @@
 #include "objectCoords.h"
 #include "Context.h"
 
-#include <format>
 #include <iomanip>
 
 // convert Object::Type to std::string
@@ -475,6 +474,16 @@ std::string getExpression(Object& obj, std::vector<Object>& object)
 
 				return ss.str();
 			}
+		}
+
+		else if (type == Object::Vector && !obj.isMutable())
+		{
+			ss << "Cross(";
+			ss << object[searchObjectByID(obj.getParentIDs()[0], object)].getName() << ", ";
+			ss << object[searchObjectByID(obj.getParentIDs()[1], object)].getName();
+			ss << ")";
+
+			return ss.str();
 		}
 
 		ss << getStringFunctionType(type) << "(";
