@@ -4,6 +4,13 @@
 #include "objectCoords.h"
 #include "Context.h"
 
+std::ostream& operator<<(std::ostream& os, const glm::vec3& vec)
+{
+	os << vec.x << ", " << vec.y << ", " << vec.z;
+
+	return os;
+}
+
 struct AutocompleteContext 
 {
 	bool textWasEdited = false;
@@ -251,7 +258,8 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	auto inputText{ ss.str() };
 
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(3,3,3)\nSegment(A,B)\nVector(A)\nLine(A,u)\nPlane(A,u)\n") };
-	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\n") };
+	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\n") };
+	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nVector(A,B)\nVector(A,C)\nCross(u,v)\n") };
 
 	// types input faster for testing
 	if (!inputArray.empty())
@@ -271,7 +279,6 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 
 			std::vector<std::string> args{ splitArgs(parameters) };
 
-			std::cout << inputText.substr(0, funcOpenParenthesisPos);
 			Object::Type funcType{ getObjectTypeFromString(inputText.substr(0, funcOpenParenthesisPos)) };
 			if (funcType == Object::Point && args.size() == 3)
 			{
@@ -503,14 +510,62 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 	else if (type == Object::Vector)
 	{
-		int startA{ pCompIndex[0] };
-		int startB{ pCompIndex[1] };
+		int pIndex1{ searchObjectByID(pIDs[1], Context::object) };
+		int pType1{ Context::object[pIndex1].getType() };
 
-		glm::vec3 pointA{};
-		glm::vec3 pointB{};
+		std::array<glm::vec3, 2> comp{};
 
-		pointA = { vecComponents[startA], vecComponents[startA + 1], vecComponents[startA + 2] };
-		pointB = { vecComponents[startB], vecComponents[startB + 1], vecComponents[startB + 2] };
+		if (pType1 == Object::Point)
+		{
+			int startA{ pCompIndex[0] };
+			int startB{ pCompIndex[1] };
+
+			glm::vec3 pointA{ vecComponents[startA], vecComponents[startA + 1], vecComponents[startA + 2] };
+			glm::vec3 pointB{ vecComponents[startB], vecComponents[startB + 1], vecComponents[startB + 2] };
+
+			comp[0] = pointA;
+			comp[1] = pointB;
+		}
+		
+		else if (pType1 == Object::Vector)
+		{
+			int startU{ pCompIndex[0] };
+			int startV{ pCompIndex[1] };
+
+			glm::vec3 u
+			{
+				vecComponents[startU + 3] - vecComponents[startU],
+				vecComponents[startU + 4] - vecComponents[startU + 1],
+				vecComponents[startU + 5] - vecComponents[startU + 2]
+			};
+
+			glm::vec3 v
+			{
+				vecComponents[startV + 3] - vecComponents[startV],
+				vecComponents[startV + 4] - vecComponents[startV + 1],
+				vecComponents[startV + 5] - vecComponents[startV + 2]
+			};
+
+			glm::vec3 cross{ glm::cross(u, v) };
+
+			std::cout << cross << "\n";
+
+			comp[0] = glm::vec3(0.0f, 0.0f, 0.0f);
+			comp[1] = cross;
+
+			//vecComponents.clear();
+			//vecComponents.push_back(comp[0].x);
+			//vecComponents.push_back(comp[0].y);
+			//vecComponents.push_back(comp[0].z);
+			//vecComponents.push_back(comp[1].x);
+			//vecComponents.push_back(comp[1].y);
+			//vecComponents.push_back(comp[1].z);
+
+			//pCompIndex[0] = 0;
+			//pCompIndex[1] = 3;
+		}
+
+		auto [pointA, pointB] = comp;
 
 		constexpr float epsilon{ 0.001f };
 
@@ -545,6 +600,7 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		vCountCone	   = getConeVertices(direction, pointB, color, coneRadius, coneHeight, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Vector, GL_LINES};
+		if (pType1 == Object::Vector) obj.setMutable(false); // if the object is the cross product, then it cannot be mutable
 		createObject(std::move(obj), vCountCilinder + vCountCone, vecComponents, color, 2, pIDs, pCompIndex);
 
 		updateBufferData(Context::vertexData);
@@ -730,8 +786,6 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 			glm::vec3 normal{ glm::cross(u, v) };
 
-			std::cout << normal.x << normal.y << normal.z << "\n";
-
 			A	   *= scale;
 			normal *= scale;
 
@@ -744,14 +798,16 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		int vCountPlane{};
 
+		auto [planeNormal0, planeNormal, planePoint] = comp;
+
 		if (update)
 		{
-			vCountPlane = getPlaneVertices(comp[0], comp[1], comp[2], color, Context::vertexData);
+			vCountPlane = getPlaneVertices(planeNormal0, planeNormal, planePoint, color, Context::vertexData);
 			return;
 		}
 
 		// getPlaneVertices create 6 new vertices
-		vCountPlane = getPlaneVertices(comp[0], comp[1], comp[2], color, Context::vertexData);
+		vCountPlane = getPlaneVertices(planeNormal0, planeNormal, planePoint, color, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Plane, GL_TRIANGLES };
 		createObject(obj, vCountPlane, vecComponents, color, 3, pIDs, pCompIndex);
@@ -787,9 +843,38 @@ void drawObjectLabels
 
 		if (type == Object::Vector)
 		{
-			int startB{ obj.getpCompIndex()[1] };
+			int pIndex1{ obj.getParentIDs()[1] };
+			int pType1{ object[searchObjectByID(pIndex1, object)].getType() };
 
-			targetWorldPos = { comp[startB], comp[startB + 1], comp[startB + 2] };
+			if (pType1 == Object::Vector)
+			{
+				int startU{ obj.getpCompIndex()[0] };
+				int startV{ obj.getpCompIndex()[1] };
+
+				glm::vec3 u
+				{
+					comp[startU + 3] - comp[startU],
+					comp[startU + 4] - comp[startU + 1],
+					comp[startU + 5] - comp[startU + 2]
+				};
+
+				glm::vec3 v
+				{
+					comp[startV + 3] - comp[startV],
+					comp[startV + 4] - comp[startV + 1],
+					comp[startV + 5] - comp[startV + 2]
+				};
+
+				glm::vec3 cross{ glm::cross(u, v) };
+
+				targetWorldPos = std::move(cross);
+			}
+
+			else
+			{
+				int startB{ obj.getpCompIndex()[1] };
+				targetWorldPos = { comp[startB], comp[startB + 1], comp[startB + 2] };
+			}
 			targetWorldPos *= scale;
 			targetWorldPos += glm::vec3{ 0.0f, 0.03f, 0.0f };
 		}

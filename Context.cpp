@@ -31,6 +31,7 @@ namespace Context
 		{"Point",     Object::Point,   {}											  },
 		{"Vector",    Object::Vector,  {Object::Point,  Object::Point}				  },
 		{"Vector",    Object::Vector,  {Object::Point}								  },
+		{"Cross",     Object::Vector,  {Object::Vector, Object::Vector}               },
 		{"Segment",   Object::Segment, {Object::Point,  Object::Point}				  },
 		{"Line",	  Object::Line,    {Object::Point,  Object::Point}				  },
 		{"Line",      Object::Line,    {Object::Point,  Object::Vector}				  },
