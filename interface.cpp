@@ -82,6 +82,7 @@ void getUserInput(std::vector<Object>& object)
 		ImGuiInputTextFlags_CallbackAlways
 	};
 	
+	ImGui::PushFont(Context::spaceFont, 16.0f);
 	ImGui::Begin("InputWindow");
 
 	ImGuiID inputID{ ImGui::GetID("Input") };
@@ -249,6 +250,7 @@ void getUserInput(std::vector<Object>& object)
 		}
 	}
 
+	ImGui::PopFont();
 	ImGui::End();
 }
 
