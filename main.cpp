@@ -48,8 +48,8 @@ int main()
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
+		ImGuiIO& io{ ImGui::GetIO() };
 		window.clear(0.0f, 0.5f, 0.8f, 1.0f);
-
 		shader.use();
 
 		glm::mat4 view{ glm::lookAt(Context::cameraPos, Context::cameraTarget, Context::worldUp) };
@@ -93,17 +93,54 @@ int main()
 
 		// render ImGui here
 		ImGui::ShowDemoWindow();
+
+		ImGui::PushFont(Context::spaceFont, 16.0f);
+		ImGui::Begin("InputWindow");
 		getUserInput(Context::object);
 
-		int width{};
-		int height{};
-		glfwGetWindowSize(window.getWindow(), &width, &height);
+		int windowWidth{};
+		int windowHeight{};
+		glfwGetWindowSize(window.getWindow(), &windowWidth, &windowHeight);
 
 		glm::vec2 viewportPos{ 0.0f, 0.0f }; 
-		glm::vec2 viewportSize{ static_cast<float>(width), static_cast<float>(height) };
+		glm::vec2 viewportSize{ static_cast<float>(windowWidth), static_cast<float>(windowHeight) };
 
 		drawObjectLabels(Context::object, view, projection, model, viewportPos, viewportSize);
 		drawAxisLabels(Context::object, view, projection, model, viewportPos, viewportSize);
+
+		static int selectedObjIndex{ -1 };
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !io.WantCaptureMouse)
+		{
+			ImVec2 imguiMousePos{ ImGui::GetMousePos() };
+
+			float mouseX{ imguiMousePos.x };
+			float mouseY{ imguiMousePos.y };
+
+			float ndcX{ (2.0f * (mouseX - viewportPos.x)) / viewportSize.x - 1.0f };
+			float ndcY{ 1.0f - (2.0f * (mouseY - viewportPos.y)) / viewportSize.y };
+
+			glm::vec4 rayNearNDC{ ndcX, ndcY, -1.0f, 1.0f };
+			glm::vec4 rayFarNDC{ ndcX, ndcY, 1.0f, 1.0f };
+
+			glm::mat4 invMVP{ glm::inverse(projection * view * model) };
+
+			glm::vec4 rayNearLocal{ invMVP * rayNearNDC };
+			glm::vec4 rayFarLocal{ invMVP * rayFarNDC };
+
+			glm::vec3 pLocalNear{ rayNearLocal / rayNearLocal.w };
+			glm::vec3 pLocalFar{ rayFarLocal / rayFarLocal.w };
+
+			glm::vec3 rayOrigin{ pLocalNear };
+			glm::vec3 rayDirection{ glm::normalize(pLocalFar - pLocalNear) };
+
+			selectedObjIndex = getSelectedObject(rayOrigin, rayDirection, Context::object);
+		}
+
+		std::cout << "Selected Object Index: " << selectedObjIndex << "\n";
+
+		showVariables(Context::object, selectedObjIndex);
+		ImGui::PopFont();
+		ImGui::End();
 
 		ImGui::Render();
 
@@ -122,16 +159,6 @@ void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) 
 		glfwSetWindowShouldClose(window, true);
-
-	//if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-	//{
-	//	isPressingRightClick = true;
-	//}
-
-	//if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE)
-	//{
-	//	isPressingRightClick = false;
-	//}
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
@@ -161,9 +188,6 @@ void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos)
 		Context::lastY = static_cast<float>(ypos);
 		Context::isFirstMouse = false;
 	}
-
-	//std::cout << "xpos: " << xpos << "\n";
-	//std::cout << "ypos: " << ypos << "\n";
 
 	float xoffset = static_cast<float>(xpos) - Context::lastX;
 	float yoffset = static_cast<float>(ypos) - Context::lastY;

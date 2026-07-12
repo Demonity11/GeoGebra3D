@@ -1011,3 +1011,42 @@ bool projectWorldToScreen
 
 	return true;
 }
+
+int getSelectedObject(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, std::vector<Object>& object)
+{
+	int closestIndex{ -1 };
+	float closestT{ FLT_MAX };
+	constexpr float epsilon{ 0.005f };
+	constexpr float scale{ 0.1f };
+
+	for (size_t idx{ 8 }; idx < object.size(); ++idx)
+	{
+		auto& obj{ object[idx] };
+		
+		if (obj.getType() == Object::Point)
+		{
+			glm::vec3 targetPoint{ obj.getComponents()[0], obj.getComponents()[1], obj.getComponents()[2] };
+			targetPoint *= scale;
+
+			glm::vec3 v{ targetPoint - rayOrigin };
+			float t{ glm::dot(v, rayDirection) };
+			
+			if (t < 0.0f) continue;
+
+			glm::vec3 closestPointOnRay{ rayOrigin + t * rayDirection };
+
+			float distance{ glm::length(targetPoint - closestPointOnRay) };
+
+			if (distance < epsilon)
+			{
+				if (t < closestT)
+				{
+					closestT = t;
+					closestIndex = static_cast<int>(idx);
+				}
+			}
+		}
+	}
+
+	return closestIndex;
+}
