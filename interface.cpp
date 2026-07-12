@@ -206,48 +206,6 @@ void getUserInput(std::vector<Object>& object)
 	}
 
 	ImGui::SeparatorText("Variables");
-
-	//for (int i{ 8 }; i < object.size(); ++i)
-	//{
-	//	auto& obj{ object[i]};
-
-	//	std::string headerText{ obj.getName() + ": " + getExpression(obj, object) + "###" + obj.getName() };
-
-	//	if (ImGui::CollapsingHeader(headerText.c_str(), ImGuiTreeNodeFlags_None))
-	//	{
-	//		static ImGuiColorEditFlags colorFlags = ImGuiColorEditFlags_None;
-
-	//		if (obj.getType() == Object::Plane || obj.getType() == Object::Line) ImGui::Text(getEquation(obj).c_str());
-
-	//		char s{ 'A' };
-	//		for (int increment{ 0 }; increment < obj.getComponents().size(); increment += 3)
-	//		{
-	//			ImGuiInputFlags textFlags{};
-
-	//			if (!obj.isMutable()) textFlags |= ImGuiInputTextFlags_ReadOnly;
-	//				
-	//			ImGui::InputFloat3((obj.getName() + "::" + s).c_str(), obj.getComponentsPointer() + increment, "%.2f", textFlags);
-
-	//			if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
-	//				updateObject(i, obj, object, Context::vertexData);
-
-	//			++s;
-	//		}
-
-	//		//ImGui::InputFloat4((obj.getName() + "::Color").c_str(), obj.getColorPointer(), "%.2f");
-	//		ImGui::ColorEdit4((obj.getName() + "::Color").c_str(), obj.getColorPointer(), ImGuiColorEditFlags_Float | colorFlags);
-
-	//		if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
-	//			updateObject(i, obj, object, Context::vertexData);
-
-	//		std::string deleteText{ "Delete###" + std::to_string(obj.getID()) };
-
-	//		if (ImGui::Button(deleteText.c_str()))
-	//		{
-	//			deleteObject(i, object, Context::vertexData);
-	//		}
-	//	}
-	//}
 }
 
 void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& function, std::vector<Object>& object)
@@ -355,24 +313,33 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	}
 }
 
-void showVariables(std::vector<Object>& object, int out_selectedObjIndex)
+void showVariables(std::vector<Object>& object, int out_selectedObjID)
 {
 	bool isSelectionChanged{ false };
-	static bool isOriginalColorChanged{ false };
-
-	static glm::vec4 prevColor{};
-	static int previousIndex{ -1 };
 	
-	if (out_selectedObjIndex != -1)
+	//if (out_selectedObjIndex != -1)
+	//{
+	//	if (Context::prevSelectedObjIndex != -1 && out_selectedObjIndex != Context::prevSelectedObjIndex)
+	//	{
+	//		isSelectionChanged = true;
+	//	}
+
+	//	else
+	//	{
+	//		Context::prevSelectedObjIndex = out_selectedObjIndex;
+	//	}
+	//}
+
+	if (out_selectedObjID != -1)
 	{
-		if (previousIndex != -1 && out_selectedObjIndex != previousIndex)
+		if (Context::prevSelectedObjID != -1 && out_selectedObjID != Context::prevSelectedObjID)
 		{
 			isSelectionChanged = true;
 		}
 
 		else
 		{
-			previousIndex = out_selectedObjIndex;
+			Context::prevSelectedObjID = out_selectedObjID;
 		}
 	}
 
@@ -382,45 +349,73 @@ void showVariables(std::vector<Object>& object, int out_selectedObjIndex)
 
 		std::string headerText{ obj.getName() + ": " + getExpression(obj, object) + "###" + obj.getName() };
 
-		int currentIndex{ static_cast<int>(i) };
+		const int currentID{ obj.getID() };
+		const int currentIndex{ static_cast<int>(i) };
 
-		if (out_selectedObjIndex == -1 && previousIndex != -1)
+		//if (out_selectedObjIndex == -1 && Context::prevSelectedObjIndex != -1)
+		//{
+		//	if (currentIndex == Context::prevSelectedObjIndex)
+		//	{
+		//		ImGui::SetNextItemOpen(false);
+		//		Context::prevSelectedObjIndex = out_selectedObjIndex;
+		//		obj.setSelected(false);
+		//		updateObject(currentIndex, obj, Context::object, Context::vertexData);
+		//	}
+		//}
+
+		//if (isSelectionChanged && Context::prevSelectedObjIndex == currentIndex)
+		//{
+		//	ImGui::SetNextItemOpen(false);
+		//	isSelectionChanged = false;
+		//	Context::prevSelectedObjIndex = out_selectedObjIndex;
+
+		//	if (obj.isSelected())
+		//	{
+		//		obj.setSelected(false);
+		//		updateObject(currentIndex, obj, Context::object, Context::vertexData);
+		//	}
+		//}
+
+		//if (currentIndex == out_selectedObjIndex)
+		//{
+		//	if (!obj.isSelected())
+		//	{
+		//		ImGui::SetNextItemOpen(true);
+		//		obj.setSelected(true);
+		//		updateObject(currentIndex, obj, Context::object, Context::vertexData);
+		//	}
+		//}
+
+		if (out_selectedObjID == -1 && Context::prevSelectedObjID != -1)
 		{
-			if (currentIndex == previousIndex)
+			if (currentID == Context::prevSelectedObjID)
 			{
 				ImGui::SetNextItemOpen(false);
-				previousIndex = out_selectedObjIndex;
-				isOriginalColorChanged = false;
-				obj.setColor(prevColor);
-				prevColor = {};
+				Context::prevSelectedObjID = out_selectedObjID;
+				obj.setSelected(false);
 				updateObject(currentIndex, obj, Context::object, Context::vertexData);
 			}
 		}
 
-		if (isSelectionChanged && previousIndex == currentIndex)
+		if (isSelectionChanged && Context::prevSelectedObjID == currentID)
 		{
 			ImGui::SetNextItemOpen(false);
 			isSelectionChanged = false;
-			previousIndex = out_selectedObjIndex;
+			Context::prevSelectedObjID = out_selectedObjID;
 
-			if (isOriginalColorChanged)
+			if (obj.isSelected())
 			{
-				isOriginalColorChanged = false;
-				obj.setColor(prevColor);
-				prevColor = {};
+				obj.setSelected(false);
 				updateObject(currentIndex, obj, Context::object, Context::vertexData);
 			}
 		}
 
-		if (currentIndex == out_selectedObjIndex)
+		if (currentID == out_selectedObjID)
 		{
-			if (!isOriginalColorChanged)
+			if (!obj.isSelected())
 			{
 				ImGui::SetNextItemOpen(true);
-
-				isOriginalColorChanged = true;
-				prevColor = obj.getColor();
-				obj.setColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+				obj.setSelected(true);
 				updateObject(currentIndex, obj, Context::object, Context::vertexData);
 			}
 		}
@@ -457,6 +452,9 @@ void showVariables(std::vector<Object>& object, int out_selectedObjIndex)
 			if (ImGui::Button(deleteText.c_str()))
 			{
 				deleteObject(static_cast<int>(i), object, Context::vertexData);
+				Context::prevSelectedObjID = -1;
+				Context::selectedObjID = -1;
+				break;
 			}
 		}
 	}

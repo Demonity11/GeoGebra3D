@@ -108,7 +108,6 @@ int main()
 		drawObjectLabels(Context::object, view, projection, model, viewportPos, viewportSize);
 		drawAxisLabels(Context::object, view, projection, model, viewportPos, viewportSize);
 
-		static int selectedObjIndex{ -1 };
 		if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !io.WantCaptureMouse)
 		{
 			ImVec2 imguiMousePos{ ImGui::GetMousePos() };
@@ -133,12 +132,10 @@ int main()
 			glm::vec3 rayOrigin{ pLocalNear };
 			glm::vec3 rayDirection{ glm::normalize(pLocalFar - pLocalNear) };
 
-			selectedObjIndex = getSelectedObject(rayOrigin, rayDirection, Context::object);
+			Context::selectedObjID = getSelectedObject(rayOrigin, rayDirection, Context::object);
 		}
 
-		std::cout << "Selected Object Index: " << selectedObjIndex << "\n";
-
-		showVariables(Context::object, selectedObjIndex);
+		showVariables(Context::object, Context::selectedObjID);
 		ImGui::PopFont();
 		ImGui::End();
 

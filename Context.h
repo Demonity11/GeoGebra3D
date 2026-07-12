@@ -37,6 +37,9 @@ namespace Context
 	inline ImFont* spaceFont{ nullptr };
 
 	constexpr float fontSize{ 16.0f };
+
+	inline int prevSelectedObjID{ -1 };
+	inline int selectedObjID{ -1 };
 }
 
 #endif

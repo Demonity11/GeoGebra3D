@@ -329,6 +329,7 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 			bool isIntersectionALive{ true };
 			// intersection has parents which causes the program to crash when updating the color of the intersection
 			// this prevents this crash
+
 			if (!obj.isMutable()) 
 			{
 				isIntersectionALive = recalculateIntersect(obj, object);
@@ -380,8 +381,11 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 
 		int newOffset = static_cast<int>(vertexData.size()) / 7;
 		obj.setOffset(newOffset);
-
-		draw(obj.getType(), obj.getComponents(), obj.getColor(), obj.getParentIDs(), obj.getpCompIndex(), true);
+		
+		if (obj.isSelected()) 
+			draw(obj.getType(), obj.getComponents(), {1.0f, 1.0f, 1.0f, 1.0f}, obj.getParentIDs(), obj.getpCompIndex(), true);
+		else
+			draw(obj.getType(), obj.getComponents(), obj.getColor(), obj.getParentIDs(), obj.getpCompIndex(), true);
 	}
 
 	updateBufferData(vertexData);
@@ -1048,5 +1052,8 @@ int getSelectedObject(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
 		}
 	}
 
-	return closestIndex;
+	if (closestIndex > 0)
+		return object[closestIndex].getID();
+
+	return -1;
 }

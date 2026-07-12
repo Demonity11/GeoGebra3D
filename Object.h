@@ -54,7 +54,10 @@ public:
 	float* getColorPointer()	  { return &m_color[0]; }
 
 	bool isMutable() const		 { return m_isMutable; }
+	bool isSelected() const		 { return m_isSelected; }
+
 	void setMutable(bool status) { m_isMutable = status; }
+	void setSelected(bool isSelected) { m_isSelected = isSelected; }
 
 private:
 	int m_id{};
@@ -73,6 +76,7 @@ private:
 	uint8_t m_parentCount{}; // max parent count. for example: a vector can have up to two parents
 
 	bool m_isMutable{ true };
+	bool m_isSelected{ false };
 };
 
 #endif
