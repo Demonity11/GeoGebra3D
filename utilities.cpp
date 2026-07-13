@@ -382,10 +382,36 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 		int newOffset = static_cast<int>(vertexData.size()) / 7;
 		obj.setOffset(newOffset);
 		
-		if (obj.isSelected()) 
-			draw(obj.getType(), obj.getComponents(), {1.0f, 1.0f, 1.0f, 1.0f}, obj.getParentIDs(), obj.getpCompIndex(), true);
-		else
-			draw(obj.getType(), obj.getComponents(), obj.getColor(), obj.getParentIDs(), obj.getpCompIndex(), true);
+		draw(obj.getType(), obj.getComponents(), obj.getColor(), obj.getParentIDs(), obj.getpCompIndex(), true);
+	}
+
+	updateBufferData(vertexData);
+}
+
+void updateSelectedObjectColor(int objIndex, std::vector<Object>& object, std::vector<float>& vertexData)
+{
+	Object& obj{ object[objIndex] };
+
+	std::vector<float>& comp{ obj.getComponents() };
+	const size_t offset{ static_cast<size_t>(obj.getOffset() * 7) };
+	const size_t vertexCount{ static_cast<size_t>(obj.getVertexCount() * 7) };
+	const Object::Type type{ obj.getType() };
+
+	glm::vec4 color{};
+
+	if (obj.isSelected())
+		color = { 1.0f, 1.0f, 1.0f, 1.0f };
+	else
+		color = obj.getColor();
+
+	const float* colorPointer{ &color[0] };
+
+	for (size_t i{ offset + 3 }; i < offset + vertexCount; i += 7)
+	{
+		for (size_t j{ 0 }; j < 4; ++j)
+		{
+			vertexData[i + j] = colorPointer[j];
+		}
 	}
 
 	updateBufferData(vertexData);
@@ -1016,7 +1042,7 @@ bool projectWorldToScreen
 	return true;
 }
 
-int getSelectedObject(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, std::vector<Object>& object)
+int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, std::vector<Object>& object)
 {
 	int closestIndex{ -1 };
 	float closestT{ FLT_MAX };

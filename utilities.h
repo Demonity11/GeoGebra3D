@@ -37,7 +37,8 @@ bool projectWorldToScreen
 	glm::vec2& outScreenPos
 );
 
-auto getSelectedObject(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, std::vector<Object>& object) -> int;
+auto getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, std::vector<Object>& object) -> int;
+auto updateSelectedObjectColor(int objIndex, std::vector<Object>& object, std::vector<float>& vertexData) -> void;
 
 void createObject(Object obj, int vCount, const std::vector<float>& comp, const glm::vec4 color, uint8_t pCount, std::array<int, 3> pIDs = { -1, -1, -1 }, std::array<int, 3> pCompIndex = { -1, -1, -1 });
 

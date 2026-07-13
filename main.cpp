@@ -132,7 +132,7 @@ int main()
 			glm::vec3 rayOrigin{ pLocalNear };
 			glm::vec3 rayDirection{ glm::normalize(pLocalFar - pLocalNear) };
 
-			Context::selectedObjID = getSelectedObject(rayOrigin, rayDirection, Context::object);
+			Context::selectedObjID = getSelectedObjectID(rayOrigin, rayDirection, Context::object);
 		}
 
 		showVariables(Context::object, Context::selectedObjID);

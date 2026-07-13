@@ -316,19 +316,6 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 void showVariables(std::vector<Object>& object, int out_selectedObjID)
 {
 	bool isSelectionChanged{ false };
-	
-	//if (out_selectedObjIndex != -1)
-	//{
-	//	if (Context::prevSelectedObjIndex != -1 && out_selectedObjIndex != Context::prevSelectedObjIndex)
-	//	{
-	//		isSelectionChanged = true;
-	//	}
-
-	//	else
-	//	{
-	//		Context::prevSelectedObjIndex = out_selectedObjIndex;
-	//	}
-	//}
 
 	if (out_selectedObjID != -1)
 	{
@@ -352,40 +339,6 @@ void showVariables(std::vector<Object>& object, int out_selectedObjID)
 		const int currentID{ obj.getID() };
 		const int currentIndex{ static_cast<int>(i) };
 
-		//if (out_selectedObjIndex == -1 && Context::prevSelectedObjIndex != -1)
-		//{
-		//	if (currentIndex == Context::prevSelectedObjIndex)
-		//	{
-		//		ImGui::SetNextItemOpen(false);
-		//		Context::prevSelectedObjIndex = out_selectedObjIndex;
-		//		obj.setSelected(false);
-		//		updateObject(currentIndex, obj, Context::object, Context::vertexData);
-		//	}
-		//}
-
-		//if (isSelectionChanged && Context::prevSelectedObjIndex == currentIndex)
-		//{
-		//	ImGui::SetNextItemOpen(false);
-		//	isSelectionChanged = false;
-		//	Context::prevSelectedObjIndex = out_selectedObjIndex;
-
-		//	if (obj.isSelected())
-		//	{
-		//		obj.setSelected(false);
-		//		updateObject(currentIndex, obj, Context::object, Context::vertexData);
-		//	}
-		//}
-
-		//if (currentIndex == out_selectedObjIndex)
-		//{
-		//	if (!obj.isSelected())
-		//	{
-		//		ImGui::SetNextItemOpen(true);
-		//		obj.setSelected(true);
-		//		updateObject(currentIndex, obj, Context::object, Context::vertexData);
-		//	}
-		//}
-
 		if (out_selectedObjID == -1 && Context::prevSelectedObjID != -1)
 		{
 			if (currentID == Context::prevSelectedObjID)
@@ -393,7 +346,7 @@ void showVariables(std::vector<Object>& object, int out_selectedObjID)
 				ImGui::SetNextItemOpen(false);
 				Context::prevSelectedObjID = out_selectedObjID;
 				obj.setSelected(false);
-				updateObject(currentIndex, obj, Context::object, Context::vertexData);
+				updateSelectedObjectColor(currentIndex, Context::object, Context::vertexData);
 			}
 		}
 
@@ -406,7 +359,7 @@ void showVariables(std::vector<Object>& object, int out_selectedObjID)
 			if (obj.isSelected())
 			{
 				obj.setSelected(false);
-				updateObject(currentIndex, obj, Context::object, Context::vertexData);
+				updateSelectedObjectColor(currentIndex, Context::object, Context::vertexData);
 			}
 		}
 
@@ -416,7 +369,7 @@ void showVariables(std::vector<Object>& object, int out_selectedObjID)
 			{
 				ImGui::SetNextItemOpen(true);
 				obj.setSelected(true);
-				updateObject(currentIndex, obj, Context::object, Context::vertexData);
+				updateSelectedObjectColor(currentIndex, Context::object, Context::vertexData);
 			}
 		}
 
@@ -592,7 +545,7 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 		point *= scale;
 
-		const float radius{ 0.005f };
+		constexpr float radius{ 0.005f };
 
 		int vCountSphere{};
 
