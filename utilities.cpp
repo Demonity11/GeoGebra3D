@@ -1051,11 +1051,13 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 
 	for (size_t idx{ 8 }; idx < object.size(); ++idx)
 	{
-		auto& obj{ object[idx] };
+		Object& obj{ object[idx] };
+		Object::Type type{ obj.getType() };
+		auto& comp{ obj.getComponents() };
 		
-		if (obj.getType() == Object::Point)
+		if (type == Object::Point)
 		{
-			glm::vec3 targetPoint{ obj.getComponents()[0], obj.getComponents()[1], obj.getComponents()[2] };
+			glm::vec3 targetPoint{ comp[0], comp[1], comp[2] };
 			targetPoint *= scale;
 
 			glm::vec3 v{ targetPoint - rayOrigin };
@@ -1074,6 +1076,54 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 					closestT = t;
 					closestIndex = static_cast<int>(idx);
 				}
+			}
+		}
+
+		else if (type == Object::Vector)
+		{
+			constexpr float epsilon_0{ 0.001f };
+
+			glm::vec3 vecOrigin{ comp[0], comp[1], comp[2] };
+			glm::vec3 vecHead{ comp[3], comp[4], comp[5] };
+
+			vecOrigin *= scale;
+			vecHead *= scale;
+
+			glm::vec3 vecDirection{ vecHead - vecOrigin };
+
+			glm::vec3 w0{ rayOrigin - vecOrigin };
+
+			float a{ 1.0f };
+			float b{ glm::dot(rayDirection, vecDirection) };
+			float c{ glm::dot(vecDirection, vecDirection) };
+			float d{ glm::dot(rayDirection, w0) };
+			float e{ glm::dot(vecDirection, w0) };
+
+			float D{ c - b * b };
+			if (glm::abs(D) < epsilon_0)
+				return -1;
+
+			float s{ (e - b * d) / D };
+			float t{ b * s - d };
+
+			if (s < 0.0f || s > 1.0f) 
+			{
+				if (s < 0.0f)
+					s = 0.0f;
+				else if (s > 1.0f) 
+					s = 1.0f;
+
+				t = glm::dot((vecOrigin + s * vecDirection) - rayOrigin, rayDirection);
+			}
+
+			glm::vec3 pRay{ rayOrigin + t * rayDirection };
+			glm::vec3 pVec{ vecOrigin + s * vecDirection };
+
+			float distance{ glm::length(pRay - pVec) };
+
+			if (distance < epsilon)
+			{
+				closestIndex = static_cast<int>(idx);
 			}
 		}
 	}
