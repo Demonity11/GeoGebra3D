@@ -1061,25 +1061,25 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 			targetPoint *= scale;
 
 			glm::vec3 v{ targetPoint - rayOrigin };
-			float t{ glm::dot(v, rayDirection) };
+			float T{ glm::dot(v, rayDirection) };
 			
-			if (t < 0.0f) continue;
+			if (T < 0.0f) continue;
 
-			glm::vec3 closestPointOnRay{ rayOrigin + t * rayDirection };
+			glm::vec3 closestPointOnRay{ rayOrigin + T * rayDirection };
 
 			float distance{ glm::length(targetPoint - closestPointOnRay) };
 
 			if (distance < epsilon)
 			{
-				if (t < closestT)
+				if (T < closestT)
 				{
-					closestT = t;
+					closestT = T;
 					closestIndex = static_cast<int>(idx);
 				}
 			}
 		}
 
-		else if (type == Object::Vector)
+		else if (type == Object::Vector || type == Object::Segment || type == Object::Line)
 		{
 			constexpr float epsilon_0{ 0.001f };
 
@@ -1100,21 +1100,26 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 			float e{ glm::dot(vecDirection, w0) };
 
 			float D{ c - b * b };
-			if (glm::abs(D) < epsilon_0)
-				return -1;
+			if (glm::abs(D) < epsilon_0) continue;
 
 			float s{ (e - b * d) / D };
 			float t{ b * s - d };
 
-			if (s < 0.0f || s > 1.0f) 
-			{
-				if (s < 0.0f)
-					s = 0.0f;
-				else if (s > 1.0f) 
-					s = 1.0f;
 
-				t = glm::dot((vecOrigin + s * vecDirection) - rayOrigin, rayDirection);
+			if (type == Object::Vector || type == Object::Segment)
+			{
+				if (s < 0.0f || s > 1.0f) 
+				{
+					if (s < 0.0f)
+						s = 0.0f;
+					else if (s > 1.0f) 
+						s = 1.0f;
+
+					t = glm::dot((vecOrigin + s * vecDirection) - rayOrigin, rayDirection);
+				}
 			}
+
+			if (t < 0.0f) continue;
 
 			glm::vec3 pRay{ rayOrigin + t * rayDirection };
 			glm::vec3 pVec{ vecOrigin + s * vecDirection };
@@ -1123,7 +1128,11 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 
 			if (distance < epsilon)
 			{
-				closestIndex = static_cast<int>(idx);
+				if (t < closestT)
+				{
+					closestT = t;
+					closestIndex = static_cast<int>(idx);
+				}
 			}
 		}
 	}
