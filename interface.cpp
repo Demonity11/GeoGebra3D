@@ -214,8 +214,9 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	auto inputText{ ss.str() };
 
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(3,3,3)\nSegment(A,B)\nVector(A)\nLine(A,u)\nPlane(A,u)\n") };
-	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nVector(A,B)\nVector(B,C)\nPoint(3,-2,-3)\nLine(A,D)\nCross(u,v)\n") };
+	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nVector(A,B)\nVector(B,C)\nPoint(3,-2,-3)\nLine(A,D)\nCross(u,v)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nVector(A,B)\nVector(A,C)\nCross(u,v)\n") };
+	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nLine(D,E)\nIntersect(r,p)\n") };
 
 	// types input faster for testing
 	if (!inputArray.empty())
@@ -472,9 +473,31 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 				points[i] = { comp[0], comp[1], comp[2] };
 
 				int parentIndex2{ searchObjectByID(arg.getParentIDs()[1], Context::object) };
-				comp = Context::object[parentIndex2].getComponents();
+				if (Context::object[parentIndex2].getType() == Object::Point)
+				{
+					glm::vec3 A{ points[i] };
 
-				vectors[i] = {comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2]};
+					comp = Context::object[parentIndex2].getComponents();
+					glm::vec3 B{ comp[0], comp[1], comp[2] };
+
+					int parentIndex3{ searchObjectByID(arg.getParentIDs()[2], Context::object) };
+					comp = Context::object[parentIndex3].getComponents();
+					glm::vec3 C{ comp[0], comp[1], comp[2] };
+
+					glm::vec3 u{ B - A };
+					glm::vec3 v{ C - A };
+
+					glm::vec3 normal{ glm::cross(u, v) };
+
+					vectors[i] = normal;
+				}
+
+				else
+				{
+					comp = Context::object[parentIndex2].getComponents();
+
+					vectors[i] = {comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2]};
+				}
 
 				types[i] = Object::Plane;
 			}

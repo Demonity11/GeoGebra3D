@@ -1094,6 +1094,7 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 
 				Object::Type pType1{ object[pIndex1].getType() };
 
+				// if the line is composed of a point and a direction vector
 				if (pType1 == Object::Vector)
 				{
 					vecOrigin = glm::vec3{ comp[3], comp[4], comp[5] };
@@ -1101,6 +1102,7 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 				}
 			}
 
+			// if the vector is a cross vector
 			else if (type == Object::Vector && !obj.isMutable())
 			{
 				point = glm::vec3{ 0.0f, 0.0f, 0.0f };
