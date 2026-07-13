@@ -1083,15 +1083,42 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 		{
 			constexpr float epsilon_0{ 0.001f };
 
+			glm::vec3 point{ comp[0], comp[1], comp[2] };
 			glm::vec3 vecOrigin{ comp[0], comp[1], comp[2] };
 			glm::vec3 vecHead{ comp[3], comp[4], comp[5] };
 
+			if (type == Object::Line)
+			{
+				int pID1{ obj.getParentIDs()[1] };
+				int pIndex1{ searchObjectByID(pID1, object) };
+
+				Object::Type pType1{ object[pIndex1].getType() };
+
+				if (pType1 == Object::Vector)
+				{
+					vecOrigin = glm::vec3{ comp[3], comp[4], comp[5] };
+					vecHead = glm::vec3{ comp[6], comp[7], comp[8] };
+				}
+			}
+
+			else if (type == Object::Vector && !obj.isMutable())
+			{
+				point = glm::vec3{ 0.0f, 0.0f, 0.0f };
+				vecOrigin = glm::vec3{ 0.0f, 0.0f, 0.0f };
+
+				glm::vec3 u{ comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2] };
+				glm::vec3 v{ comp[9] - comp[6], comp[10] - comp[7], comp[11] - comp[8] };
+
+				vecHead = glm::cross(u, v);
+			}
+
+			point *= scale;
 			vecOrigin *= scale;
 			vecHead *= scale;
 
 			glm::vec3 vecDirection{ vecHead - vecOrigin };
 
-			glm::vec3 w0{ rayOrigin - vecOrigin };
+			glm::vec3 w0{ rayOrigin - point };
 
 			float a{ 1.0f };
 			float b{ glm::dot(rayDirection, vecDirection) };
@@ -1105,7 +1132,6 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 			float s{ (e - b * d) / D };
 			float t{ b * s - d };
 
-
 			if (type == Object::Vector || type == Object::Segment)
 			{
 				if (s < 0.0f || s > 1.0f) 
@@ -1115,14 +1141,14 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 					else if (s > 1.0f) 
 						s = 1.0f;
 
-					t = glm::dot((vecOrigin + s * vecDirection) - rayOrigin, rayDirection);
+					t = glm::dot((point + s * vecDirection) - rayOrigin, rayDirection);
 				}
 			}
 
 			if (t < 0.0f) continue;
 
 			glm::vec3 pRay{ rayOrigin + t * rayDirection };
-			glm::vec3 pVec{ vecOrigin + s * vecDirection };
+			glm::vec3 pVec{ point + s * vecDirection };
 
 			float distance{ glm::length(pRay - pVec) };
 
