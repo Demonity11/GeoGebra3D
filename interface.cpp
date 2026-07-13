@@ -216,7 +216,8 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(3,3,3)\nSegment(A,B)\nVector(A)\nLine(A,u)\nPlane(A,u)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nVector(A,B)\nVector(B,C)\nPoint(3,-2,-3)\nLine(A,D)\nCross(u,v)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nVector(A,B)\nVector(A,C)\nCross(u,v)\n") };
-	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nLine(D,E)\nIntersect(r,p)\n") };
+	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nLine(D,E)\nIntersect(r,p)\n") };
+	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nPoint(2,1,-3)\nPlane(D,E,F)\nIntersect(p,q)\n") };
 
 	// types input faster for testing
 	if (!inputArray.empty())
@@ -703,26 +704,74 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 	else if (type == Object::Line && Context::object[searchObjectByID(pIDs[0], Context::object)].getType() == Object::Plane)
 	{
-		auto plane1{ Context::object[searchObjectByID(pIDs[0], Context::object)] };
-		auto plane2{ Context::object[searchObjectByID(pIDs[1], Context::object)] };
+		Object& plane1{ Context::object[searchObjectByID(pIDs[0], Context::object)] };
+		Object& plane2{ Context::object[searchObjectByID(pIDs[1], Context::object)] };
 
 		// plane 1 components extraction
-		int startP1{ plane1.getpCompIndex()[0] };
-		int startN1{ plane1.getpCompIndex()[1] };
-
 		auto comp1{ plane1.getComponents() };
-
+		
+		int startP1{ plane1.getpCompIndex()[0] };
 		glm::vec3 p1{ comp1[startP1], comp1[startP1 + 1], comp1[startP1 + 2] };
-		glm::vec3 n1{ comp1[startN1 + 3] - comp1[startN1], comp1[startN1 + 4] - comp1[startN1 + 1], comp1[startN1 + 5] - comp1[startN1 + 2] };
+		glm::vec3 n1{};
+
+		int pIndex1{ searchObjectByID(plane1.getParentIDs()[1], Context::object) };
+		Object::Type pType1{ Context::object[pIndex1].getType() };
+		if (pType1 == Object::Point)
+		{
+			int startPointB{ plane1.getpCompIndex()[1] };
+			int startPointC{ plane1.getpCompIndex()[2] };
+
+			glm::vec3 B{ comp1[startPointB], comp1[startPointB + 1], comp1[startPointB + 2] };
+			glm::vec3 C{ comp1[startPointC], comp1[startPointC + 1], comp1[startPointC + 2] };
+
+			glm::vec3 u{ B - p1 };
+			glm::vec3 v{ C - p1 };
+
+			n1 = glm::cross(u, v);
+		}
+
+		else if (pType1 == Object::Vector)
+		{
+			int startN1{ plane1.getpCompIndex()[1] };
+			n1 = { comp1[startN1 + 3] - comp1[startN1], comp1[startN1 + 4] - comp1[startN1 + 1], comp1[startN1 + 5] - comp1[startN1 + 2] };
+		}
 
 		// plane 2 components extraction
-		int startP2{ plane2.getpCompIndex()[0] };
-		int startN2{ plane2.getpCompIndex()[1] };
+		//int startP2{ plane2.getpCompIndex()[0] };
+		//int startN2{ plane2.getpCompIndex()[1] };
+
+		//auto comp2{ plane2.getComponents() };
+
+		//glm::vec3 p2{ comp2[startP2], comp2[startP2 + 1], comp2[startP2 + 2] };
+		//glm::vec3 n2{ comp2[startN2 + 3] - comp2[startN2], comp2[startN2 + 4] - comp2[startN2 + 1], comp2[startN2 + 5] - comp2[startN2 + 2] };
 
 		auto comp2{ plane2.getComponents() };
 
+		int startP2{ plane2.getpCompIndex()[0] };
 		glm::vec3 p2{ comp2[startP2], comp2[startP2 + 1], comp2[startP2 + 2] };
-		glm::vec3 n2{ comp2[startN2 + 3] - comp2[startN2], comp2[startN2 + 4] - comp2[startN2 + 1], comp2[startN2 + 5] - comp2[startN2 + 2] };
+		glm::vec3 n2{};
+
+		pIndex1 = searchObjectByID(plane2.getParentIDs()[1], Context::object);
+		pType1 = Context::object[pIndex1].getType();
+		if (pType1 == Object::Point)
+		{
+			int startPointB{ plane2.getpCompIndex()[1] };
+			int startPointC{ plane2.getpCompIndex()[2] };
+
+			glm::vec3 B{ comp2[startPointB], comp2[startPointB + 1], comp2[startPointB + 2] };
+			glm::vec3 C{ comp2[startPointC], comp2[startPointC + 1], comp2[startPointC + 2] };
+
+			glm::vec3 u{ B - p2 };
+			glm::vec3 v{ C - p2 };
+
+			n2 = glm::cross(u, v);
+		}
+
+		else if (pType1 == Object::Vector)
+		{
+			int startN2{ plane2.getpCompIndex()[1] };
+			n2 = { comp2[startN2 + 3] - comp2[startN2], comp2[startN2 + 4] - comp2[startN2 + 1], comp2[startN2 + 5] - comp2[startN2 + 2] };
+		}
 
 		auto intersection{ intersectionPlanePlane(p1, n1, p2, n2) };
 
