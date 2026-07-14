@@ -150,6 +150,7 @@
     <ClCompile Include="..\..\..\..\..\CPP-PROJECTS\GLFW\include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\..\..\..\..\CPP-PROJECTS\GLFW\src\glad.c" />
     <ClCompile Include="Context.cpp" />
+    <ClCompile Include="objectAssembling.cpp" />
     <ClCompile Include="objectCoords.cpp" />
     <ClCompile Include="helloCamera.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -170,6 +171,7 @@
     <ClInclude Include="Context.h" />
     <ClInclude Include="draw_utils.h" />
     <ClInclude Include="Object.h" />
+    <ClInclude Include="objectAssembling.h" />
     <ClInclude Include="objectCoords.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="utilities.h" />

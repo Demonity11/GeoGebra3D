@@ -3,6 +3,7 @@
 #include "utilities.h"
 #include "objectCoords.h"
 #include "Context.h"
+#include "objectAssembling.h"
 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& vec)
 {
@@ -217,7 +218,7 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nVector(A,B)\nVector(B,C)\nPoint(3,-2,-3)\nLine(A,D)\nCross(u,v)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nVector(A,B)\nVector(A,C)\nCross(u,v)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nLine(D,E)\nIntersect(r,p)\n") };
-	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nPoint(2,1,-3)\nPlane(D,E,F)\nIntersect(p,q)\n") };
+	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nPoint(2,1,-3)\nPlane(D,E,F)\nIntersect(p,q)\nVector(A,B)\nVector(D,E)\nCross(u,v)\n") };
 
 	// types input faster for testing
 	if (!inputArray.empty())
@@ -396,7 +397,6 @@ void showVariables(std::vector<Object>& object, int out_selectedObjID)
 				++s;
 			}
 
-			//ImGui::InputFloat4((obj.getName() + "::Color").c_str(), obj.getColorPointer(), "%.2f");
 			ImGui::ColorEdit4((obj.getName() + "::Color").c_str(), obj.getColorPointer(), ImGuiColorEditFlags_Float | colorFlags);
 
 			if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
@@ -418,118 +418,16 @@ void showVariables(std::vector<Object>& object, int out_selectedObjID)
 // draw objects such as Points, Vectors, Planes, etc.
 void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color, std::array<int, 3> pIDs, std::array<int, 3> pCompIndex, bool update)
 {
+	using Context::object;
+
 	const float scale{ 0.1f };
 
 	// intersection
 	if (type == Object::Point && pIDs[0] != -1)
 	{
-		std::array<Object, 2> args{};
+		Intersect intersect{ gatherPlaneLine(pIDs, object) };
 
-		for (int i{ 0 }; i < pIDs.size(); ++i)
-		{
-			if (pIDs[i] >= 0)
-			{
-				int index{ searchObjectByID(pIDs[i], Context::object) };
-				const auto& obj{ Context::object[index] };
-
-				args[i] = obj;
-			}
-		}
-
-		int lineCount{ 0 };
-
-		std::array<glm::vec3, 2> points{};
-		std::array<glm::vec3, 2> vectors{};
-		std::array<Object::Type, 2> types{};
-
-		for (int i{ 0 }; i < args.size(); ++i)
-		{
-			const auto& arg{ args[i] };
-
-			if (arg.getType() == Object::Line)
-			{
-				int parentIndex1{ searchObjectByID(arg.getParentIDs()[0], Context::object) };
-				auto comp{ Context::object[parentIndex1].getComponents() };
-
-				points[i] = { comp[0], comp[1], comp[2] };
-
-				int parentIndex2{ searchObjectByID(arg.getParentIDs()[1], Context::object) };
-				comp = Context::object[parentIndex2].getComponents();
-
-				if (Context::object[parentIndex2].getType() == Object::Vector)
-					vectors[i] = {comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2]};
-
-				else if (Context::object[parentIndex2].getType() == Object::Point)
-					vectors[i] = {comp[0] - points[i].x, comp[1] - points[i].y, comp[2] - points[i].z};
-
-				++lineCount;
-				types[i] = Object::Line;
-			}
-
-			else if (arg.getType() == Object::Plane)
-			{
-				int parentIndex1 = searchObjectByID(arg.getParentIDs()[0], Context::object);
-				auto comp{ Context::object[parentIndex1].getComponents() };
-
-				points[i] = { comp[0], comp[1], comp[2] };
-
-				int parentIndex2{ searchObjectByID(arg.getParentIDs()[1], Context::object) };
-				if (Context::object[parentIndex2].getType() == Object::Point)
-				{
-					glm::vec3 A{ points[i] };
-
-					comp = Context::object[parentIndex2].getComponents();
-					glm::vec3 B{ comp[0], comp[1], comp[2] };
-
-					int parentIndex3{ searchObjectByID(arg.getParentIDs()[2], Context::object) };
-					comp = Context::object[parentIndex3].getComponents();
-					glm::vec3 C{ comp[0], comp[1], comp[2] };
-
-					glm::vec3 u{ B - A };
-					glm::vec3 v{ C - A };
-
-					glm::vec3 normal{ glm::cross(u, v) };
-
-					vectors[i] = normal;
-				}
-
-				else
-				{
-					comp = Context::object[parentIndex2].getComponents();
-
-					vectors[i] = {comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2]};
-				}
-
-				types[i] = Object::Plane;
-			}
-		}
-
-		glm::vec3 intersection{};
-
-		if (lineCount == 2)
-		{
-			intersection = intersectionLineLine(points[0], vectors[0], points[1], vectors[1]);
-		}
-
-		else
-		{
-			float d{};
-			if (types[0] == Object::Plane) 
-			{
-				d = -glm::dot(points[0], vectors[0]);
-				intersection = intersectionLinePlane(points[1], vectors[1], vectors[0], d);
-			}
-			else 
-			{
-				d = -glm::dot(points[1], vectors[1]);
-				intersection = intersectionLinePlane(points[0], vectors[0], vectors[1], d);
-			}
-		}
-
-		if (intersection == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
-		{
-			std::cerr << "Intersection doesn't exist. Handle later.\n";
-		}
+		glm::vec3 intersection{ assemblyIntersectPoint(intersect) };
 
 		std::vector components{ intersection.x, intersection.y, intersection.z };
 
@@ -547,7 +445,7 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 			return;
 		}
 
-		if (scanForIdenticalObject(type, components, Context::object))
+		if (scanForIdenticalObject(type, components, object))
 		{
 			std::cout << components[0] << ", " << components[1] << ", " << components[2] << "\n";
 			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
@@ -586,88 +484,46 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		createObject(std::move(obj), vCountSphere, vecComponents, color, 0, pIDs);
 
 		updateBufferData(Context::vertexData);
-		}
+	}
 
 	else if (type == Object::Vector)
 	{
-		int pIndex1{ searchObjectByID(pIDs[1], Context::object) };
-		int pType1{ Context::object[pIndex1].getType() };
+		std::array<glm::vec3, 2> vector{ assemblyVector(vecComponents, pIDs, pCompIndex, object) };
 
-		std::array<glm::vec3, 2> comp{};
-
-		if (pType1 == Object::Point)
-		{
-			int startA{ pCompIndex[0] };
-			int startB{ pCompIndex[1] };
-
-			glm::vec3 pointA{ vecComponents[startA], vecComponents[startA + 1], vecComponents[startA + 2] };
-			glm::vec3 pointB{ vecComponents[startB], vecComponents[startB + 1], vecComponents[startB + 2] };
-
-			comp[0] = pointA;
-			comp[1] = pointB;
-		}
-		
-		else if (pType1 == Object::Vector)
-		{
-			int startU{ pCompIndex[0] };
-			int startV{ pCompIndex[1] };
-
-			glm::vec3 u
-			{
-				vecComponents[startU + 3] - vecComponents[startU],
-				vecComponents[startU + 4] - vecComponents[startU + 1],
-				vecComponents[startU + 5] - vecComponents[startU + 2]
-			};
-
-			glm::vec3 v
-			{
-				vecComponents[startV + 3] - vecComponents[startV],
-				vecComponents[startV + 4] - vecComponents[startV + 1],
-				vecComponents[startV + 5] - vecComponents[startV + 2]
-			};
-
-			glm::vec3 cross{ glm::cross(u, v) };
-
-			comp[0] = glm::vec3(0.0f, 0.0f, 0.0f);
-			comp[1] = cross;
-		}
-
-		auto [pointA, pointB] = comp;
+		auto [vecOrigin, vecHead] = vector;
 
 		constexpr float epsilon{ 0.001f };
-
-		if (glm::length(pointB - pointA) < epsilon)
+		if (glm::length(vecHead - vecOrigin) < epsilon)
 			return;
 
-		pointA *= scale;
-		pointB *= scale;
-
-		const float cilinderLength{ glm::length(pointB - pointA) };
+		vecOrigin *= scale;
+		vecHead *= scale;
 
 		constexpr float radius{ 0.0015f };
 		constexpr float coneRadius{ radius * 4.0f };
 
-		const glm::vec3 direction{ glm::normalize(pointB - pointA) };
+		const glm::vec3 direction{ glm::normalize(vecHead - vecOrigin) };
+		const float cilinderLength{ glm::length(vecHead - vecOrigin) };
 		constexpr float coneHeight{ 0.025f };
-		
-		auto newPointB{ pointA + (cilinderLength - coneHeight) * direction };
+
+		glm::vec3 newVecHead{ vecOrigin + (cilinderLength - coneHeight) * direction };
 
 		int vCountCilinder{};
 		int vCountCone{};
 
 		if (update)
 		{
-			vCountCilinder = getCilinderVertices(pointA, newPointB, color, radius, Context::vertexData);
-			vCountCone     = getConeVertices(direction, pointB, color, coneRadius, coneHeight, Context::vertexData);
+			vCountCilinder = getCilinderVertices(vecOrigin, newVecHead, color, radius, Context::vertexData);
+			vCountCone     = getConeVertices(direction, vecHead, color, coneRadius, coneHeight, Context::vertexData);
 			return;
 		}
 
 		// getCilinderVertices creates 144 new vertices 
-		vCountCilinder = getCilinderVertices(pointA, newPointB, color, radius, Context::vertexData);
-		vCountCone	   = getConeVertices(direction, pointB, color, coneRadius, coneHeight, Context::vertexData);
+		vCountCilinder = getCilinderVertices(vecOrigin, newVecHead, color, radius, Context::vertexData);
+		vCountCone	   = getConeVertices(direction, vecHead, color, coneRadius, coneHeight, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Vector, GL_LINES};
-		if (pType1 == Object::Vector) obj.setMutable(false); // if the object is the cross product, then it cannot be mutable
+		if (vecComponents.size() > 6) obj.setMutable(false); // if the object is the cross product, then it cannot be mutable
 		createObject(std::move(obj), vCountCilinder + vCountCone, vecComponents, color, 2, pIDs, pCompIndex);
 
 		updateBufferData(Context::vertexData);
@@ -702,80 +558,21 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		updateBufferData(Context::vertexData);
 	}
 
-	else if (type == Object::Line && Context::object[searchObjectByID(pIDs[0], Context::object)].getType() == Object::Plane)
+	else if 
+		(
+		auto pType0{ object[searchObjectByID(pIDs[0], object)].getType() }; 
+		type == Object::Line && pType0 == Object::Plane
+		)
 	{
-		Object& plane1{ Context::object[searchObjectByID(pIDs[0], Context::object)] };
-		Object& plane2{ Context::object[searchObjectByID(pIDs[1], Context::object)] };
+		Intersect intersect{ gatherPlaneLine(pIDs, object) };
 
-		// plane 1 components extraction
-		auto comp1{ plane1.getComponents() };
-		
-		int startP1{ plane1.getpCompIndex()[0] };
-		glm::vec3 p1{ comp1[startP1], comp1[startP1 + 1], comp1[startP1 + 2] };
-		glm::vec3 n1{};
+		auto [p1, p2] = intersect.points;
+		auto [n1, n2] = intersect.vectors;
 
-		int pIndex1{ searchObjectByID(plane1.getParentIDs()[1], Context::object) };
-		Object::Type pType1{ Context::object[pIndex1].getType() };
-		if (pType1 == Object::Point)
-		{
-			int startPointB{ plane1.getpCompIndex()[1] };
-			int startPointC{ plane1.getpCompIndex()[2] };
+		std::array<glm::vec3, 2> intersection{ intersectionPlanePlane(p1, n1, p2, n2) };
 
-			glm::vec3 B{ comp1[startPointB], comp1[startPointB + 1], comp1[startPointB + 2] };
-			glm::vec3 C{ comp1[startPointC], comp1[startPointC + 1], comp1[startPointC + 2] };
-
-			glm::vec3 u{ B - p1 };
-			glm::vec3 v{ C - p1 };
-
-			n1 = glm::cross(u, v);
-		}
-
-		else if (pType1 == Object::Vector)
-		{
-			int startN1{ plane1.getpCompIndex()[1] };
-			n1 = { comp1[startN1 + 3] - comp1[startN1], comp1[startN1 + 4] - comp1[startN1 + 1], comp1[startN1 + 5] - comp1[startN1 + 2] };
-		}
-
-		// plane 2 components extraction
-		//int startP2{ plane2.getpCompIndex()[0] };
-		//int startN2{ plane2.getpCompIndex()[1] };
-
-		//auto comp2{ plane2.getComponents() };
-
-		//glm::vec3 p2{ comp2[startP2], comp2[startP2 + 1], comp2[startP2 + 2] };
-		//glm::vec3 n2{ comp2[startN2 + 3] - comp2[startN2], comp2[startN2 + 4] - comp2[startN2 + 1], comp2[startN2 + 5] - comp2[startN2 + 2] };
-
-		auto comp2{ plane2.getComponents() };
-
-		int startP2{ plane2.getpCompIndex()[0] };
-		glm::vec3 p2{ comp2[startP2], comp2[startP2 + 1], comp2[startP2 + 2] };
-		glm::vec3 n2{};
-
-		pIndex1 = searchObjectByID(plane2.getParentIDs()[1], Context::object);
-		pType1 = Context::object[pIndex1].getType();
-		if (pType1 == Object::Point)
-		{
-			int startPointB{ plane2.getpCompIndex()[1] };
-			int startPointC{ plane2.getpCompIndex()[2] };
-
-			glm::vec3 B{ comp2[startPointB], comp2[startPointB + 1], comp2[startPointB + 2] };
-			glm::vec3 C{ comp2[startPointC], comp2[startPointC + 1], comp2[startPointC + 2] };
-
-			glm::vec3 u{ B - p2 };
-			glm::vec3 v{ C - p2 };
-
-			n2 = glm::cross(u, v);
-		}
-
-		else if (pType1 == Object::Vector)
-		{
-			int startN2{ plane2.getpCompIndex()[1] };
-			n2 = { comp2[startN2 + 3] - comp2[startN2], comp2[startN2 + 4] - comp2[startN2 + 1], comp2[startN2 + 5] - comp2[startN2 + 2] };
-		}
-
-		auto intersection{ intersectionPlanePlane(p1, n1, p2, n2) };
-
-		if (glm::length(intersection[1]) < 0.001f)
+		constexpr float epsilon{ 0.001f };
+		if (glm::length(intersection[1]) < epsilon)
 		{
 			std::cerr << "Intersection doesn't exist.\n";
 			return;
@@ -802,7 +599,7 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 			return;
 		}
 
-		if (scanForIdenticalObject(type, components, Context::object))
+		if (scanForIdenticalObject(type, components, object))
 		{
 			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
 			return;
@@ -815,45 +612,29 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		createObject(std::move(obj), vCountLine, components, color, 2, pIDs, pCompIndex);
 
 		updateBufferData(Context::vertexData);
-
 	}
 
 	else if (type == Object::Line)
 	{
-		int startPoint { pCompIndex[0] };
-		int startVector{ pCompIndex[1] };
+		std::array<glm::vec3, 3> line{ assemblyLine(vecComponents, pCompIndex) };
 
-		glm::vec3 point{ vecComponents[startPoint],  vecComponents[startPoint + 1],  vecComponents[startPoint + 2] };
-		glm::vec3 dVectorP0{};
-		glm::vec3 dVectorP{};
-
-		if (vecComponents.size() == 6)
-		{
-			dVectorP0 = { vecComponents[startPoint],  vecComponents[startPoint + 1],  vecComponents[startPoint + 2] };
-			dVectorP  = { vecComponents[startVector], vecComponents[startVector + 1], vecComponents[startVector + 2] };
-		}
-
-		else if (vecComponents.size() == 9)
-		{
-			dVectorP0 = { vecComponents[startVector],     vecComponents[startVector + 1], vecComponents[startVector + 2] };
-			dVectorP  = { vecComponents[startVector + 3], vecComponents[startVector + 4], vecComponents[startVector + 5] };
-		}
+		auto [point, dVectorOrigin, dVectorHead] = line;
 
 		point     *= scale;
-		dVectorP0 *= scale;
-		dVectorP  *= scale;
+		dVectorOrigin *= scale;
+		dVectorHead *= scale;
 
-		const float radius{ 0.0015f };
+		constexpr float radius{ 0.0015f };
 
 		int vCountLine{};
 
 		if (update)
 		{
-			vCountLine = getLineVertices(point, dVectorP0, dVectorP, color, radius, Context::vertexData);
+			vCountLine = getLineVertices(point, dVectorOrigin, dVectorHead, color, radius, Context::vertexData);
 			return;
 		}
 		
-		vCountLine = getLineVertices(point, dVectorP0, dVectorP, color, radius, Context::vertexData);
+		vCountLine = getLineVertices(point, dVectorOrigin, dVectorHead, color, radius, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Line, GL_LINES };
 		createObject(obj, vCountLine, vecComponents, color, 2, pIDs, pCompIndex);
@@ -863,66 +644,28 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 
 	else if (type == Object::Plane)
 	{
-		int pIndex1{ searchObjectByID(pIDs[1], Context::object) };
-		Object::Type pType1{ Context::object[pIndex1].getType() };
+		int pIndex1{ searchObjectByID(pIDs[1], object) };
+		Object::Type pType1{ object[pIndex1].getType() };
 
-		std::array<glm::vec3, 3> comp{};
+		std::array<glm::vec3, 3> plane{ assemblyPlane(vecComponents, pIDs, pCompIndex, object) };
 
-		if (pType1 == Object::Vector)
-		{
-			int startPoint{ pCompIndex[0] };
-			int startNormal{ pCompIndex[1] };
+		auto [normalOrigin, normalHead, point] = plane;
 
-			glm::vec3 normalP0{ vecComponents[startNormal], vecComponents[startNormal + 1], vecComponents[startNormal + 2] };
-			glm::vec3 normalP{ vecComponents[startNormal + 3], vecComponents[startNormal + 4], vecComponents[startNormal + 5] };
-			glm::vec3 point{ vecComponents[startPoint], vecComponents[startPoint + 1], vecComponents[startPoint + 2] };
-
-			normalP0 *= scale;
-			normalP  *= scale;
-			point    *= scale;
-
-			comp[0] = normalP0;
-			comp[1] = normalP;
-			comp[2] = point;
-		}
-
-		else if (pType1 == Object::Point)
-		{
-			int startPointA{ pCompIndex[0] };
-			int startPointB{ pCompIndex[1] };
-			int startPointC{ pCompIndex[2] };
-
-			glm::vec3 A{ vecComponents[startPointA], vecComponents[startPointA + 1], vecComponents[startPointA + 2] };
-			glm::vec3 B{ vecComponents[startPointB], vecComponents[startPointB + 1], vecComponents[startPointB + 2] };
-			glm::vec3 C{ vecComponents[startPointC], vecComponents[startPointC + 1], vecComponents[startPointC + 2] };
-
-			glm::vec3 u{ B - A };
-			glm::vec3 v{ C - A };
-
-			glm::vec3 normal{ glm::cross(u, v) };
-
-			A	   *= scale;
-			normal *= scale;
-
-			comp[0] = glm::vec3(0.0f, 0.0f, 0.0f);
-			comp[1] = normal;
-			comp[2] = A;
-		}
+		normalOrigin *= scale;
+		normalHead *= scale;
+		point *= scale;
 
 		color.w = 0.2f;
-
 		int vCountPlane{};
-
-		auto [planeNormal0, planeNormal, planePoint] = comp;
 
 		if (update)
 		{
-			vCountPlane = getPlaneVertices(planeNormal0, planeNormal, planePoint, color, Context::vertexData);
+			vCountPlane = getPlaneVertices(normalOrigin, normalHead, point, color, Context::vertexData);
 			return;
 		}
 
 		// getPlaneVertices create 6 new vertices
-		vCountPlane = getPlaneVertices(planeNormal0, planeNormal, planePoint, color, Context::vertexData);
+		vCountPlane = getPlaneVertices(normalOrigin, normalHead, point, color, Context::vertexData);
 
 		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Plane, GL_TRIANGLES };
 		createObject(obj, vCountPlane, vecComponents, color, 3, pIDs, pCompIndex);
@@ -958,38 +701,9 @@ void drawObjectLabels
 
 		if (type == Object::Vector)
 		{
-			int pIndex1{ obj.getParentIDs()[1] };
-			int pType1{ object[searchObjectByID(pIndex1, object)].getType() };
+			std::array<glm::vec3, 2> vector{ assemblyVector(obj.getComponents(), obj.getParentIDs(), obj.getpCompIndex(), object) };
 
-			if (pType1 == Object::Vector)
-			{
-				int startU{ obj.getpCompIndex()[0] };
-				int startV{ obj.getpCompIndex()[1] };
-
-				glm::vec3 u
-				{
-					comp[startU + 3] - comp[startU],
-					comp[startU + 4] - comp[startU + 1],
-					comp[startU + 5] - comp[startU + 2]
-				};
-
-				glm::vec3 v
-				{
-					comp[startV + 3] - comp[startV],
-					comp[startV + 4] - comp[startV + 1],
-					comp[startV + 5] - comp[startV + 2]
-				};
-
-				glm::vec3 cross{ glm::cross(u, v) };
-
-				targetWorldPos = std::move(cross);
-			}
-
-			else
-			{
-				int startB{ obj.getpCompIndex()[1] };
-				targetWorldPos = { comp[startB], comp[startB + 1], comp[startB + 2] };
-			}
+			targetWorldPos = vector[1];
 
 			targetWorldPos *= scale;
 			targetWorldPos += glm::vec3{ 0.0f, 0.03f, 0.0f };
