@@ -173,6 +173,7 @@
     <ClInclude Include="Object.h" />
     <ClInclude Include="objectAssembling.h" />
     <ClInclude Include="objectCoords.h" />
+    <ClInclude Include="Random.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="utilities.h" />
     <ClInclude Include="Window.h" />

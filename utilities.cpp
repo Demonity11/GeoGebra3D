@@ -244,6 +244,24 @@ void createObject(Object obj, int vCount, const std::vector<float>& comp, const 
 	Context::object.push_back(std::move(obj));
 }
 
+void createObject(Object obj, int vCount)
+{
+	int offset{ 0 };
+	int id{ static_cast<int>(Context::object.size()) };
+
+	if (!Context::object.empty())
+	{
+		int previousIndex{ static_cast<int>(Context::object.size()) - 1 };
+		offset = Context::object[previousIndex].getOffset() + Context::object[previousIndex].getVertexCount();
+	}
+
+	obj.setID(id);
+	obj.setOffset(offset);
+	obj.setVertexCount(vCount);
+
+	Context::object.push_back(std::move(obj));
+}
+
 // delete a Object with a given index from Object's vector
 void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>& vertexData)
 {
@@ -310,7 +328,8 @@ void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>&
 		int newOffset = static_cast<int>(vertexData.size()) / 7;
 		obj.setOffset(newOffset);
 
-		draw(obj.getType(), obj.getComponents(), obj.getColor(), obj.getParentIDs(), obj.getpCompIndex(), true);
+		//draw(obj.getType(), obj.getComponents(), obj.getColor(), obj.getParentIDs(), obj.getpCompIndex(), true);
+		generateObjectVertices(obj, vertexData);
 	}
 
 	updateBufferData(vertexData);
@@ -328,9 +347,6 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 		if (obj.getParentCount() > 0)
 		{
 			bool isIntersectionALive{ true };
-			// intersection has parents which causes the program to crash when updating the color of the intersection
-			// this prevents this crash
-
 			if (!obj.isMutable() && obj.getType() != Object::Vector) 
 			{
 				isIntersectionALive = recalculateIntersect(obj, object);
@@ -383,7 +399,8 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 		int newOffset = static_cast<int>(vertexData.size()) / 7;
 		obj.setOffset(newOffset);
 		
-		draw(obj.getType(), obj.getComponents(), obj.getColor(), obj.getParentIDs(), obj.getpCompIndex(), true);
+		//draw(obj.getType(), obj.getComponents(), obj.getColor(), obj.getParentIDs(), obj.getpCompIndex(), true);
+		generateObjectVertices(obj, vertexData);
 	}
 
 	updateBufferData(vertexData);
@@ -418,13 +435,13 @@ void updateSelectedObjectColor(int objIndex, std::vector<Object>& object, std::v
 	updateBufferData(vertexData);
 }
 
-// return true if exist an object with the same type and components 
-bool scanForIdenticalObject(Object::Type type, const std::vector<float>& components, std::vector<Object>& object)
+bool scanForIdenticalObject(Object::Type type, const std::vector<float>& components, std::vector<Object>& object, int ignoreID)
 {
-	const float epsilon{ 0.001f };
+	constexpr float epsilon{ 0.001f };
 
 	for (auto& obj : object)
 	{
+		if (obj.getID() == ignoreID) continue;
 		if (obj.getType() != type) continue;
 
 		const auto& objComponents{ obj.getComponents() };
@@ -560,7 +577,7 @@ std::string getEquation(Object& obj)
 
 	if (type == Object::Plane)
 	{
-		std::array<glm::vec3, 3> plane{ assemblyPlane(obj.getComponents(), obj.getParentIDs(), obj.getpCompIndex(), Context::object) };
+		std::array<glm::vec3, 3> plane{ assemblyPlane(obj, Context::object) };
 
 		glm::vec3 normal{ plane[1] - plane[0] };
 		glm::vec3 point{ plane[2] };
@@ -841,7 +858,7 @@ bool recalculateIntersect(Object& obj, std::vector<Object>& object)
 
 	if (type == Object::Line)
 	{
-		Intersect intersect{ gatherPlaneLine(pIDs, object) };
+		Intersect intersect{ gatherPlaneLine(obj, object) };
 
 		auto [p1, p2] = intersect.points;
 		auto [n1, n2] = intersect.vectors;
@@ -865,7 +882,7 @@ bool recalculateIntersect(Object& obj, std::vector<Object>& object)
 
 	else if (type == Object::Point)
 	{
-		Intersect intersect{ gatherPlaneLine(pIDs, object) };
+		Intersect intersect{ gatherPlaneLine(obj, object) };
 
 		glm::vec3 intersection{ assemblyIntersectPoint(intersect) };
 
@@ -971,7 +988,7 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 
 			else if (type == Object::Vector)
 			{
-				std::array<glm::vec3, 2> vector{ assemblyVector(obj.getComponents(), obj.getParentIDs(), obj.getpCompIndex(), object) };
+				std::array<glm::vec3, 2> vector{ assemblyVector(obj, object) };
 
 				point = vector[0];
 				vecOrigin = vector[0];

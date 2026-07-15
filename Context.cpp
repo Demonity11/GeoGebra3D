@@ -41,7 +41,6 @@ namespace Context
 		{"Intersect", Object::Point,   {Object::Plane,  Object::Line}			      },
 		{"Intersect", Object::Point,   {Object::Line,   Object::Line}			      },
 		{"Intersect", Object::Line,    {Object::Plane,  Object::Plane}				  }
-		//{"Plane",   Object::Plane,   {Object::Point, Object::Point, Object::Point} }
 	};
 
 	// store object symbols (default name)
@@ -52,5 +51,23 @@ namespace Context
 		{ Object::Segment, 'f' },
 		{ Object::Plane,   'p' },
 		{ Object::Line,    'r' }
+	};
+
+	std::map<Object::Type, unsigned int> primitives
+	{
+		{ Object::Vector,  GL_LINES },
+		{ Object::Point,   GL_LINES },
+		{ Object::Segment, GL_LINES },
+		{ Object::Line,    GL_LINES },
+		{ Object::Plane,   GL_TRIANGLES }
+	};
+
+	std::map<Object::Type, glm::vec4> defaultColors
+	{
+		{ Object::Vector,  {0.0f, 0.0f, 0.0f, 1.0f} },
+		{ Object::Point,   {0.0f, 0.2f, 0.5f, 1.0f} },
+		{ Object::Segment, {0.0f, 0.0f, 0.0f, 1.0f} },
+		{ Object::Line,    {0.0f, 0.0f, 0.0f, 1.0f} },
+		{ Object::Plane,   {0.0f, 0.0f, 0.0f, 0.2f} }
 	};
 }

@@ -1,8 +1,10 @@
 #include "objectAssembling.h"
 #include "utilities.h"
 
-Intersect gatherPlaneLine(const std::array<int, 3>& pIDs, std::vector<Object>& object)
+Intersect gatherPlaneLine(const Object& obj, std::vector<Object>& object)
 {
+	const std::array<int, 3>& pIDs{ obj.getParentIDs() };
+
 	std::array<Object, 2> args{};
 
 	for (int i{ 0 }; i < pIDs.size(); ++i)
@@ -116,8 +118,13 @@ glm::vec3 assemblyIntersectPoint(const Intersect& intersect)
 	return intersection;
 }
 
-std::array<glm::vec3, 2> assemblyVector(const std::vector<float>& comp, std::array<int, 3> pIDs, const std::array<int, 3>& pCompIndex, const std::vector<Object>& object)
+std::array<glm::vec3, 2> assemblyVector(Object& obj, const std::vector<Object>& object)
 {
+	// object data
+	const std::array<int, 3>& pIDs{ obj.getParentIDs() };
+	const std::array<int, 3>& pCompIndex{ obj.getpCompIndex() };
+	const std::vector<float>& comp{ obj.getComponents() };
+
 	std::array<glm::vec3, 2> vector{};
 
 	Object::Type pType1{ object[searchObjectByID(pIDs[1], object)].getType() };
@@ -163,25 +170,21 @@ std::array<glm::vec3, 2> assemblyVector(const std::vector<float>& comp, std::arr
 	return vector;
 }
 
-//std::array<glm::vec3, 2> assemblyVector(Object& obj, const std::vector<Object>& object)
-//{
-//	const auto& comp{ obj.getComponents() };
-//
-//	if (!obj.isMutable())
-//	{
-//		std::array<glm::vec3, 2> vector{};
-//		vector[0] = { comp[0], comp[1], comp[2] };
-//		vector[1] = { comp[3], comp[4], comp[5] };
-//
-//		return vector;
-//	}
-//
-//	return assemblyVector(comp, obj.getParentIDs(), obj.getpCompIndex(), object);
-//}
-
-std::array<glm::vec3, 3> assemblyLine(const std::vector<float>& comp, const std::array<int, 3>& pCompIndex)
+std::array<glm::vec3, 3> assemblyLine(Object& obj)
 {
+	const std::vector<float>& comp{ obj.getComponents() };
+	const std::array<int, 3>& pCompIndex{ obj.getpCompIndex() };
+
 	std::array<glm::vec3, 3> line{};
+	
+	if (!obj.isMutable())
+	{
+		line[0] = { comp[0], comp[1], comp[2] };
+		line[1] = { 0.0f, 0.0f, 0.0f };
+		line[2] = { comp[3], comp[4], comp[5] };
+
+		return line;
+	}
 
 	int startPoint{ pCompIndex[0] };
 	int startVector{ pCompIndex[1] };
@@ -209,25 +212,13 @@ std::array<glm::vec3, 3> assemblyLine(const std::vector<float>& comp, const std:
 	return line;
 }
 
-std::array<glm::vec3, 3> assemblyLine(Object& obj)
+std::array<glm::vec3, 3> assemblyPlane(Object& obj, const std::vector<Object>& object)
 {
-	const auto& comp{ obj.getComponents() };
+	// object data
+	const std::array<int, 3>& pIDs{ obj.getParentIDs() };
+	const std::array<int, 3>& pCompIndex{ obj.getpCompIndex() };
+	const std::vector<float>& comp{ obj.getComponents() };
 
-	if (!obj.isMutable())
-	{
-		std::array<glm::vec3, 3> line{};
-		line[0] = { comp[0], comp[1], comp[2] }; 
-		line[1] = { 0.0f, 0.0f, 0.0f };          
-		line[2] = { comp[3], comp[4], comp[5] }; 
-
-		return line;
-	}
-
-	return assemblyLine(comp, obj.getpCompIndex());
-}
-
-std::array<glm::vec3, 3> assemblyPlane(const std::vector<float>& comp, std::array<int, 3> pIDs, const std::array<int, 3>& pCompIndex, const std::vector<Object>& object)
-{
 	Object::Type pType1{ object[searchObjectByID(pIDs[1], object)].getType() };
 
 	std::array<glm::vec3, 3> plane{};

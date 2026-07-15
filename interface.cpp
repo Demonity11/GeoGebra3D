@@ -4,6 +4,7 @@
 #include "objectCoords.h"
 #include "Context.h"
 #include "objectAssembling.h"
+#include "Random.h"
 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& vec)
 {
@@ -253,7 +254,8 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 				{
 					if (!scanForIdenticalObject(func.type, vecComponents, object))
 					{
-						draw(funcType, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
+						//draw(funcType, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
+						buildAndRegisterObject(funcType, vecComponents, Context::defaultColors[funcType]);
 						inputBuffer[0] = '\0';
 						return;
 					}
@@ -298,7 +300,11 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 						getObjectComponents(args, vecComponents, pIDs, pCompIndex);
 
 						if (!scanForIdenticalObject(func.type, vecComponents, object))
-							draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
+						{
+							//draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
+							buildAndRegisterObject(func.type, vecComponents, Context::defaultColors[func.type], pIDs, pCompIndex);
+						}
+
 					}
 
 					else
@@ -306,7 +312,10 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 						getObjectComponents(args, vecComponents, pIDs, pCompIndex);
 
 						if (!scanForIdenticalObject(func.type, vecComponents, object))
-							draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
+						{
+							//draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
+							buildAndRegisterObject(func.type, vecComponents, Context::defaultColors[func.type], pIDs, pCompIndex);
+						}
 					}
 
 					inputBuffer[0] = '\0';
@@ -415,86 +424,67 @@ void showVariables(std::vector<Object>& object, int out_selectedObjID)
 	}
 }
 
-// draw objects such as Points, Vectors, Planes, etc.
-void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color, std::array<int, 3> pIDs, std::array<int, 3> pCompIndex, bool update)
+int generateObjectVertices(Object& obj, std::vector<float>& vertexData)
 {
 	using Context::object;
 
-	const float scale{ 0.1f };
+	constexpr float scale{ 0.1f };
+
+	// object data
+	Object::Type type{ obj.getType() };
+	const std::array<int, 3>& pIDs{ obj.getParentIDs() };
+	const std::array<int, 3>& pCompIndex{ obj.getpCompIndex() };
+	const std::vector<float>& comp{ obj.getComponents() };
+	const glm::vec4& color{ obj.getColor() };
+
+	int vCount{ 0 };
 
 	// intersection
 	if (type == Object::Point && pIDs[0] != -1)
 	{
-		Intersect intersect{ gatherPlaneLine(pIDs, object) };
-
+		Intersect intersect{ gatherPlaneLine(obj, object) };
 		glm::vec3 intersection{ assemblyIntersectPoint(intersect) };
-
 		std::vector components{ intersection.x, intersection.y, intersection.z };
 
 		intersection *= scale;
 
-		const float radius{ 0.005f };
-		if (color == glm::vec4{0.0f, 0.0f, 0.0f, 1.0f})
-			color = { 0.7f, 0.3f, 0.0f, 1.0f };
+		constexpr float radius{ 0.005f };
 
-		int vCountSphere{};
-
-		if (update)
-		{
-			vCountSphere = getSphereVertices(intersection, color, radius, Context::vertexData);
-			return;
-		}
-
-		if (scanForIdenticalObject(type, components, object))
+		if (scanForIdenticalObject(type, components, object, obj.getID()))
 		{
 			std::cout << components[0] << ", " << components[1] << ", " << components[2] << "\n";
 			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
-			return;
+			return -1;
 		}
 
-		vCountSphere = getSphereVertices(intersection, color, radius, Context::vertexData);
-
-		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
 		obj.setMutable(false);
-		createObject(std::move(obj), vCountSphere, components, color, 2, pIDs, pCompIndex);
-			
-		updateBufferData(Context::vertexData);
+		obj.setComponents(components);
+		obj.setColor({ 0.7f, 0.3f, 0.0f, 1.0f });
+
+		vCount = getSphereVertices(intersection, color, radius, vertexData);
 	}
 
 	else if (type == Object::Point)
 	{
-		glm::vec3 point{ vecComponents[0], vecComponents[1], vecComponents[2] };
+		glm::vec3 point{ comp[0], comp[1], comp[2] };
 
 		point *= scale;
 
 		constexpr float radius{ 0.005f };
 
-		int vCountSphere{};
-
-		if (update)
-		{
-			vCountSphere = getSphereVertices(point, color, radius, Context::vertexData);
-			return;
-		}
-
 		// getSphereVertices create 120960 new floats => 120960 / 7 = 17280 vertices, where 7 = number of components
-		vCountSphere = getSphereVertices(point, color, radius, Context::vertexData);
-
-		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
-		createObject(std::move(obj), vCountSphere, vecComponents, color, 0, pIDs);
-
-		updateBufferData(Context::vertexData);
+		vCount = getSphereVertices(point, color, radius, vertexData);
 	}
 
 	else if (type == Object::Vector)
 	{
-		std::array<glm::vec3, 2> vector{ assemblyVector(vecComponents, pIDs, pCompIndex, object) };
+		std::array<glm::vec3, 2> vector{ assemblyVector(obj, object) };
 
 		auto [vecOrigin, vecHead] = vector;
 
 		constexpr float epsilon{ 0.001f };
 		if (glm::length(vecHead - vecOrigin) < epsilon)
-			return;
+			return -1;
 
 		vecOrigin *= scale;
 		vecHead *= scale;
@@ -511,22 +501,14 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		int vCountCilinder{};
 		int vCountCone{};
 
-		if (update)
-		{
-			vCountCilinder = getCilinderVertices(vecOrigin, newVecHead, color, radius, Context::vertexData);
-			vCountCone     = getConeVertices(direction, vecHead, color, coneRadius, coneHeight, Context::vertexData);
-			return;
-		}
+		if (comp.size() > 6) 
+			obj.setMutable(false); // if the object is the cross product, then it cannot be mutable
 
 		// getCilinderVertices creates 144 new vertices 
-		vCountCilinder = getCilinderVertices(vecOrigin, newVecHead, color, radius, Context::vertexData);
-		vCountCone	   = getConeVertices(direction, vecHead, color, coneRadius, coneHeight, Context::vertexData);
+		vCountCilinder = getCilinderVertices(vecOrigin, newVecHead, color, radius, vertexData);
+		vCountCone = getConeVertices(direction, vecHead, color, coneRadius, coneHeight, vertexData);
 
-		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Vector, GL_LINES};
-		if (vecComponents.size() > 6) obj.setMutable(false); // if the object is the cross product, then it cannot be mutable
-		createObject(std::move(obj), vCountCilinder + vCountCone, vecComponents, color, 2, pIDs, pCompIndex);
-
-		updateBufferData(Context::vertexData);
+		vCount = vCountCilinder + vCountCone;
 	}
 
 	else if (type == Object::Segment)
@@ -534,37 +516,25 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		int startA{ pCompIndex[0] };
 		int startB{ pCompIndex[1] };
 
-		glm::vec3 pointA{ vecComponents[startA], vecComponents[startA + 1], vecComponents[startA + 2] };
-		glm::vec3 pointB{ vecComponents[startB], vecComponents[startB + 1], vecComponents[startB + 2] };
+		glm::vec3 pointA{ comp[startA], comp[startA + 1], comp[startA + 2] };
+		glm::vec3 pointB{ comp[startB], comp[startB + 1], comp[startB + 2] };
 
 		pointA *= scale;
 		pointB *= scale;
 
 		const float radius{ 0.0015f };
 
-		int vCountCilinder{};
-
-		if (update)
-		{
-			vCountCilinder = getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
-			return;
-		}
-
-		vCountCilinder = getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
-
-		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Segment, GL_LINES };
-		createObject(obj, vCountCilinder, vecComponents, color, 2, pIDs, pCompIndex);
-
-		updateBufferData(Context::vertexData);
+		vCount = getCilinderVertices(pointA, pointB, color, radius, vertexData);
 	}
 
-	else if 
-		(
-		auto pType0{ object[searchObjectByID(pIDs[0], object)].getType() }; 
+	else if
+	(
+		auto pType0{ object[searchObjectByID(pIDs[0], object)].getType() };
+
 		type == Object::Line && pType0 == Object::Plane
-		)
+	)
 	{
-		Intersect intersect{ gatherPlaneLine(pIDs, object) };
+		Intersect intersect{ gatherPlaneLine(obj, object) };
 
 		auto [p1, p2] = intersect.points;
 		auto [n1, n2] = intersect.vectors;
@@ -575,7 +545,7 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		if (glm::length(intersection[1]) < epsilon)
 		{
 			std::cerr << "Intersection doesn't exist.\n";
-			return;
+			return -1;
 		}
 
 		std::vector components
@@ -588,66 +558,38 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		intersection[1] *= scale;
 
 		const float radius{ 0.0015f };
-		if (color == glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f })
-			color = { 0.7f, 0.3f, 0.0f, 1.0f };
 
-		int vCountLine{};
-
-		if (update)
-		{
-			vCountLine = getLineVertices(intersection[0], {0.0f, 0.0f, 0.0f}, intersection[1], color, radius, Context::vertexData);
-			return;
-		}
-
-		if (scanForIdenticalObject(type, components, object))
+		if (scanForIdenticalObject(type, components, object, obj.getID()))
 		{
 			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
-			return;
+			return -1;
 		}
 
-		vCountLine = getLineVertices(intersection[0], { 0.0f, 0.0f, 0.0f }, intersection[1], color, radius, Context::vertexData);
-
-		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Line, GL_LINES };
 		obj.setMutable(false);
-		createObject(std::move(obj), vCountLine, components, color, 2, pIDs, pCompIndex);
-
-		updateBufferData(Context::vertexData);
+		obj.setColor({ 0.7f, 0.3f, 0.0f, 1.0f });
+		obj.setComponents(components);
+		
+		vCount = getLineVertices(intersection[0], { 0.0f, 0.0f, 0.0f }, intersection[1], color, radius, vertexData);
 	}
 
 	else if (type == Object::Line)
 	{
-		std::array<glm::vec3, 3> line{ assemblyLine(vecComponents, pCompIndex) };
+		std::array<glm::vec3, 3> line{ assemblyLine(obj) };
 
 		auto [point, dVectorOrigin, dVectorHead] = line;
 
-		point     *= scale;
+		point *= scale;
 		dVectorOrigin *= scale;
 		dVectorHead *= scale;
 
 		constexpr float radius{ 0.0015f };
 
-		int vCountLine{};
-
-		if (update)
-		{
-			vCountLine = getLineVertices(point, dVectorOrigin, dVectorHead, color, radius, Context::vertexData);
-			return;
-		}
-		
-		vCountLine = getLineVertices(point, dVectorOrigin, dVectorHead, color, radius, Context::vertexData);
-
-		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Line, GL_LINES };
-		createObject(obj, vCountLine, vecComponents, color, 2, pIDs, pCompIndex);
-
-		updateBufferData(Context::vertexData);
+		vCount = getLineVertices(point, dVectorOrigin, dVectorHead, color, radius, vertexData);
 	}
 
 	else if (type == Object::Plane)
 	{
-		int pIndex1{ searchObjectByID(pIDs[1], object) };
-		Object::Type pType1{ object[pIndex1].getType() };
-
-		std::array<glm::vec3, 3> plane{ assemblyPlane(vecComponents, pIDs, pCompIndex, object) };
+		std::array<glm::vec3, 3> plane{ assemblyPlane(obj, object) };
 
 		auto [normalOrigin, normalHead, point] = plane;
 
@@ -655,24 +597,324 @@ void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color,
 		normalHead *= scale;
 		point *= scale;
 
-		color.w = 0.2f;
-		int vCountPlane{};
-
-		if (update)
-		{
-			vCountPlane = getPlaneVertices(normalOrigin, normalHead, point, color, Context::vertexData);
-			return;
-		}
-
 		// getPlaneVertices create 6 new vertices
-		vCountPlane = getPlaneVertices(normalOrigin, normalHead, point, color, Context::vertexData);
-
-		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Plane, GL_TRIANGLES };
-		createObject(obj, vCountPlane, vecComponents, color, 3, pIDs, pCompIndex);
-
-		updateBufferData(Context::vertexData);
+		vCount = getPlaneVertices(normalOrigin, normalHead, point, color, vertexData);
 	}
+
+	return vCount;
 }
+
+void buildAndRegisterObject(Object::Type type, const std::vector<float>& components, const glm::vec4& color, const std::array<int, 3>& pIDs, const std::array<int, 3>& pCompIndex)
+{
+	if (scanForIdenticalObject(type, components, Context::object))
+	{
+		std::cerr << "Object already exist.\n";
+		return;
+	}
+
+	int pCount{ 0 };
+	for (size_t i{ 0 }; i < std::size(pIDs); ++i)
+	{
+		if (pIDs[i] != -1 && pIDs[i] != Context::componentLiteral)
+			++pCount;
+	}
+
+	glm::vec4 finalColor{ color };
+
+	// plane random color
+	//if (type == Object::Plane)
+	//{
+	//	float r{ Random::get(0.0f, 1.0f) };
+	//	float g{ Random::get(0.0f, 1.0f) };
+	//	float b{ Random::get(0.0f, 1.0f) };
+
+	//	finalColor = { r, g, b, 0.2f };
+	//}
+
+	if (type == Object::Plane)
+	{
+		float r{}, g{}, b{};
+		do {
+			r = static_cast<float>(Random::get(0, 10)) * 0.1f;
+			g = static_cast<float>(Random::get(0, 10)) * 0.1f;
+			b = static_cast<float>(Random::get(0, 10)) * 0.1f;
+		} while (r < 0.2f && g > 0.4f && b > 0.7f); // Re-sorteia se ficar muito próximo do ciano do fundo!
+
+		finalColor = { r, g, b, 0.2f };
+	}
+
+	Object obj{ std::string(1, Context::objectSymbols[type]++), type, Context::primitives[type], components, finalColor, pIDs, pCompIndex, pCount};
+	int vCount{ generateObjectVertices(obj, Context::vertexData) };
+
+	if (vCount == -1)
+	{
+		std::cerr << "ERROR::FAILED_TO_GENERATE_VERTICES\n";
+		return;
+	}
+
+	createObject(std::move(obj), vCount);
+
+	updateBufferData(Context::vertexData);
+}
+
+// draw objects such as Points, Vectors, Planes, etc.
+//void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color, std::array<int, 3> pIDs, std::array<int, 3> pCompIndex, bool update)
+//{
+//	using Context::object;
+//
+//	constexpr float scale{ 0.1f };
+//
+//	// intersection
+//	if (type == Object::Point && pIDs[0] != -1)
+//	{
+//		Intersect intersect{ gatherPlaneLine(pIDs, object) };
+//
+//		glm::vec3 intersection{ assemblyIntersectPoint(intersect) };
+//
+//		std::vector components{ intersection.x, intersection.y, intersection.z };
+//
+//		intersection *= scale;
+//
+//		const float radius{ 0.005f };
+//		if (color == glm::vec4{0.0f, 0.0f, 0.0f, 1.0f})
+//			color = { 0.7f, 0.3f, 0.0f, 1.0f };
+//
+//		int vCountSphere{};
+//
+//		if (update)
+//		{
+//			vCountSphere = getSphereVertices(intersection, color, radius, Context::vertexData);
+//			return;
+//		}
+//
+//		if (scanForIdenticalObject(type, components, object))
+//		{
+//			std::cout << components[0] << ", " << components[1] << ", " << components[2] << "\n";
+//			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
+//			return;
+//		}
+//
+//		vCountSphere = getSphereVertices(intersection, color, radius, Context::vertexData);
+//
+//		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
+//		obj.setMutable(false);
+//		createObject(std::move(obj), vCountSphere, components, color, 2, pIDs, pCompIndex);
+//			
+//		updateBufferData(Context::vertexData);
+//	}
+//
+//	else if (type == Object::Point)
+//	{
+//		glm::vec3 point{ vecComponents[0], vecComponents[1], vecComponents[2] };
+//
+//		point *= scale;
+//
+//		constexpr float radius{ 0.005f };
+//
+//		int vCountSphere{};
+//
+//		if (update)
+//		{
+//			vCountSphere = getSphereVertices(point, color, radius, Context::vertexData);
+//			return;
+//		}
+//
+//		// getSphereVertices create 120960 new floats => 120960 / 7 = 17280 vertices, where 7 = number of components
+//		vCountSphere = getSphereVertices(point, color, radius, Context::vertexData);
+//
+//		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Point, GL_LINES };
+//		createObject(std::move(obj), vCountSphere, vecComponents, color, 0, pIDs);
+//
+//		updateBufferData(Context::vertexData);
+//	}
+//
+//	else if (type == Object::Vector)
+//	{
+//		std::array<glm::vec3, 2> vector{ assemblyVector(vecComponents, pIDs, pCompIndex, object) };
+//
+//		auto [vecOrigin, vecHead] = vector;
+//
+//		constexpr float epsilon{ 0.001f };
+//		if (glm::length(vecHead - vecOrigin) < epsilon)
+//			return;
+//
+//		vecOrigin *= scale;
+//		vecHead *= scale;
+//
+//		constexpr float radius{ 0.0015f };
+//		constexpr float coneRadius{ radius * 4.0f };
+//
+//		const glm::vec3 direction{ glm::normalize(vecHead - vecOrigin) };
+//		const float cilinderLength{ glm::length(vecHead - vecOrigin) };
+//		constexpr float coneHeight{ 0.025f };
+//
+//		glm::vec3 newVecHead{ vecOrigin + (cilinderLength - coneHeight) * direction };
+//
+//		int vCountCilinder{};
+//		int vCountCone{};
+//
+//		if (update)
+//		{
+//			vCountCilinder = getCilinderVertices(vecOrigin, newVecHead, color, radius, Context::vertexData);
+//			vCountCone     = getConeVertices(direction, vecHead, color, coneRadius, coneHeight, Context::vertexData);
+//			return;
+//		}
+//
+//		// getCilinderVertices creates 144 new vertices 
+//		vCountCilinder = getCilinderVertices(vecOrigin, newVecHead, color, radius, Context::vertexData);
+//		vCountCone	   = getConeVertices(direction, vecHead, color, coneRadius, coneHeight, Context::vertexData);
+//
+//		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Vector, GL_LINES};
+//		if (vecComponents.size() > 6) obj.setMutable(false); // if the object is the cross product, then it cannot be mutable
+//		createObject(std::move(obj), vCountCilinder + vCountCone, vecComponents, color, 2, pIDs, pCompIndex);
+//
+//		updateBufferData(Context::vertexData);
+//	}
+//
+//	else if (type == Object::Segment)
+//	{
+//		int startA{ pCompIndex[0] };
+//		int startB{ pCompIndex[1] };
+//
+//		glm::vec3 pointA{ vecComponents[startA], vecComponents[startA + 1], vecComponents[startA + 2] };
+//		glm::vec3 pointB{ vecComponents[startB], vecComponents[startB + 1], vecComponents[startB + 2] };
+//
+//		pointA *= scale;
+//		pointB *= scale;
+//
+//		const float radius{ 0.0015f };
+//
+//		int vCountCilinder{};
+//
+//		if (update)
+//		{
+//			vCountCilinder = getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
+//			return;
+//		}
+//
+//		vCountCilinder = getCilinderVertices(pointA, pointB, color, radius, Context::vertexData);
+//
+//		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Segment, GL_LINES };
+//		createObject(obj, vCountCilinder, vecComponents, color, 2, pIDs, pCompIndex);
+//
+//		updateBufferData(Context::vertexData);
+//	}
+//
+//	else if 
+//		(
+//		auto pType0{ object[searchObjectByID(pIDs[0], object)].getType() }; 
+//		type == Object::Line && pType0 == Object::Plane
+//		)
+//	{
+//		Intersect intersect{ gatherPlaneLine(pIDs, object) };
+//
+//		auto [p1, p2] = intersect.points;
+//		auto [n1, n2] = intersect.vectors;
+//
+//		std::array<glm::vec3, 2> intersection{ intersectionPlanePlane(p1, n1, p2, n2) };
+//
+//		constexpr float epsilon{ 0.001f };
+//		if (glm::length(intersection[1]) < epsilon)
+//		{
+//			std::cerr << "Intersection doesn't exist.\n";
+//			return;
+//		}
+//
+//		std::vector components
+//		{
+//			intersection[0].x, intersection[0].y, intersection[0].z,
+//			intersection[1].x, intersection[1].y, intersection[1].z
+//		};
+//
+//		intersection[0] *= scale;
+//		intersection[1] *= scale;
+//
+//		const float radius{ 0.0015f };
+//		if (color == glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f })
+//			color = { 0.7f, 0.3f, 0.0f, 1.0f };
+//
+//		int vCountLine{};
+//
+//		if (update)
+//		{
+//			vCountLine = getLineVertices(intersection[0], {0.0f, 0.0f, 0.0f}, intersection[1], color, radius, Context::vertexData);
+//			return;
+//		}
+//
+//		if (scanForIdenticalObject(type, components, object))
+//		{
+//			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
+//			return;
+//		}
+//
+//		vCountLine = getLineVertices(intersection[0], { 0.0f, 0.0f, 0.0f }, intersection[1], color, radius, Context::vertexData);
+//
+//		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Line, GL_LINES };
+//		obj.setMutable(false);
+//		createObject(std::move(obj), vCountLine, components, color, 2, pIDs, pCompIndex);
+//
+//		updateBufferData(Context::vertexData);
+//	}
+//
+//	else if (type == Object::Line)
+//	{
+//		std::array<glm::vec3, 3> line{ assemblyLine(vecComponents, pCompIndex) };
+//
+//		auto [point, dVectorOrigin, dVectorHead] = line;
+//
+//		point     *= scale;
+//		dVectorOrigin *= scale;
+//		dVectorHead *= scale;
+//
+//		constexpr float radius{ 0.0015f };
+//
+//		int vCountLine{};
+//
+//		if (update)
+//		{
+//			vCountLine = getLineVertices(point, dVectorOrigin, dVectorHead, color, radius, Context::vertexData);
+//			return;
+//		}
+//		
+//		vCountLine = getLineVertices(point, dVectorOrigin, dVectorHead, color, radius, Context::vertexData);
+//
+//		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Line, GL_LINES };
+//		createObject(obj, vCountLine, vecComponents, color, 2, pIDs, pCompIndex);
+//
+//		updateBufferData(Context::vertexData);
+//	}
+//
+//	else if (type == Object::Plane)
+//	{
+//		int pIndex1{ searchObjectByID(pIDs[1], object) };
+//		Object::Type pType1{ object[pIndex1].getType() };
+//
+//		std::array<glm::vec3, 3> plane{ assemblyPlane(vecComponents, pIDs, pCompIndex, object) };
+//
+//		auto [normalOrigin, normalHead, point] = plane;
+//
+//		normalOrigin *= scale;
+//		normalHead *= scale;
+//		point *= scale;
+//
+//		color.w = 0.2f;
+//		int vCountPlane{};
+//
+//		if (update)
+//		{
+//			vCountPlane = getPlaneVertices(normalOrigin, normalHead, point, color, Context::vertexData);
+//			return;
+//		}
+//
+//		// getPlaneVertices create 6 new vertices
+//		vCountPlane = getPlaneVertices(normalOrigin, normalHead, point, color, Context::vertexData);
+//
+//		Object obj{ std::string(1, Context::objectSymbols[type]++), Object::Plane, GL_TRIANGLES };
+//		createObject(obj, vCountPlane, vecComponents, color, 3, pIDs, pCompIndex);
+//
+//		updateBufferData(Context::vertexData);
+//	}
+//}
 
 void drawObjectLabels
 (
@@ -701,7 +943,7 @@ void drawObjectLabels
 
 		if (type == Object::Vector)
 		{
-			std::array<glm::vec3, 2> vector{ assemblyVector(obj.getComponents(), obj.getParentIDs(), obj.getpCompIndex(), object) };
+			std::array<glm::vec3, 2> vector{ assemblyVector(obj, object) };
 
 			targetWorldPos = vector[1];
 

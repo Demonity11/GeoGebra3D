@@ -23,6 +23,28 @@ public:
 		, m_primitive{ primitive }
 	{ }
 
+	Object
+	(
+		std::string name, 
+		Type type, 
+		unsigned int primitive, 
+		const std::vector<float>& components, 
+		const glm::vec4& color, 
+		const std::array<int, 3>& pIDs, 
+		const std::array<int, 3>& pCompIndex,
+		int pCount
+	)
+		: m_name{ name }
+		, m_type{ type }
+		, m_primitive{ primitive }
+		, m_components{ components }
+		, m_color { color }
+		, m_parentIDs { pIDs }
+		, m_pCompIndex { pCompIndex }
+		, m_parentCount { pCount }
+	{
+	}
+
 	Object()
 		: m_id{ -1 }
 	{ }
@@ -73,7 +95,7 @@ private:
 
 	std::array<int, 3> m_parentIDs{ -1, -1, -1 }; // default values to a object that has no parent
 	std::array<int, 3> m_pCompIndex{ -1, -1, -1 };
-	uint8_t m_parentCount{}; // max parent count. for example: a vector can have up to two parents
+	int m_parentCount{}; // max parent count. for example: a vector can have up to two parents
 
 	bool m_isMutable{ true };
 	bool m_isSelected{ false };

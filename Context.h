@@ -2,6 +2,7 @@
 #define CONTEXT_H
 
 #include "draw_utils.h"
+#include "Window.h"
 
 namespace Context
 {
@@ -31,6 +32,11 @@ namespace Context
 	extern std::vector<FunctionArgs> function;
 	// store object symbols (default name)
 	extern std::map<Object::Type, char> objectSymbols;
+
+	extern std::map<Object::Type, unsigned int> primitives;
+
+	extern std::map<Object::Type, glm::vec4> defaultColors;
+
 	// parent ID when the object has literal components
 	inline constexpr int componentLiteral{ -2 };
 
