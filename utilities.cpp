@@ -418,7 +418,10 @@ void updateSelectedObjectColor(int objIndex, std::vector<Object>& object, std::v
 	glm::vec4 color{};
 
 	if (obj.isSelected())
+	{
 		color = { 1.0f, 1.0f, 1.0f, 1.0f };
+		if (type == Object::Plane) color.w = 0.2f;
+	}
 	else
 		color = obj.getColor();
 
@@ -936,6 +939,7 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 {
 	int closestIndex{ -1 };
 	float closestT{ FLT_MAX };
+	float closestTEffective{ FLT_MAX };
 	constexpr float epsilon{ 0.005f };
 	constexpr float scale{ 0.1f };
 
@@ -961,9 +965,13 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 
 			if (distance < epsilon)
 			{
-				if (T < closestT)
+				float bias{ obj.isMutable() ? 0.06f : 0.08f };
+				float tEffective{ T - bias };
+
+				if (tEffective < closestTEffective)
 				{
 					closestT = T;
+					closestTEffective = tEffective;
 					closestIndex = static_cast<int>(idx);
 				}
 			}
@@ -1007,16 +1015,20 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 			vecHead *= scale;
 
 			glm::vec3 vecDirection{ vecHead - vecOrigin };
+			float lineLength{ glm::length(vecDirection) };
+
+			if (lineLength < 0.0001f) continue;
+
+			glm::vec3 normalizedVecDirection{ vecDirection / lineLength };
 
 			glm::vec3 w0{ rayOrigin - point };
+			glm::vec3 normalizedRayDirection{ glm::normalize(rayDirection) };
 
-			float a{ 1.0f };
-			float b{ glm::dot(rayDirection, vecDirection) };
-			float c{ glm::dot(vecDirection, vecDirection) };
-			float d{ glm::dot(rayDirection, w0) };
-			float e{ glm::dot(vecDirection, w0) };
+			float b{ glm::dot(normalizedRayDirection, normalizedVecDirection) };
+			float d{ glm::dot(normalizedRayDirection, w0) };
+			float e{ glm::dot(normalizedVecDirection, w0) };
 
-			float D{ c - b * b };
+			float D{ 1.0f - b * b };
 			if (glm::abs(D) < epsilon_0) continue;
 
 			float s{ (e - b * d) / D };
@@ -1024,30 +1036,104 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 
 			if (type == Object::Vector || type == Object::Segment)
 			{
-				if (s < 0.0f || s > 1.0f) 
+				if (s < 0.0f || s > lineLength)
 				{
 					if (s < 0.0f)
 						s = 0.0f;
-					else if (s > 1.0f) 
-						s = 1.0f;
+					else if (s > lineLength)
+						s = lineLength;
 
-					t = glm::dot((point + s * vecDirection) - rayOrigin, rayDirection);
+					t = glm::dot((point + s * normalizedVecDirection) - rayOrigin, normalizedRayDirection);
 				}
 			}
 
 			if (t < 0.0f) continue;
 
-			glm::vec3 pRay{ rayOrigin + t * rayDirection };
-			glm::vec3 pVec{ point + s * vecDirection };
+			glm::vec3 pRay{ rayOrigin + t * normalizedRayDirection };
+			glm::vec3 pVec{ point + s * normalizedVecDirection };
 
 			float distance{ glm::length(pRay - pVec) };
 
 			if (distance < epsilon)
 			{
-				if (t < closestT)
+				float bias{ 0.02f };
+				if (type == Object::Line && !obj.isMutable())
+				{
+					bias = 0.05f; 
+				}
+
+				float tEffective{ t - bias };
+				if (tEffective < closestTEffective)
 				{
 					closestT = t;
+					closestTEffective = tEffective;
 					closestIndex = static_cast<int>(idx);
+				}
+			}
+		}
+
+		else if (type == Object::Plane)
+		{
+			std::array<glm::vec3, 3> plane{ assemblyPlane(obj, object) };
+
+			auto [normalOrigin, normalHead, point] = plane;
+
+			normalOrigin *= scale;
+			normalHead *= scale;
+			point *= scale;
+
+			glm::vec3 direction{ normalHead - normalOrigin };
+			glm::vec3 planeNormal{ glm::normalize(direction) };
+
+			glm::vec3 right{};
+			glm::vec3 up{};
+			getNewCoordSystem(direction, right, up);
+
+			float divisor{ glm::dot(planeNormal, rayDirection) };
+			float d{ -glm::dot(planeNormal, point) };
+
+			constexpr float epsilon{ 0.001f };
+			float t{ -1.0f };
+			bool hasIntersect{ false };
+			if (glm::abs(divisor) < epsilon)
+			{
+				if (glm::abs(glm::dot(planeNormal, rayOrigin) + d) < epsilon)
+				{
+					float t = 0.0f;
+					hasIntersect = true;
+				}
+
+				else
+					continue;
+			}
+			else
+			{
+				t = -(glm::dot(planeNormal, rayOrigin) + d) / divisor;
+				if (t >= 0.0f)
+				{
+					hasIntersect = true;
+				}
+			}
+
+			if (hasIntersect)
+			{
+				glm::vec3 intersectionPoint{ rayOrigin + t * rayDirection };
+				glm::vec3 relativePos{ intersectionPoint - point };
+
+				float uCoord{ glm::dot(relativePos, right) };
+				float vCoord{ glm::dot(relativePos, up) };
+
+				if (glm::abs(uCoord) <= 1.0f && glm::abs(vCoord) <= 1.0f)
+				{
+					float bias{ 0.0f };
+					float tEffective{ t - bias };
+
+					if (tEffective < closestTEffective)
+					{
+						closestT = t;
+						closestTEffective = tEffective;
+						closestIndex = static_cast<int>(idx);
+					}
 				}
 			}
 		}

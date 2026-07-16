@@ -56,7 +56,6 @@ void drawAxisLabels
 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& vec);
 
-//void draw(Object::Type type, std::vector<float>& vecComponents, glm::vec4 color, std::array<int, 3> pIDs = { -1, -1, -1 }, std::array<int, 3> pCompIndex = { -1, -1, -1 }, bool update = false);
 void buildAndRegisterObject(Object::Type type, const std::vector<float>& components, const glm::vec4& color, const std::array<int, 3>& pIDs = { -1, -1, -1 }, const std::array<int, 3>& pCompIndex = { -1, -1, -1 });
 int generateObjectVertices(Object& obj, std::vector<float>& vertexData);
 
