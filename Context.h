@@ -47,6 +47,8 @@ namespace Context
 
 	inline int prevSelectedObjID{ -1 };
 	inline int selectedObjID{ -1 };
+
+	inline int globalObjectIDCounter{ 8 };
 }
 
 #endif

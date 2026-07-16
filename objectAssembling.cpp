@@ -1,5 +1,6 @@
 #include "objectAssembling.h"
 #include "utilities.h"
+#include "objectCoords.h"
 
 Intersect gatherPlaneLine(const Object& obj, std::vector<Object>& object)
 {
@@ -250,7 +251,30 @@ std::array<glm::vec3, 3> assemblyPlane(Object& obj, const std::vector<Object>& o
 		glm::vec3 u{ B - A };
 		glm::vec3 v{ C - A };
 
-		glm::vec3 normal{ glm::cross(u, v) };
+		glm::vec3 normal{};
+		
+		const float lengthProduct{ glm::length(u) * glm::length(v) };
+		constexpr float epsilon_0{ 0.001f };
+		if (lengthProduct > 0.001f)
+		{
+			const float theta{ glm::dot(u, v) / lengthProduct };
+
+			constexpr float epsilon_1{ 0.999f };
+			if (glm::abs(theta) > epsilon_1)
+			{
+				glm::vec3 right{};
+
+				getNewCoordSystem(u, right, normal);
+			}
+			else
+			{
+				normal = glm::cross(u, v);
+			}
+		}
+		else
+		{
+			normal = glm::cross(u, v);
+		}
 
 		plane[0] = glm::vec3(0.0f, 0.0f, 0.0f);
 		plane[1] = normal;

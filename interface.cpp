@@ -219,7 +219,16 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nVector(A,B)\nVector(B,C)\nPoint(3,-2,-3)\nLine(A,D)\nCross(u,v)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nVector(A,B)\nVector(A,C)\nCross(u,v)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nLine(D,E)\nIntersect(r,p)\n") };
-	static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nPoint(2,1,-3)\nPlane(D,E,F)\nIntersect(p,q)\nVector(A,B)\nVector(D,E)\nCross(u,v)\n") };
+	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nPoint(2,1,-3)\nPlane(D,E,F)\nIntersect(p,q)\nVector(A,B)\nVector(D,E)\nCross(u,v)\n") };
+	static auto inputArray{ testInput(
+		"Point(1,1,1)\n"
+		"Point(2,2,2)\n"
+		"Point(3,3,3)\n"
+		"Point(4,4,4)\n"
+		"Point(5,5,5)\n"
+		"Point(6,6,6)\n"
+		"Plane(A,B,C)\n"
+	) };
 
 	// types input faster for testing
 	if (!inputArray.empty())

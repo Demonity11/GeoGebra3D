@@ -220,7 +220,7 @@ int searchObjectByID(int id, const std::vector<Object>& objectRef)
 void createObject(Object obj, int vCount, const std::vector<float>& comp, const glm::vec4 color, uint8_t pCount, std::array<int, 3> pIDs, std::array<int, 3> pCompIndex)
 {
 	int offset{ 0 };
-	int id{ static_cast<int>(Context::object.size()) };
+	int id{ Context::globalObjectIDCounter++ };
 
 	if (!Context::object.empty())
 	{
@@ -247,7 +247,7 @@ void createObject(Object obj, int vCount, const std::vector<float>& comp, const 
 void createObject(Object obj, int vCount)
 {
 	int offset{ 0 };
-	int id{ static_cast<int>(Context::object.size()) };
+	int id{ Context::globalObjectIDCounter++ };
 
 	if (!Context::object.empty())
 	{
