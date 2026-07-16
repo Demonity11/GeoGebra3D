@@ -108,7 +108,6 @@ int main()
 		drawObjectLabels(Context::object, view, projection, model, viewportPos, viewportSize);
 		drawAxisLabels(Context::object, view, projection, model, viewportPos, viewportSize);
 
-		bool clicked{ false };
 		if (Context::leftClickPressed && !io.WantCaptureMouse)
 		{
 			Context::leftClickPressed = false;
@@ -135,8 +134,16 @@ int main()
 			glm::vec3 rayOrigin{ pLocalNear };
 			glm::vec3 rayDirection{ glm::normalize(pLocalFar - pLocalNear) };
 
-			Context::selectedObjID = getSelectedObjectID(rayOrigin, rayDirection, Context::object);
-			clicked = true;
+			int clickedID{ getSelectedObjectID(rayOrigin, rayDirection, Context::object) };
+			
+			if (Context::selectedObjID == clickedID)
+			{
+				Context::selectedObjID = -1; 
+			}
+			else
+			{
+				Context::selectedObjID = clickedID;
+			}
 		}
 
 		if (io.WantCaptureMouse)
@@ -144,8 +151,7 @@ int main()
 			Context::leftClickPressed = false;
 		}
 
-		showVariables(Context::object, clicked);
-		clicked = false;
+		showVariables(Context::object);
 		ImGui::PopFont();
 		ImGui::End();
 

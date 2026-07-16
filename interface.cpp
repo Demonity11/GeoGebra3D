@@ -325,7 +325,7 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	}
 }
 
-void showVariables(std::vector<Object>& object, bool clicked)
+void showVariables(std::vector<Object>& object)
 {
 	bool isSelectionChanged{ false };
 
@@ -376,16 +376,9 @@ void showVariables(std::vector<Object>& object, bool clicked)
 		}
 
 		if (currentID == Context::selectedObjID)
-		{
-			if (clicked && obj.isSelected())
-			{
-				ImGui::SetNextItemOpen(false);
-				obj.setSelected(false);
-				updateSelectedObjectColor(currentIndex, Context::object, Context::vertexData);
-				Context::selectedObjID = -1;
-			}
+		{	
 
-			else if (!obj.isSelected())
+			if (!obj.isSelected())
 			{
 				ImGui::SetNextItemOpen(true);
 				obj.setSelected(true);
