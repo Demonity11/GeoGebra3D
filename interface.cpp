@@ -325,20 +325,20 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	}
 }
 
-void showVariables(std::vector<Object>& object, int out_selectedObjID)
+void showVariables(std::vector<Object>& object, bool clicked)
 {
 	bool isSelectionChanged{ false };
 
-	if (out_selectedObjID != -1)
+	if (Context::selectedObjID != -1)
 	{
-		if (Context::prevSelectedObjID != -1 && out_selectedObjID != Context::prevSelectedObjID)
+		if (Context::prevSelectedObjID != -1 && Context::selectedObjID != Context::prevSelectedObjID)
 		{
 			isSelectionChanged = true;
 		}
 
 		else
 		{
-			Context::prevSelectedObjID = out_selectedObjID;
+			Context::prevSelectedObjID = Context::selectedObjID;
 		}
 	}
 
@@ -351,12 +351,12 @@ void showVariables(std::vector<Object>& object, int out_selectedObjID)
 		const int currentID{ obj.getID() };
 		const int currentIndex{ static_cast<int>(i) };
 
-		if (out_selectedObjID == -1 && Context::prevSelectedObjID != -1)
+		if (Context::selectedObjID == -1 && Context::prevSelectedObjID != -1)
 		{
 			if (currentID == Context::prevSelectedObjID)
 			{
 				ImGui::SetNextItemOpen(false);
-				Context::prevSelectedObjID = out_selectedObjID;
+				Context::prevSelectedObjID = Context::selectedObjID;
 				obj.setSelected(false);
 				updateSelectedObjectColor(currentIndex, Context::object, Context::vertexData);
 			}
@@ -366,7 +366,7 @@ void showVariables(std::vector<Object>& object, int out_selectedObjID)
 		{
 			ImGui::SetNextItemOpen(false);
 			isSelectionChanged = false;
-			Context::prevSelectedObjID = out_selectedObjID;
+			Context::prevSelectedObjID = Context::selectedObjID;
 
 			if (obj.isSelected())
 			{
@@ -375,9 +375,17 @@ void showVariables(std::vector<Object>& object, int out_selectedObjID)
 			}
 		}
 
-		if (currentID == out_selectedObjID)
+		if (currentID == Context::selectedObjID)
 		{
-			if (!obj.isSelected())
+			if (clicked && obj.isSelected())
+			{
+				ImGui::SetNextItemOpen(false);
+				obj.setSelected(false);
+				updateSelectedObjectColor(currentIndex, Context::object, Context::vertexData);
+				Context::selectedObjID = -1;
+			}
+
+			else if (!obj.isSelected())
 			{
 				ImGui::SetNextItemOpen(true);
 				obj.setSelected(true);

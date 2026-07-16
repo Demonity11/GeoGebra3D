@@ -32,7 +32,7 @@ auto updateBufferData(const std::vector<float>& vertices) -> void;
 auto initializeImGui(GLFWwindow* window)																		 -> void;
 auto getUserInput(std::vector<Object>& object)																	 -> void;
 auto processInput(char inputBuffer[128], const std::vector<FunctionArgs>& function, std::vector<Object>& object) -> void;
-auto showVariables(std::vector<Object>& object, int selectedObjIndex)											 -> void;
+auto showVariables(std::vector<Object>& object, bool clicked)													 -> void;
 
 
 void drawObjectLabels

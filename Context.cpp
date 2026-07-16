@@ -20,6 +20,7 @@ namespace Context
 	bool isPressingRightClick{ false };
 	bool isFirstMouse{ true };
 	bool isEnterPressed{ false };
+	bool leftClickPressed{ false };
 
 	std::vector<float> vertexData{};
 	// Objects conteiner

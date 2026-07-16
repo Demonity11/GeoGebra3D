@@ -24,6 +24,7 @@ namespace Context
 	extern bool isPressingRightClick;
 	extern bool isFirstMouse;
 	extern bool isEnterPressed;
+	extern bool leftClickPressed;
 
 	extern std::vector<float> vertexData;
 	// Objects conteiner

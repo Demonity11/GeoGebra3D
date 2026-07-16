@@ -108,8 +108,11 @@ int main()
 		drawObjectLabels(Context::object, view, projection, model, viewportPos, viewportSize);
 		drawAxisLabels(Context::object, view, projection, model, viewportPos, viewportSize);
 
-		if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !io.WantCaptureMouse)
+		bool clicked{ false };
+		if (Context::leftClickPressed && !io.WantCaptureMouse)
 		{
+			Context::leftClickPressed = false;
+
 			ImVec2 imguiMousePos{ ImGui::GetMousePos() };
 
 			float mouseX{ imguiMousePos.x };
@@ -133,9 +136,16 @@ int main()
 			glm::vec3 rayDirection{ glm::normalize(pLocalFar - pLocalNear) };
 
 			Context::selectedObjID = getSelectedObjectID(rayOrigin, rayDirection, Context::object);
+			clicked = true;
 		}
 
-		showVariables(Context::object, Context::selectedObjID);
+		if (io.WantCaptureMouse)
+		{
+			Context::leftClickPressed = false;
+		}
+
+		showVariables(Context::object, clicked);
+		clicked = false;
 		ImGui::PopFont();
 		ImGui::End();
 
@@ -170,6 +180,14 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 		if (action == GLFW_RELEASE)
 			Context::isPressingRightClick = false;
+	}
+
+	if (button == GLFW_MOUSE_BUTTON_LEFT)
+	{
+		if (action == GLFW_PRESS)
+		{
+			Context::leftClickPressed = true;
+		}
 	}
 }
 
