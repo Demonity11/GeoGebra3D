@@ -4,6 +4,7 @@
 #include "objectCoords.h"
 #include "utilities.h"
 #include "Context.h"
+#include "lexer.h"
 
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -18,6 +19,14 @@ struct TransparentItem
 
 int main()
 {
+	std::string input{ "Vector(A, Point(1.22,-1.2,100)) " };
+	std::cout << "TEST#1 : input = " << input << "\n";
+	tokenizer(input);
+	printTokens(Lexer::tokens);
+	Lexer::tokens.clear();
+	std::cout << "\n";
+
+
 	constexpr int width{ 960 };
 	constexpr int height{ 540 };
 	std::string title{ "GeoGebra3D" };
