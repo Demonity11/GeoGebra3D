@@ -163,6 +163,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Object.cpp" />
+    <ClCompile Include="parser.cpp" />
+    <ClCompile Include="parser.h" />
     <ClCompile Include="utilities.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>

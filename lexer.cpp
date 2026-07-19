@@ -6,7 +6,7 @@ namespace Lexer
 	std::vector<Token> tokens{};
 }
 
-std::string_view convertTokenToString_View(Token::Type type)
+std::string_view convertTokenTo_string_view(Token::Type type)
 {
 	switch (type)
 	{
@@ -22,9 +22,11 @@ std::string_view convertTokenToString_View(Token::Type type)
 
 void printTokens(const std::vector<Token>& tokens)
 {
-	for (const auto& token : Lexer::tokens)
+	for (size_t pos{ 0 }; pos < tokens.size(); ++pos)
 	{
-		std::cout << convertTokenToString_View(token.type) << ": " << token.lexeme << "\n";
+		const Token& token{ tokens[pos] };
+
+		std::cout << "Pos: " << pos << "\t" << convertTokenTo_string_view(token.type) << ": " << token.lexeme << "\n";
 	}
 }
 

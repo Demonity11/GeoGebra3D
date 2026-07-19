@@ -4,7 +4,7 @@
 #include "objectCoords.h"
 #include "utilities.h"
 #include "Context.h"
-#include "lexer.h"
+#include "parser.h"
 
 void processInput(GLFWwindow* window);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -23,9 +23,120 @@ int main()
 	std::cout << "TEST#1 : input = " << input << "\n";
 	tokenizer(input);
 	printTokens(Lexer::tokens);
-	Lexer::tokens.clear();
 	std::cout << "\n";
+	parser(Lexer::tokens);
+	printNodes(Parser::nodes);
+	Parser::nodes.clear();
+	Lexer::tokens.clear();
+	std::cout << "\n----------------------------------------\n\n";
 
+	// TEST#2: Estouro de Argumentos (Argument Overflow)
+	input = "Point(1, 2, 3, 4)";
+	std::cout << "TEST#2 : input = " << input << "\n";
+	tokenizer(input);
+	printTokens(Lexer::tokens);
+	std::cout << "\n";
+	parser(Lexer::tokens);
+	printNodes(Parser::nodes);
+	Parser::nodes.clear();
+	Lexer::tokens.clear();
+	std::cout << "\n----------------------------------------\n\n";
+
+	// TEST#3: Função Sem Argumentos (Empty Call)
+	input = "Vector()";
+	std::cout << "TEST#3 : input = " << input << "\n";
+	tokenizer(input);
+	printTokens(Lexer::tokens);
+	std::cout << "\n";
+	parser(Lexer::tokens);
+	printNodes(Parser::nodes);
+	Parser::nodes.clear();
+	Lexer::tokens.clear();
+	std::cout << "\n----------------------------------------\n\n";
+
+	// TEST#4: Parêntese Órfão - Falta fechar (Unmatched Parenthesis)
+	input = "Vector(A, Point(1, 2, 3)";
+	std::cout << "TEST#4 : input = " << input << "\n";
+	tokenizer(input);
+	printTokens(Lexer::tokens);
+	std::cout << "\n";
+	parser(Lexer::tokens);
+	printNodes(Parser::nodes);
+	Parser::nodes.clear();
+	Lexer::tokens.clear();;
+	std::cout << "\n----------------------------------------\n\n";
+
+	// TEST#5: Parêntese Órfão - Fechar a mais (Unexpected Trailing Tokens)
+	input = "Vector(A, Point(1, 2, 3)))";
+	std::cout << "TEST#5 : input = " << input << "\n";
+	tokenizer(input);
+	printTokens(Lexer::tokens);
+	std::cout << "\n";
+	parser(Lexer::tokens);
+	printNodes(Parser::nodes);
+	Parser::nodes.clear();
+	Lexer::tokens.clear();
+	std::cout << "\n----------------------------------------\n\n";
+
+	// TEST#6: Vírgula sobrando no fim (Trailing Comma)
+	input = "Point(1, 2, 3,)";
+	std::cout << "TEST#6 : input = " << input << "\n";
+	tokenizer(input);
+	printTokens(Lexer::tokens);
+	std::cout << "\n";
+	parser(Lexer::tokens);
+	printNodes(Parser::nodes);
+	Parser::nodes.clear();
+	Lexer::tokens.clear();
+	std::cout << "\n----------------------------------------\n\n";
+
+	// TEST#7: Vírgula dupla / vazia (Misplaced Comma)
+	input = "Point(1, , 3)";
+	std::cout << "TEST#7 : input = " << input << "\n";
+	tokenizer(input);
+	printTokens(Lexer::tokens);
+	std::cout << "\n";
+	parser(Lexer::tokens);
+	printNodes(Parser::nodes);
+	Parser::nodes.clear();
+	Lexer::tokens.clear();
+	std::cout << "\n----------------------------------------\n\n";
+
+	// TEST#8: Funções Irmãs no Mesmo Nível (Lateralidade)
+	input = "Line(Point(1, 2, 3), Point(-4, 5, 0))";
+	std::cout << "TEST#8 : input = " << input << "\n";
+	tokenizer(input);
+	printTokens(Lexer::tokens);
+	std::cout << "\n";
+	parser(Lexer::tokens);
+	printNodes(Parser::nodes);
+	Parser::nodes.clear();
+	Lexer::tokens.clear();
+	std::cout << "\n----------------------------------------\n\n";
+
+	// TEST#9: Aninhamento Triplo (Profundidade Máxima)
+	input = "Vector(A, Direction(Point(0, 0, 1)))";
+	std::cout << "TEST#9 : input = " << input << "\n";
+	tokenizer(input);
+	printTokens(Lexer::tokens);
+	std::cout << "\n";
+	parser(Lexer::tokens);
+	printNodes(Parser::nodes);
+	Parser::nodes.clear();
+	Lexer::tokens.clear();
+	std::cout << "\n----------------------------------------\n\n";
+
+	// TEST#10: O Erro Sem Separador entre Funções (Syntax Error de Falta de Vírgula)
+	input = "Vector(Point(1, 2, 3) Point(4, 5, 6))";
+	std::cout << "TEST#10 : input = " << input << "\n";
+	tokenizer(input);
+	printTokens(Lexer::tokens);
+	std::cout << "\n";
+	parser(Lexer::tokens);
+	printNodes(Parser::nodes);
+	Parser::nodes.clear();
+	Lexer::tokens.clear();
+	std::cout << "\n----------------------------------------\n\n";
 
 	constexpr int width{ 960 };
 	constexpr int height{ 540 };

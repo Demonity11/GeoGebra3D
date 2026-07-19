@@ -27,7 +27,7 @@ namespace Lexer
 }
 
 void tokenizer(const std::string& input);
-std::string_view convertTokenToString_View(Token::Type type);
+std::string_view convertTokenTo_string_view(Token::Type type);
 void printTokens(const std::vector<Token>& tokens);
 
 #endif
