@@ -71,4 +71,6 @@ namespace Context
 		{ Object::Line,    {0.0f, 0.0f, 0.0f, 1.0f} },
 		{ Object::Plane,   {0.0f, 0.0f, 0.0f, 0.2f} }
 	};
+
+	std::map<std::string, size_t> symbolTable{};
 }

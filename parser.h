@@ -9,6 +9,7 @@
 #include <optional>
 
 #include "lexer.h"
+#include "Context.h"
 
 struct Node
 {

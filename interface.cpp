@@ -6,13 +6,6 @@
 #include "objectAssembling.h"
 #include "Random.h"
 
-std::ostream& operator<<(std::ostream& os, const glm::vec3& vec)
-{
-	os << vec.x << ", " << vec.y << ", " << vec.z;
-
-	return os;
-}
-
 struct AutocompleteContext 
 {
 	bool textWasEdited = false;
@@ -654,9 +647,19 @@ void buildAndRegisterObject(Object::Type type, const std::vector<float>& compone
 		return;
 	}
 
-	createObject(std::move(obj), vCount);
+	const std::string objName{ obj.getName() };
+	size_t objIdx{ createObject(std::move(obj), vCount) };
+
+	Context::symbolTable[objName] = objIdx;
 
 	updateBufferData(Context::vertexData);
+
+	for (const auto& [name, idx] : Context::symbolTable)
+	{
+		std::cout << idx << " - " << name << "\n";
+	}
+
+	std::cout << "\n\n";
 }
 
 void drawObjectLabels

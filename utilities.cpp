@@ -6,6 +6,13 @@
 
 #include <iomanip>
 
+std::ostream& operator<<(std::ostream& os, const glm::vec3& vec)
+{
+	os << vec.x << ", " << vec.y << ", " << vec.z;
+
+	return os;
+}
+
 // convert Object::Type to std::string
 std::string getStringFunctionType(Object::Type type)
 {
@@ -147,12 +154,17 @@ std::vector<std::string> splitArgs(const std::string& argumentString)
 // search object's index by name
 int searchObjectIndexByName(const std::string& objName, const std::vector<Object>& object)
 {
-	for (int index{ 0 }; index < object.size(); ++index)
-	{
-		const auto& obj{ object[index] };
+	//for (int index{ 0 }; index < object.size(); ++index)
+	//{
+	//	const auto& obj{ object[index] };
 
-		if (obj.getName() == objName)
-			return index;
+	//	if (obj.getName() == objName)
+	//		return index;
+	//}
+
+	if (auto idx{ Context::symbolTable.find(objName) }; idx != Context::symbolTable.end())
+	{
+		return static_cast<int>(idx->second);
 	}
 
 	return -1;
@@ -217,7 +229,7 @@ int searchObjectByID(int id, const std::vector<Object>& objectRef)
 }
 
 // creates a Object object
-void createObject(Object obj, int vCount, const std::vector<float>& comp, const glm::vec4 color, uint8_t pCount, std::array<int, 3> pIDs, std::array<int, 3> pCompIndex)
+size_t createObject(Object obj, int vCount, const std::vector<float>& comp, const glm::vec4 color, uint8_t pCount, std::array<int, 3> pIDs, std::array<int, 3> pCompIndex)
 {
 	int offset{ 0 };
 	int id{ Context::globalObjectIDCounter++ };
@@ -242,9 +254,11 @@ void createObject(Object obj, int vCount, const std::vector<float>& comp, const 
 	}
 
 	Context::object.push_back(std::move(obj));
+
+	return Context::object.size() - 1;
 }
 
-void createObject(Object obj, int vCount)
+size_t createObject(Object obj, int vCount)
 {
 	int offset{ 0 };
 	int id{ Context::globalObjectIDCounter++ };
@@ -260,6 +274,8 @@ void createObject(Object obj, int vCount)
 	obj.setVertexCount(vCount);
 
 	Context::object.push_back(std::move(obj));
+
+	return Context::object.size() - 1;
 }
 
 // delete a Object with a given index from Object's vector
@@ -314,6 +330,9 @@ void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>&
 
 	for (auto i : childIndex)
 	{
+		const Object& obj{ object[i] };
+		Context::symbolTable.erase(obj.getName());
+
 		object.erase(object.begin() + i);
 	}
 
@@ -323,7 +342,8 @@ void deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>&
 
 	for (size_t idx{ 8 }; idx < object.size(); ++idx)
 	{
-		auto& obj{ object[idx] };
+		Object& obj{ object[idx] };
+		Context::symbolTable[obj.getName()] = idx;
 
 		int newOffset = static_cast<int>(vertexData.size()) / 7;
 		obj.setOffset(newOffset);
@@ -354,15 +374,15 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 				continue;
 			}
 
-			std::array<int, 3> currentParents = obj.getParentIDs();
-			std::array<int, 3> currentOffsets = obj.getpCompIndex();
+			const std::array<int, 3>& currentParents{ obj.getParentIDs() };
+			const std::array<int, 3>& currentOffsets{ obj.getpCompIndex() };
 
 			for (int i{ 0 }; i < obj.getParentCount(); ++i)
 			{
 				if (auto pIndex = searchObjectByID(currentParents[i], object); pIndex != -1)
 				{
-					const auto& parentComps = object[pIndex].getComponents();
-					float* childCompsPtr = obj.getComponentsPointer();
+					const std::vector<float>& parentComps{ object[pIndex].getComponents() };
+					float* childCompsPtr{ obj.getComponentsPointer() };
 
 					for (size_t j{ 0 }; j < parentComps.size(); ++j)
 					{
@@ -384,6 +404,9 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 
 		for (int index : toBeDeleted)
 		{
+			const Object& obj{ object[index] };
+			Context::symbolTable.erase(obj.getName());
+
 			deleteObject(index, object, vertexData);
 		}
 	}
@@ -394,7 +417,10 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 
 	for (size_t idx{ 8 }; idx < object.size(); ++idx)
 	{
-		auto& obj = object[idx];
+		Object& obj = object[idx];
+
+		// update index for each object in symbolTable
+		Context::symbolTable[obj.getName()] = idx;
 
 		int newOffset = static_cast<int>(vertexData.size()) / 7;
 		obj.setOffset(newOffset);

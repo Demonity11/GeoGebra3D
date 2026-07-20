@@ -1,5 +1,4 @@
 #include "parser.h"
-#include "Context.h"
 
 namespace Parser
 {
@@ -41,7 +40,7 @@ std::optional<ParseResult> parser(const std::vector<Token>& tokens, size_t tp)
 
     using Parser::nodes;
 
-    Token token{ tokens[tp] };
+    const Token& token{ tokens[tp] };
 
     if (token.type == Token::Number)
     {

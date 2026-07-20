@@ -37,18 +37,25 @@ namespace Context
 	extern std::map<Object::Type, unsigned int> primitives;
 
 	extern std::map<Object::Type, glm::vec4> defaultColors;
+	// key: object name - value: object index
+	extern std::map<std::string, size_t> symbolTable;
 
 	// parent ID when the object has literal components
 	inline constexpr int componentLiteral{ -2 };
 
 	inline ImFont* spaceFont{ nullptr };
 
-	constexpr float fontSize{ 16.0f };
+	inline constexpr float fontSize{ 16.0f };
 
 	inline int prevSelectedObjID{ -1 };
 	inline int selectedObjID{ -1 };
 
 	inline int globalObjectIDCounter{ 8 };
+
+	struct RuntimeError
+	{
+		std::string message{};
+	};
 }
 
 #endif
