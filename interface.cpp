@@ -217,14 +217,18 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nVector(A,B)\nVector(A,C)\nCross(u,v)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nLine(D,E)\nIntersect(r,p)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nPoint(2,1,-3)\nPlane(D,E,F)\nIntersect(p,q)\nVector(A,B)\nVector(D,E)\nCross(u,v)\n") };
-	//static auto inputArray{ testInput(
-	//	"Point(1,1,1)\n"
-	//	"Point(2,2,2)\n"
-	//	"Point(3,3,3)\n"
-	//	"Plane(Point(-2,1,-3), Vector(B,C))\n"
-	//) };
+	static auto inputArray{ testInput(
+		"Point(1,1,1)\n"
+		"Point(2,2,2)\n"
+		"Point(3,3,3)\n"
+		"Plane(Point(-2,1,-3), Vector(B,C))\n"
+		//"Vector(A,B)\n"
+		//"Vector(Point(-2,-1,3), Point(-3,1,-2))\n"
+		//"Cross(u,v)\n"
+		"Cross(Vector(A,B), Vector(Point(-2,-1,3), Point(-3,1,-2)))\n"
+	) };
 
-	static auto inputArray{ testInput("") };
+	//static auto inputArray{ testInput("") };
 
 	// types input faster for testing
 	if (!inputArray.empty())
@@ -251,10 +255,11 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 		return;
 	}
 
-	printRuntimeValue(evalObj);
 	extractAndRegisterObject(evalObj, object, Parser::nodes);
 	Lexer::tokens.clear();
 	Parser::nodes.clear();
+
+	inputBuffer[0] = '\0';
 }
 
 void showVariables(std::vector<Object>& object)
@@ -322,13 +327,16 @@ void showVariables(std::vector<Object>& object)
 		{
 			static ImGuiColorEditFlags colorFlags = ImGuiColorEditFlags_None;
 
-			if (obj.getType() == Object::Plane || obj.getType() == Object::Line) ImGui::Text(getEquation(obj).c_str());
+			if (obj.getType() == Object::Plane || obj.getType() == Object::Line) 
+				ImGui::Text(getEquation(obj).c_str());
 
-			getObjectInputFloats(obj);
+			bool valuesChanged{ getObjectInputFloats(obj) };
 
 			ImGui::ColorEdit4((obj.getName() + "::Color").c_str(), obj.getColorPointer(), ImGuiColorEditFlags_Float | colorFlags);
 
-			if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
+			bool colorChanged{ ImGui::IsItemDeactivatedAfterEdit() };
+
+			if (valuesChanged || colorChanged) // saves the changes
 				updateObject(static_cast<int>(i), obj, object, Context::vertexData);
 
 			std::string deleteText{ "Delete###" + std::to_string(obj.getID()) };
@@ -344,43 +352,53 @@ void showVariables(std::vector<Object>& object)
 	}
 }
 
-void getObjectInputFloats(const Object& obj)
+bool getObjectInputFloats(Object& obj)
 {
-	const RuntimeValue& comp{ obj.getComponents() };
+	RuntimeValue& comp{ obj.getComponents() };
 
 	ImGuiInputFlags textFlags{};
 
 	if (!obj.isMutable()) textFlags |= ImGuiInputTextFlags_ReadOnly;
 
+	bool isDeactivated{ false };
+
+	auto checkInput = [&](const std::string& label, float* data) {
+		ImGui::InputFloat3((obj.getName() + label).c_str(), data, "%.2f", textFlags);
+		if (ImGui::IsItemDeactivatedAfterEdit())
+		{
+			isDeactivated = true;
+		}
+		};
+
 	std::visit(overloaded
 		{
 		[](float f)
 		{},
-		[&](glm::vec3 point)
+		[&](glm::vec3& point)
 		{
-			ImGui::InputFloat3((obj.getName() + "::Point").c_str(), &point[0], "%.2f", textFlags);
+			checkInput("::Point", &point[0]);
 		},
-		[&](Eval::Vector vector)
+		[&](Eval::Vector& vector)
 		{
-			ImGui::InputFloat3((obj.getName() + "::Origin").c_str(), &vector.origin[0], "%.2f", textFlags);
-			ImGui::InputFloat3((obj.getName() + "::Head").c_str(), &vector.head[0], "%.2f", textFlags);
+			checkInput("::Origin", &vector.origin[0]);
+			checkInput("::Head", &vector.head[0]);
 		},
-		[&](Eval::Segment segment)
+		[&](Eval::Segment& segment)
 		{
-			ImGui::InputFloat3((obj.getName() + "::A").c_str(), &segment.A[0], "%.2f", textFlags);
-			ImGui::InputFloat3((obj.getName() + "::B").c_str(), &segment.B[0], "%.2f", textFlags);
+			checkInput("::A", &segment.A[0]);
+			checkInput("::B", &segment.B[0]);
 		},
-		[&](Eval::Line line)
+		[&](Eval::Line& line)
 		{
-			ImGui::InputFloat3((obj.getName() + "::Point").c_str(), &line.point[0], "%.2f", textFlags);
-			ImGui::InputFloat3((obj.getName() + "::DVecOrigin").c_str(), &line.dVecOrigin[0], "%.2f", textFlags);
-			ImGui::InputFloat3((obj.getName() + "::DVecOrigin").c_str(), &line.dVecHead[0], "%.2f", textFlags);
+			checkInput("::Point", &line.point[0]);
+			checkInput("::DVecOrigin", &line.dVecOrigin[0]);
+			checkInput("::DVecHead", &line.dVecHead[0]);
 		},
-		[&](Eval::Plane plane)
+		[&](Eval::Plane& plane)
 		{
-			ImGui::InputFloat3((obj.getName() + "::Point").c_str(), &plane.point[0], "%.2f", textFlags);
-			ImGui::InputFloat3((obj.getName() + "::NormalOrigin").c_str(), &plane.normalOrigin[0], "%.2f", textFlags);
-			ImGui::InputFloat3((obj.getName() + "::NormalHead").c_str(), &plane.normalHead[0], "%.2f", textFlags);
+			checkInput("::Point", &plane.point[0]);
+			checkInput("::NormalOrigin", &plane.normalOrigin[0]);
+			checkInput("::NormalHead", &plane.normalHead[0]);
 		},
 		[](Context::RuntimeError error)
 		{
@@ -388,6 +406,8 @@ void getObjectInputFloats(const Object& obj)
 		}
 
 		}, comp);
+
+	return isDeactivated;
 }
 
 int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::vector<float>& vertexData)
@@ -479,9 +499,6 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 				obj.setMutable(false);
 		}
 
-		//if (comp.size() > 6) 
-		//	obj.setMutable(false); // if the object is the cross product, then it cannot be mutable
-
 		// getCilinderVertices creates 144 new vertices 
 		vCountCilinder = getCilinderVertices(vecOrigin, newVecHead, color, radius, vertexData);
 		vCountCone = getConeVertices(direction, vecHead, color, coneRadius, coneHeight, vertexData);
@@ -524,13 +541,6 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 			return -1;
 		}
 
-		//std::vector components
-		//{
-		//	intersection[0].x, intersection[0].y, intersection[0].z,
-		//	intersection[1].x, intersection[1].y, intersection[1].z
-		//};
-
-
 		if (scanForIdenticalObject(type, intersection, object, obj.getID()))
 		{
 			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
@@ -551,7 +561,6 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 
 	else if (type == Object::Line)
 	{
-		//std::array<glm::vec3, 3> line{ assemblyLine(obj) };
 		Eval::Line line{ std::get<Eval::Line>(obj.getComponents()) };
 
 		line.point *= scale;
@@ -564,7 +573,6 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 
 	else if (type == Object::Plane)
 	{
-		//std::array<glm::vec3, 3> plane{ assemblyPlane(obj, object) };
 		Eval::Plane plane{ std::get<Eval::Plane>(obj.getComponents()) };
 
 		plane.point *= scale;
@@ -579,61 +587,6 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 
 	return vCount;
 }
-
-//void buildAndRegisterObject(Object::Type type, const std::vector<float>& components, const glm::vec4& color, const std::array<int, 3>& pIDs, const std::array<int, 3>& pCompIndex)
-//{
-//	if (scanForIdenticalObject(type, components, Context::object))
-//	{
-//		std::cerr << "Object already exist.\n";
-//		return;
-//	}
-//
-//	int pCount{ 0 };
-//	for (size_t i{ 0 }; i < std::size(pIDs); ++i)
-//	{
-//		if (pIDs[i] != -1 && pIDs[i] != Context::componentLiteral)
-//			++pCount;
-//	}
-//
-//	glm::vec4 finalColor{ color };
-//
-//	// plane random color
-//	if (type == Object::Plane)
-//	{
-//		float r{}, g{}, b{};
-//
-//		do {
-//			r = static_cast<float>(Random::get(0, 10)) * 0.1f;
-//			g = static_cast<float>(Random::get(0, 10)) * 0.1f;
-//			b = static_cast<float>(Random::get(0, 10)) * 0.1f;
-//		} while (r < 0.2f && g > 0.4f && b > 0.7f); 
-//
-//		finalColor = { r, g, b, 0.2f };
-//	}
-//
-//	Object obj{ std::string(1, Context::objectSymbols[type]++), type, Context::primitives[type], components, finalColor, pIDs, pCompIndex, pCount};
-//	int vCount{ generateObjectVertices(obj, Context::vertexData) };
-//
-//	if (vCount == -1)
-//	{
-//		std::cerr << "ERROR::FAILED_TO_GENERATE_VERTICES\n";
-//		return;
-//	}
-//
-//	const std::string objName{ obj.getName() };
-//	size_t objIdx{ createObject(std::move(obj), vCount) };
-//
-//	Context::symbolTable[objName] = objIdx;
-//
-//	updateBufferData(Context::vertexData);
-//
-//	for (const auto& [name, idx] : Context::symbolTable)
-//	{
-//		std::cout << idx << " - " << name << "\n";
-//	}
-//
-//	std::cout << "\n\n";
-//}
 
 void drawObjectLabels
 (
@@ -829,11 +782,6 @@ void extractAndRegisterObject(const RuntimeValue& evalObj, const std::vector<Obj
 		finalColor = { r, g, b, 0.2f };
 	}
 
-	//std::cout << "pIDS: [" << pIDs[0] << ", " << pIDs[1] << ", " << pIDs[2] << "]\n";
-	//std::cout << "pCompIndex: [" << pCompIndex[0] << ", " << pCompIndex[1] << ", " << pCompIndex[2] << "]\n";
-
-	std::cout << getStringFunctionType(type) << "\n";
-
 	Object obj{ objName, type, Context::primitives[type], evalObj, finalColor, pIDs, pCount };
 	int vCount{ generateObjectVertices(obj, object, Context::vertexData) };
 
@@ -848,11 +796,4 @@ void extractAndRegisterObject(const RuntimeValue& evalObj, const std::vector<Obj
 	Context::symbolTable[objName] = objIdx;
 
 	updateBufferData(Context::vertexData);
-
-	for (const auto& [name, idx] : Context::symbolTable)
-	{
-		std::cout << idx << " - " << name << "\n";
-	}
-
-	std::cout << "\n\n";
 }

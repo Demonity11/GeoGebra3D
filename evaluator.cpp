@@ -40,6 +40,45 @@ RuntimeValue evaluator(const std::vector<Node>& nodes, const std::vector<Object>
         }
 
         std::vector<RuntimeValue> args{};
+        //for (size_t i{ 0 }; i < node.children.size(); ++i)
+        //{
+        //    int childIdx{ node.children[i] };
+
+        //    if (childIdx == -1) break;
+
+        //    RuntimeValue childVal{ evaluator(nodes, object, childIdx) };
+
+        //    if (std::holds_alternative<Context::RuntimeError>(childVal))
+        //    {
+        //        return childVal;
+        //    }
+
+        //    Object::Type pType{ duduceRuntimeValueType(childVal) };
+
+        //    if (pType == Object::Vector)
+        //    {
+        //        Eval::Vector vec{ std::get<Eval::Vector>(childVal) };
+        //        vec.pTypes[i] = pType;
+        //        args.push_back(vec);
+        //        continue;
+        //    }
+        //    else if (pType == Object::Segment)
+        //    {
+        //        Eval::Segment seg{ std::get<Eval::Segment>(childVal) };
+        //        seg.pTypes[i] = pType;
+        //        args.push_back(seg);
+        //        continue;
+        //    }
+        //    else if (pType == Object::Line)
+        //    {
+        //        Eval::Line line{ std::get<Eval::Line>(childVal) };
+        //        line.pTypes[i] = pType;
+        //        args.push_back(line);
+        //        continue;
+        //    }
+
+        //    args.push_back(childVal);
+        //}
         for (int childIdx : node.children)
         {
             if (childIdx == -1) break;
@@ -60,23 +99,23 @@ RuntimeValue evaluator(const std::vector<Node>& nodes, const std::vector<Object>
         }
         else if (node.content == "Vector")
         {
-            return evaluateVectorFunc(args);
+            return evaluateVectorFunc(args, node, nodes);
         }
         else if (node.content == "Cross")
         {
-            return evaluateCrossFunc(args);
+            return evaluateCrossFunc(args, node, nodes);
         }
         else if (node.content == "Segment")
         {
-            return evaluateSegmentFunc(args);
+            return evaluateSegmentFunc(args, node, nodes);
         }
         else if (node.content == "Line")
         {
-            return evaluateLineFunc(args);
+            return evaluateLineFunc(args, node, nodes);
         }
         else if (node.content == "Plane")
         {
-            return evaluatePlaneFunc(args);
+            return evaluatePlaneFunc(args, node, nodes);
         }
         else if (node.content == "Intersect")
         {
@@ -243,14 +282,16 @@ RuntimeValue evaluatePointFunc(const std::vector<RuntimeValue>& args)
     return Context::RuntimeError{ "SEMANTICS::ERROR::POINT::INVALID_ARGUMENTS_OVERLOAD\n" };
 }
 
-RuntimeValue evaluateVectorFunc(const std::vector<RuntimeValue>& args)
+RuntimeValue evaluateVectorFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes)
 {
-    if (args.size() == 1 && std::holds_alternative<Eval::Vector>(args[0]))
-    {
-        return args[0];
-    }
+    //if (args.size() == 1 && std::holds_alternative<Eval::Vector>(args[0]))
+    //{
+    //    return args[0];
+    //}
 
-    else if (args.size() == 2 &&
+    const std::array<int, 3>& cIdx{ node.children };
+
+    if (args.size() == 2 &&
         std::holds_alternative<glm::vec3>(args[0]) &&
         std::holds_alternative<glm::vec3>(args[1])
         )
@@ -261,22 +302,33 @@ RuntimeValue evaluateVectorFunc(const std::vector<RuntimeValue>& args)
             std::get<glm::vec3>(args[1])
         };
 
+        vector.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+        vector.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+
         return vector;
     }
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::VECTOR::INVALID_ARGUMENTS_OVERLOAD\n" };
 }
 
-RuntimeValue evaluateCrossFunc(const std::vector<RuntimeValue>& args)
+RuntimeValue evaluateCrossFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes)
 {
+    const std::array<int, 3>& cIdx{ node.children };
+
     if (args.size() == 2 && std::holds_alternative<Eval::Vector>(args[0]) &&
         std::holds_alternative<Eval::Vector>(args[1]))
     {
+        const Eval::Vector& u{ std::get<Eval::Vector>(args[0]) };
+        const Eval::Vector& v{ std::get<Eval::Vector>(args[1]) };
+
         Eval::Vector cross
         {
             glm::vec3{ 0.0f, 0.0f, 0.0f },
-            glm::cross(std::get<glm::vec3>(args[0]), std::get<glm::vec3>(args[1]))
+            glm::cross(u.head - u.origin, v.head - v.origin)
         };
+
+        cross.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+        cross.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
 
         return cross;
     }
@@ -284,14 +336,16 @@ RuntimeValue evaluateCrossFunc(const std::vector<RuntimeValue>& args)
     return Context::RuntimeError{ "SEMANTICS::ERROR::CROSS::INVALID_ARGUMENTS_OVERLOAD\n" };
 }
 
-RuntimeValue evaluateSegmentFunc(const std::vector<RuntimeValue>& args)
+RuntimeValue evaluateSegmentFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes)
 {
-    if (args.size() == 1 && std::holds_alternative<Eval::Segment>(args[0]))
-    {
-        return args[0];
-    }
+    const std::array<int, 3>& cIdx{ node.children };
 
-    else if (args.size() == 2 &&
+    //if (args.size() == 1 && std::holds_alternative<Eval::Segment>(args[0]))
+    //{
+    //    return args[0];
+    //}
+
+    if (args.size() == 2 &&
         std::holds_alternative<glm::vec3>(args[0]) &&
         std::holds_alternative<glm::vec3>(args[1])
         )
@@ -302,20 +356,25 @@ RuntimeValue evaluateSegmentFunc(const std::vector<RuntimeValue>& args)
             std::get<glm::vec3>(args[1])
         };
 
+        segment.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+        segment.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+
         return segment;
     }
 
-    return Context::RuntimeError{ "SEMANTICS::ERROR::VECTOR::INVALID_ARGUMENTS_OVERLOAD\n" };
+    return Context::RuntimeError{ "SEMANTICS::ERROR::SEGMENT::INVALID_ARGUMENTS_OVERLOAD\n" };
 }
 
-RuntimeValue evaluateLineFunc(const std::vector<RuntimeValue>& args)
+RuntimeValue evaluateLineFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes)
 {
-    if (args.size() == 1 && std::holds_alternative<Eval::Line>(args[0]))
-    {
-        return args[0];
-    }
+    const std::array<int, 3>& cIdx{ node.children };
 
-    else if (args.size() == 2 &&
+    //if (args.size() == 1 && std::holds_alternative<Eval::Line>(args[0]))
+    //{
+    //    return args[0];
+    //}
+
+    if (args.size() == 2 &&
         std::holds_alternative<glm::vec3>(args[0]) &&
         std::holds_alternative<Eval::Vector>(args[1])
         )
@@ -324,6 +383,9 @@ RuntimeValue evaluateLineFunc(const std::vector<RuntimeValue>& args)
         Eval::Vector vector{ std::get<Eval::Vector>(args[1]) };
 
         Eval::Line line{ point, vector.origin, vector.head };
+
+        line.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+        line.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
 
         return line;
     }
@@ -338,14 +400,19 @@ RuntimeValue evaluateLineFunc(const std::vector<RuntimeValue>& args)
 
         Eval::Line line{ point, vector.origin, vector.head };
 
+        line.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+        line.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+
         return line;
     }
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::LINE::INVALID_ARGUMENTS_OVERLOAD\n" };
 }
 
-RuntimeValue evaluatePlaneFunc(const std::vector<RuntimeValue>& args)
+RuntimeValue evaluatePlaneFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes)
 {
+    const std::array<int, 3>& cIdx{ node.children };
+
     if (args.size() == 2 &&
         std::holds_alternative<glm::vec3>(args[0]) &&
         std::holds_alternative<Eval::Vector>(args[1])
@@ -355,6 +422,9 @@ RuntimeValue evaluatePlaneFunc(const std::vector<RuntimeValue>& args)
         Eval::Vector vector{ std::get<Eval::Vector>(args[1]) };
 
         Eval::Plane plane{ point, vector.origin, vector.head };
+
+        plane.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+        plane.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
 
         return plane;
     }
@@ -399,10 +469,35 @@ RuntimeValue evaluatePlaneFunc(const std::vector<RuntimeValue>& args)
 
         Eval::Plane plane{ A, glm::vec3(0.0f, 0.0f, 0.0f), normal };
 
+        plane.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+        plane.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+        plane.pTypes[2] = deduceTypeByIdentifierName(nodes[cIdx[2]].content);
+
         return plane;
     }
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::PLANE::INVALID_ARGUMENTS_OVERLOAD\n" };
+}
+
+Object::Type deduceTypeByIdentifierName(std::string_view func)
+{
+    if (func == "Point") return Object::Point;
+    else if (func == "Vector") return Object::Vector;
+    else if (func == "Cross") return Object::Vector;
+    else if (func == "Segment") return Object::Segment;
+    else if (func == "Line") return Object::Line;
+    else if (func == "Plane") return Object::Plane;
+    else
+    {
+        int idx{ searchObjectIndexByName(std::string(func), Context::object) };
+
+        if (idx >= 0)
+        {
+            return Context::object[idx].getType();
+        }
+    }
+
+    return Object::Null;
 }
 
 std::array<int, 3> findParentsIDs(const std::vector<Node>& nodes)

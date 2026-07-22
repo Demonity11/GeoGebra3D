@@ -15,16 +15,12 @@
 bool compareRuntimeValue(Object::Type type, const RuntimeValue& components1, const RuntimeValue& components2);
 bool scanForIdenticalObject(Object::Type type, const RuntimeValue& components, const std::vector<Object>& object, int ignoreID = -1);
 
-auto getObjectComponents(std::vector<std::string>& args, std::vector<float>& vecComponents, std::array<int, 3>& pIDs, std::array<int, 3>& pCompIndex) -> void;
-auto convertParametersToFloat(std::string& parameters, std::vector<float>& vecComponents)															  -> void;
-auto compareObjectType(const std::string& component, Object::Type expectedType, const std::vector<Object>& object)									  -> bool;
 auto searchObjectByID(int id, const std::vector<Object>& objectRef)																					  -> int;
 auto searchObjectIndexByName(const std::string& objName, const std::vector<Object>& object)															  -> int;
 auto nextFreeParentIndex(const std::array<int, 3>& pIDs)																							  -> int;
 auto splitArgs(const std::string& argumentString)																									  -> std::vector<std::string>;
 auto getStringFunctionType(Object::Type type)																										  -> std::string;
 auto getObjectTypeFromString(const std::string& funcName)																							  -> Object::Type;
-auto stripArg(std::string& arg)																														  -> void;
 auto deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>& vertexData)														  -> void;
 auto updateObject(int objIndex, const Object& newObj, std::vector<Object>& object, std::vector<float>& vertexData)									  -> void;
 bool rebuildObjectFromParents(Object& obj, const std::vector<Object>& object);

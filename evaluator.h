@@ -19,12 +19,13 @@ std::optional<float> convertSVToFloat(std::string_view sv);
 //RuntimeValue assemblyVariable(const Object& obj, const std::vector<Object>& object);
 
 RuntimeValue evaluatePointFunc(const std::vector<RuntimeValue>& args);
-RuntimeValue evaluateVectorFunc(const std::vector<RuntimeValue>& args);
-RuntimeValue evaluateCrossFunc(const std::vector<RuntimeValue>& args);
-RuntimeValue evaluateSegmentFunc(const std::vector<RuntimeValue>& args);
-RuntimeValue evaluateLineFunc(const std::vector<RuntimeValue>& args);
-RuntimeValue evaluatePlaneFunc(const std::vector<RuntimeValue>& args);
+RuntimeValue evaluateVectorFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes);
+RuntimeValue evaluateCrossFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes);
+RuntimeValue evaluateSegmentFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes);
+RuntimeValue evaluateLineFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes);
+RuntimeValue evaluatePlaneFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes);
 
 std::array<int, 3> findParentsIDs(const std::vector<Node>& nodes);
+Object::Type deduceTypeByIdentifierName(std::string_view func);
 
 #endif

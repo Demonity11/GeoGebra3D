@@ -6,20 +6,21 @@
 #include <cstdint>
 #include <utility>
 #include <glm/glm.hpp>
+
+#include "ObjectType.h"
 #include "RuntimeValue.h"
 
 class Object
 {
 public:
-	enum Type
-	{
-		Null,
-		Point,
-		Vector,
-		Segment,
-		Line,
-		Plane
-	};
+	using Type = ObjectType;
+
+	static constexpr Type Null = ObjectType::Null;
+	static constexpr Type Point = ObjectType::Point;
+	static constexpr Type Vector = ObjectType::Vector;
+	static constexpr Type Segment = ObjectType::Segment;
+	static constexpr Type Line = ObjectType::Line;
+	static constexpr Type Plane = ObjectType::Plane;
 
 	Object(std::string name, Type type, unsigned int primitive)
 		: m_name{ name }

@@ -30,7 +30,7 @@ auto initializeImGui(GLFWwindow* window)																		       -> void;
 auto getUserInput(std::vector<Object>& object)																	       -> void;
 auto processInput(char inputBuffer[128], const std::vector<FunctionArgs>& function, const std::vector<Object>& object) -> void;
 auto showVariables(std::vector<Object>& object)																	       -> void;
-void getObjectInputFloats(const Object& obj);
+bool getObjectInputFloats(Object& obj);
 
 
 void drawObjectLabels

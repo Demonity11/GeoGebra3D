@@ -356,7 +356,7 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 
 	for (size_t idx{ 8 }; idx < object.size(); ++idx)
 	{
-		Object& obj = object[idx];
+		Object& obj{ object[idx] };
 
 		if (obj.getParentCount() > 0)
 		{
@@ -364,7 +364,11 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 			{
 				bool isIntersectionALive{ recalculateIntersect(obj, object) };
 
-				if (!isIntersectionALive) toBeDeleted.push_back(static_cast<int>(idx));
+				if (!isIntersectionALive) 
+				{
+					toBeDeleted.push_back(static_cast<int>(idx));
+				}
+
 				continue;
 			}
 
@@ -373,23 +377,6 @@ void updateObject(int objIndex, const Object& newObj, std::vector<Object>& objec
 			{
 				std::cerr << "WARNING::FAILED_TO_REBUILD_DEPENDENT_OBJECT: " << obj.getName() << "\n";
 			}
-
-			//const std::array<int, 3>& currentParents{ obj.getParentIDs() };
-			////const std::array<int, 3>& currentOffsets{ obj.getpCompIndex() };
-
-			//for (int i{ 0 }; i < obj.getParentCount(); ++i)
-			//{
-			//	if (auto pIndex = searchObjectByID(currentParents[i], object); pIndex != -1)
-			//	{
-			//		const RuntimeValue& parentComps{ object[pIndex].getComponents() };
-			//		float* childCompsPtr{ obj.getComponentsPointer() };
-
-			//		for (size_t j{ 0 }; j < parentComps.size(); ++j)
-			//		{
-			//			childCompsPtr[currentOffsets[i] + j] = parentComps[j];
-			//		}
-			//	}
-			//}
 		}
 	}
 

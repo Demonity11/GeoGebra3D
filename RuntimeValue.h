@@ -4,6 +4,7 @@
 #include <variant>
 #include <string>
 #include <glm/glm.hpp>
+#include "ObjectType.h"
 
 namespace Context
 {
@@ -22,12 +23,16 @@ namespace Eval
 	{
 		glm::vec3 origin{};
 		glm::vec3 head{};
+
+		std::array<ObjectType, 2> pTypes{ ObjectType::Null, ObjectType::Null };
 	};
 
 	struct Segment
 	{
 		glm::vec3 A{};
 		glm::vec3 B{};
+
+		std::array<ObjectType, 2> pTypes{ ObjectType::Null, ObjectType::Null };
 	};
 
 	struct Line
@@ -35,6 +40,8 @@ namespace Eval
 		glm::vec3 point{};
 		glm::vec3 dVecOrigin{};
 		glm::vec3 dVecHead{};
+
+		std::array<ObjectType, 2> pTypes{ ObjectType::Null, ObjectType::Null };
 	};
 
 	struct Plane
@@ -42,6 +49,8 @@ namespace Eval
 		glm::vec3 point{};
 		glm::vec3 normalOrigin{};
 		glm::vec3 normalHead{};
+
+		std::array<ObjectType, 3> pTypes{ ObjectType::Null, ObjectType::Null, ObjectType::Null };
 	};
 }
 
