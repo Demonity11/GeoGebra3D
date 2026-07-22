@@ -1,5 +1,7 @@
 #include "lexer.h"
 #include "Context.h"
+#include <iostream>
+#include <cctype>
 
 namespace Lexer
 {
@@ -37,18 +39,6 @@ bool isDigit(char ch) { return std::isdigit(static_cast<unsigned char>(ch)); }
 bool isUpper(char ch) { return std::isupper(static_cast<unsigned char>(ch)); }
 
 bool isAlpha(char ch) { return std::isalpha(static_cast<unsigned char>(ch)); }
-
-void formatFloat(std::string& num)
-{
-	if (num.starts_with('.'))
-	{
-		num = '0' + num;
-	}
-	else if (num.ends_with('.'))
-	{
-		num = num + '0';
-	}
-}
 
 void tokenizer(const std::string& input)
 {

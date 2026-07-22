@@ -518,7 +518,7 @@ void getEnvironmentVertices(std::vector<float>& vertexData, bool firstRun)
 
 	char axis{ 'X' };
 
-	std::vector<float> axisPos{ 0.0f, 0.5f, 0.0f };
+	glm::vec3 axisPos{ 0.0f, 0.5f, 0.0f };
 
 	// this loop does 3 * 1008 = 3024 pushbacks
 	for (int v{ 0 }, c{ 0 }; v < axisVertices.size(); v += 6, c += 4)

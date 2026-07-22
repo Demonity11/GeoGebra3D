@@ -1,7 +1,11 @@
 #ifndef OBJECT_ASSEMBLING_H
 #define OBJECT_ASSEMBLING_H
 
-#include "draw_utils.h"
+#include <array>
+#include <vector>
+#include <glm/glm.hpp>
+
+#include "Object.h"
 
 struct Intersect
 {
@@ -13,10 +17,10 @@ struct Intersect
 	int planeCount{};
 };
 
-Intersect gatherPlaneLine(const Object& obj, std::vector<Object>& object);
+Intersect gatherPlaneLine(const Object& obj, const std::vector<Object>& object);
 glm::vec3 assemblyIntersectPoint(const Intersect& intersect);
-std::array<glm::vec3, 2> assemblyVector(Object& obj, const std::vector<Object>& object);
-std::array<glm::vec3, 3> assemblyLine(Object& obj);
-std::array<glm::vec3, 3> assemblyPlane(Object& obj, const std::vector<Object>& object);
+//std::array<glm::vec3, 2> assemblyVector(Object& obj, const std::vector<Object>& object);
+//std::array<glm::vec3, 3> assemblyLine(Object& obj);
+//std::array<glm::vec3, 3> assemblyPlane(Object& obj, const std::vector<Object>& object);
 
 #endif

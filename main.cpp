@@ -19,19 +19,19 @@ struct TransparentItem
 
 int main()
 {
-	std::string input{ "Vector(Point(1,1,1), Point(1.22,-1.2,100)) " };
-	std::cout << "TEST#1 : input = " << input << "\n";
-	tokenizer(input);
-	printTokens(Lexer::tokens);
-	std::cout << "\n";
-	parser(Lexer::tokens);
-	printNodes(Parser::nodes);
-	std::cout << "\n----------------------------------------\n\n";
-	RuntimeValue finalResult{ evaluator(Parser::nodes, Context::object) };
-	printRuntimeValue(finalResult);
+	//std::string input{ "Vector(Point(1,1,1), Point(1.22,-1.2,100)) " };
+	//std::cout << "TEST#1 : input = " << input << "\n";
+	//tokenizer(input);
+	//printTokens(Lexer::tokens);
+	//std::cout << "\n";
+	//parser(Lexer::tokens);
+	//printNodes(Parser::nodes);
+	//std::cout << "\n----------------------------------------\n\n";
+	//RuntimeValue finalResult{ evaluator(Parser::nodes, Context::object) };
+	//printRuntimeValue(finalResult);
 
-	Parser::nodes.clear();
-	Lexer::tokens.clear();
+	//Parser::nodes.clear();
+	//Lexer::tokens.clear();
 
 	//std::string input{ "Vector(A, Point(1.22,-1.2,100)) " };
 	//std::cout << "TEST#1 : input = " << input << "\n";

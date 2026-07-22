@@ -1,8 +1,21 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
-#include "draw_utils.h"
-#include "Window.h"
+#include <vector>
+#include <string>
+#include <map>
+#include <glm/glm.hpp>
+#include <glad/glad.h>
+#include "Object.h"
+
+struct ImFont;
+
+struct FunctionArgs
+{
+	std::string name{};
+	Object::Type type{};
+	std::vector<Object::Type> expectedArgs{};
+};
 
 namespace Context
 {
@@ -51,11 +64,6 @@ namespace Context
 	inline int selectedObjID{ -1 };
 
 	inline int globalObjectIDCounter{ 8 };
-
-	struct RuntimeError
-	{
-		std::string message{};
-	};
 }
 
 #endif

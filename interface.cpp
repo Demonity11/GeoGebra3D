@@ -2,9 +2,13 @@
 #include "draw_utils.h"
 #include "utilities.h"
 #include "objectCoords.h"
-#include "Context.h"
 #include "objectAssembling.h"
 #include "Random.h"
+#include "lexer.h"
+#include "parser.h"
+#include "evaluator.h"
+#include <sstream>
+#include <iostream>
 
 struct AutocompleteContext 
 {
@@ -203,7 +207,7 @@ void getUserInput(std::vector<Object>& object)
 	ImGui::SeparatorText("Variables");
 }
 
-void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& function, std::vector<Object>& object)
+void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& function, const std::vector<Object>& object)
 {
 	auto ss{ std::stringstream(inputBuffer) };
 	auto inputText{ ss.str() };
@@ -213,15 +217,14 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nVector(A,B)\nVector(A,C)\nCross(u,v)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nLine(D,E)\nIntersect(r,p)\n") };
 	//static auto inputArray{ testInput("Point(1,1,1)\nPoint(2,2,2)\nPoint(3,-1,2)\nPlane(A,B,C)\nPoint(-3,2,1)\nPoint(4,-2,3)\nPoint(2,1,-3)\nPlane(D,E,F)\nIntersect(p,q)\nVector(A,B)\nVector(D,E)\nCross(u,v)\n") };
-	static auto inputArray{ testInput(
-		"Point(1,1,1)\n"
-		"Point(2,2,2)\n"
-		"Point(3,3,3)\n"
-		"Point(4,4,4)\n"
-		"Point(5,5,5)\n"
-		"Point(6,6,6)\n"
-		"Plane(A,B,C)\n"
-	) };
+	//static auto inputArray{ testInput(
+	//	"Point(1,1,1)\n"
+	//	"Point(2,2,2)\n"
+	//	"Point(3,3,3)\n"
+	//	"Plane(Point(-2,1,-3), Vector(B,C))\n"
+	//) };
+
+	static auto inputArray{ testInput("") };
 
 	// types input faster for testing
 	if (!inputArray.empty())
@@ -230,101 +233,28 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 		inputArray.erase(inputArray.begin());
 	}
 
-	for (const auto& func : function)
+	tokenizer(inputText);
+
+	printTokens(Lexer::tokens);
+
+	parser(Lexer::tokens);
+
+	printNodes(Parser::nodes);
+
+	RuntimeValue evalObj{ evaluator(Parser::nodes, object) };
+
+	if (std::holds_alternative<Context::RuntimeError>(evalObj))
 	{
-		auto funcOpenParenthesisPos{ inputText.find("(") };
-		auto funcCloseParenthesisPos{ (inputText.rfind(")") != std::string::npos) ? inputText.rfind(")") : 0 };
+		Lexer::tokens.clear();
+		Parser::nodes.clear();
 
-		if (funcCloseParenthesisPos > funcOpenParenthesisPos)
-		{
-			std::string parameters{ inputText.substr(funcOpenParenthesisPos + 1, funcCloseParenthesisPos - funcOpenParenthesisPos - 1) };
-
-			std::vector<std::string> args{ splitArgs(parameters) };
-
-			Object::Type funcType{ getObjectTypeFromString(inputText.substr(0, funcOpenParenthesisPos)) };
-			if (funcType == Object::Point && args.size() == 3)
-			{
-				std::vector<float> vecComponents{};
-				convertParametersToFloat(parameters, vecComponents);
-
-				if (vecComponents[0] == -9999.0f && vecComponents[2] == -9999.0f)
-				{
-					std::cerr << "ERROR::COULDNT_CONVERT\n";
-					return;
-				}
-				else
-				{
-					if (!scanForIdenticalObject(func.type, vecComponents, object))
-					{
-						//draw(funcType, vecComponents, glm::vec4{ 0.0f, 0.2f, 0.5f, 1.0f });
-						buildAndRegisterObject(funcType, vecComponents, Context::defaultColors[funcType]);
-						inputBuffer[0] = '\0';
-						return;
-					}
-				}
-			}
-
-			else if (inputText.find(func.name) == 0 && args.size() == func.expectedArgs.size())
-			{
-				bool isObjectValid{ true };
-
-				for (int index{ 0 }; index < args.size(); ++index)
-				{
-					if (func.expectedArgs.size() != args.size())
-					{
-						isObjectValid = false;
-						break;
-					}
-
-					isObjectValid = compareObjectType(args[index], func.expectedArgs[index], object);
-
-					if (!isObjectValid)
-					{
-						isObjectValid = false;
-						break;
-					}
-				}
-
-				if (isObjectValid)
-				{
-					std::array<int, 3> pIDs{ -1, -1, -1 };
-					std::array<int, 3> pCompIndex{ -1, -1, -1 };
-
-					std::vector<float> vecComponents{};
-
-					if (args.size() == 1)
-					{
-						pIDs[0] = Context::componentLiteral;
-						pCompIndex[0] = 0;
-
-						vecComponents = { 0.0f, 0.0f, 0.0f };
-
-						getObjectComponents(args, vecComponents, pIDs, pCompIndex);
-
-						if (!scanForIdenticalObject(func.type, vecComponents, object))
-						{
-							//draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
-							buildAndRegisterObject(func.type, vecComponents, Context::defaultColors[func.type], pIDs, pCompIndex);
-						}
-
-					}
-
-					else
-					{
-						getObjectComponents(args, vecComponents, pIDs, pCompIndex);
-
-						if (!scanForIdenticalObject(func.type, vecComponents, object))
-						{
-							//draw(func.type, vecComponents, glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f }, pIDs, pCompIndex);
-							buildAndRegisterObject(func.type, vecComponents, Context::defaultColors[func.type], pIDs, pCompIndex);
-						}
-					}
-
-					inputBuffer[0] = '\0';
-				}
-			}
-		}
+		return;
 	}
+
+	printRuntimeValue(evalObj);
+	extractAndRegisterObject(evalObj, object, Parser::nodes);
+	Lexer::tokens.clear();
+	Parser::nodes.clear();
 }
 
 void showVariables(std::vector<Object>& object)
@@ -346,7 +276,7 @@ void showVariables(std::vector<Object>& object)
 
 	for (size_t i{ 8 }; i < object.size(); ++i)
 	{
-		auto& obj{ object[i] };
+		Object& obj{ object[i] };
 
 		std::string headerText{ obj.getName() + ": " + getExpression(obj, object) + "###" + obj.getName() };
 
@@ -360,7 +290,7 @@ void showVariables(std::vector<Object>& object)
 				ImGui::SetNextItemOpen(false);
 				Context::prevSelectedObjID = Context::selectedObjID;
 				obj.setSelected(false);
-				updateSelectedObjectColor(currentIndex, Context::object, Context::vertexData);
+				updateSelectedObjectColor(currentIndex, object, Context::vertexData);
 			}
 		}
 
@@ -373,7 +303,7 @@ void showVariables(std::vector<Object>& object)
 			if (obj.isSelected())
 			{
 				obj.setSelected(false);
-				updateSelectedObjectColor(currentIndex, Context::object, Context::vertexData);
+				updateSelectedObjectColor(currentIndex, object, Context::vertexData);
 			}
 		}
 
@@ -384,7 +314,7 @@ void showVariables(std::vector<Object>& object)
 			{
 				ImGui::SetNextItemOpen(true);
 				obj.setSelected(true);
-				updateSelectedObjectColor(currentIndex, Context::object, Context::vertexData);
+				updateSelectedObjectColor(currentIndex, object, Context::vertexData);
 			}
 		}
 
@@ -394,20 +324,7 @@ void showVariables(std::vector<Object>& object)
 
 			if (obj.getType() == Object::Plane || obj.getType() == Object::Line) ImGui::Text(getEquation(obj).c_str());
 
-			char s{ 'A' };
-			for (int increment{ 0 }; increment < obj.getComponents().size(); increment += 3)
-			{
-				ImGuiInputFlags textFlags{};
-
-				if (!obj.isMutable()) textFlags |= ImGuiInputTextFlags_ReadOnly;
-
-				ImGui::InputFloat3((obj.getName() + "::" + s).c_str(), obj.getComponentsPointer() + increment, "%.2f", textFlags);
-
-				if (ImGui::IsItemDeactivatedAfterEdit()) // saves the changes
-					updateObject(static_cast<int>(i), obj, object, Context::vertexData);
-
-				++s;
-			}
+			getObjectInputFloats(obj);
 
 			ImGui::ColorEdit4((obj.getName() + "::Color").c_str(), obj.getColorPointer(), ImGuiColorEditFlags_Float | colorFlags);
 
@@ -427,49 +344,93 @@ void showVariables(std::vector<Object>& object)
 	}
 }
 
-int generateObjectVertices(Object& obj, std::vector<float>& vertexData)
+void getObjectInputFloats(const Object& obj)
 {
-	using Context::object;
+	const RuntimeValue& comp{ obj.getComponents() };
+
+	ImGuiInputFlags textFlags{};
+
+	if (!obj.isMutable()) textFlags |= ImGuiInputTextFlags_ReadOnly;
+
+	std::visit(overloaded
+		{
+		[](float f)
+		{},
+		[&](glm::vec3 point)
+		{
+			ImGui::InputFloat3((obj.getName() + "::Point").c_str(), &point[0], "%.2f", textFlags);
+		},
+		[&](Eval::Vector vector)
+		{
+			ImGui::InputFloat3((obj.getName() + "::Origin").c_str(), &vector.origin[0], "%.2f", textFlags);
+			ImGui::InputFloat3((obj.getName() + "::Head").c_str(), &vector.head[0], "%.2f", textFlags);
+		},
+		[&](Eval::Segment segment)
+		{
+			ImGui::InputFloat3((obj.getName() + "::A").c_str(), &segment.A[0], "%.2f", textFlags);
+			ImGui::InputFloat3((obj.getName() + "::B").c_str(), &segment.B[0], "%.2f", textFlags);
+		},
+		[&](Eval::Line line)
+		{
+			ImGui::InputFloat3((obj.getName() + "::Point").c_str(), &line.point[0], "%.2f", textFlags);
+			ImGui::InputFloat3((obj.getName() + "::DVecOrigin").c_str(), &line.dVecOrigin[0], "%.2f", textFlags);
+			ImGui::InputFloat3((obj.getName() + "::DVecOrigin").c_str(), &line.dVecHead[0], "%.2f", textFlags);
+		},
+		[&](Eval::Plane plane)
+		{
+			ImGui::InputFloat3((obj.getName() + "::Point").c_str(), &plane.point[0], "%.2f", textFlags);
+			ImGui::InputFloat3((obj.getName() + "::NormalOrigin").c_str(), &plane.normalOrigin[0], "%.2f", textFlags);
+			ImGui::InputFloat3((obj.getName() + "::NormalHead").c_str(), &plane.normalHead[0], "%.2f", textFlags);
+		},
+		[](Context::RuntimeError error)
+		{
+			std::cerr << error.message << '\n';
+		}
+
+		}, comp);
+}
+
+int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::vector<float>& vertexData)
+{
+	//using Context::object;
 
 	constexpr float scale{ 0.1f };
 
 	// object data
 	Object::Type type{ obj.getType() };
 	const std::array<int, 3>& pIDs{ obj.getParentIDs() };
-	const std::array<int, 3>& pCompIndex{ obj.getpCompIndex() };
-	const std::vector<float>& comp{ obj.getComponents() };
+	//const std::array<int, 3>& pCompIndex{ obj.getpCompIndex() };
 	const glm::vec4& color{ obj.getColor() };
 
 	int vCount{ 0 };
 
 	// intersection
-	if (type == Object::Point && pIDs[0] != -1)
+	if (type == Object::Point && pIDs[0] >= 0)
 	{
 		Intersect intersect{ gatherPlaneLine(obj, object) };
 		glm::vec3 intersection{ assemblyIntersectPoint(intersect) };
-		std::vector components{ intersection.x, intersection.y, intersection.z };
+		//std::vector components{ intersection.x, intersection.y, intersection.z };
 
-		intersection *= scale;
-
-		constexpr float radius{ 0.005f };
-
-		if (scanForIdenticalObject(type, components, object, obj.getID()))
+		if (scanForIdenticalObject(type, intersection, object, obj.getID()))
 		{
-			std::cout << components[0] << ", " << components[1] << ", " << components[2] << "\n";
+			std::cout << intersection << "\n";
 			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
 			return -1;
 		}
 
 		obj.setMutable(false);
-		obj.setComponents(components);
+		obj.setComponents(intersection);
 		obj.setColor({ 0.7f, 0.3f, 0.0f, 1.0f });
+
+		intersection *= scale;
+		constexpr float radius{ 0.005f };
 
 		vCount = getSphereVertices(intersection, color, radius, vertexData);
 	}
 
 	else if (type == Object::Point)
 	{
-		glm::vec3 point{ comp[0], comp[1], comp[2] };
+		glm::vec3 point{ std::get<glm::vec3>(obj.getComponents()) };
 
 		point *= scale;
 
@@ -481,9 +442,11 @@ int generateObjectVertices(Object& obj, std::vector<float>& vertexData)
 
 	else if (type == Object::Vector)
 	{
-		std::array<glm::vec3, 2> vector{ assemblyVector(obj, object) };
+		//std::array<glm::vec3, 2> vector{ assemblyVector(obj, object) };
+		Eval::Vector vector{ std::get<Eval::Vector>(obj.getComponents()) };
 
-		auto [vecOrigin, vecHead] = vector;
+		glm::vec3 vecOrigin{ vector.origin };
+		glm::vec3 vecHead{ vector.head };
 
 		constexpr float epsilon{ 0.001f };
 		if (glm::length(vecHead - vecOrigin) < epsilon)
@@ -499,13 +462,25 @@ int generateObjectVertices(Object& obj, std::vector<float>& vertexData)
 		const float cilinderLength{ glm::length(vecHead - vecOrigin) };
 		constexpr float coneHeight{ 0.025f };
 
-		glm::vec3 newVecHead{ vecOrigin + (cilinderLength - coneHeight) * direction };
+		float actualCilinderLength{ glm::max(0.0f, cilinderLength - coneHeight) };
+
+		glm::vec3 newVecHead{ vecOrigin + actualCilinderLength * direction };
 
 		int vCountCilinder{};
 		int vCountCone{};
 
-		if (comp.size() > 6) 
-			obj.setMutable(false); // if the object is the cross product, then it cannot be mutable
+		// check if the vector is a cross product
+		if (pIDs[0] >= 0 && pIDs[1] >= 0)
+		{
+			int pIndex0{ searchObjectByID(pIDs[0], object) };
+			int pIndex1{ searchObjectByID(pIDs[1], object) };
+
+			if (object[pIndex0].getType() == Object::Vector && object[pIndex1].getType() == Object::Vector)
+				obj.setMutable(false);
+		}
+
+		//if (comp.size() > 6) 
+		//	obj.setMutable(false); // if the object is the cross product, then it cannot be mutable
 
 		// getCilinderVertices creates 144 new vertices 
 		vCountCilinder = getCilinderVertices(vecOrigin, newVecHead, color, radius, vertexData);
@@ -516,25 +491,23 @@ int generateObjectVertices(Object& obj, std::vector<float>& vertexData)
 
 	else if (type == Object::Segment)
 	{
-		int startA{ pCompIndex[0] };
-		int startB{ pCompIndex[1] };
+		Eval::Segment segment{ std::get<Eval::Segment>(obj.getComponents()) };
 
-		glm::vec3 pointA{ comp[startA], comp[startA + 1], comp[startA + 2] };
-		glm::vec3 pointB{ comp[startB], comp[startB + 1], comp[startB + 2] };
+		glm::vec3& pointA{ segment.A };
+		glm::vec3& pointB{ segment.B };
 
 		pointA *= scale;
 		pointB *= scale;
 
-		const float radius{ 0.0015f };
+		constexpr float radius{ 0.0015f };
 
 		vCount = getCilinderVertices(pointA, pointB, color, radius, vertexData);
 	}
 
-	else if
+	else if 
 	(
-		auto pType0{ object[searchObjectByID(pIDs[0], object)].getType() };
-
-		type == Object::Line && pType0 == Object::Plane
+		int pIdx0{ (pIDs[0] >= 0) ? searchObjectByID(pIDs[0], object) : -1 };
+		type == Object::Line && pIdx0 >= 0 && object[pIdx0].getType() == Object::Plane
 	)
 	{
 		Intersect intersect{ gatherPlaneLine(obj, object) };
@@ -542,27 +515,23 @@ int generateObjectVertices(Object& obj, std::vector<float>& vertexData)
 		auto [p1, p2] = intersect.points;
 		auto [n1, n2] = intersect.vectors;
 
-		std::array<glm::vec3, 2> intersection{ intersectionPlanePlane(p1, n1, p2, n2) };
+		Eval::Line intersection{ intersectionPlanePlane(p1, n1, p2, n2) };
 
 		constexpr float epsilon{ 0.001f };
-		if (glm::length(intersection[1]) < epsilon)
+		if (glm::length(intersection.dVecHead -intersection.dVecOrigin) < epsilon)
 		{
 			std::cerr << "Intersection doesn't exist.\n";
 			return -1;
 		}
 
-		std::vector components
-		{
-			intersection[0].x, intersection[0].y, intersection[0].z,
-			intersection[1].x, intersection[1].y, intersection[1].z
-		};
+		//std::vector components
+		//{
+		//	intersection[0].x, intersection[0].y, intersection[0].z,
+		//	intersection[1].x, intersection[1].y, intersection[1].z
+		//};
 
-		intersection[0] *= scale;
-		intersection[1] *= scale;
 
-		const float radius{ 0.0015f };
-
-		if (scanForIdenticalObject(type, components, object, obj.getID()))
+		if (scanForIdenticalObject(type, intersection, object, obj.getID()))
 		{
 			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
 			return -1;
@@ -570,101 +539,105 @@ int generateObjectVertices(Object& obj, std::vector<float>& vertexData)
 
 		obj.setMutable(false);
 		obj.setColor({ 0.7f, 0.3f, 0.0f, 1.0f });
-		obj.setComponents(components);
+		obj.setComponents(intersection);
+
+		intersection.point *= scale;
+		intersection.dVecOrigin *= scale;
+		intersection.dVecHead *= scale;
+		constexpr float radius{ 0.0015f };
 		
-		vCount = getLineVertices(intersection[0], { 0.0f, 0.0f, 0.0f }, intersection[1], color, radius, vertexData);
+		vCount = getLineVertices(intersection.point, { 0.0f, 0.0f, 0.0f }, intersection.dVecHead - intersection.dVecOrigin, color, radius, vertexData);
 	}
 
 	else if (type == Object::Line)
 	{
-		std::array<glm::vec3, 3> line{ assemblyLine(obj) };
+		//std::array<glm::vec3, 3> line{ assemblyLine(obj) };
+		Eval::Line line{ std::get<Eval::Line>(obj.getComponents()) };
 
-		auto [point, dVectorOrigin, dVectorHead] = line;
-
-		point *= scale;
-		dVectorOrigin *= scale;
-		dVectorHead *= scale;
-
+		line.point *= scale;
+		line.dVecOrigin *= scale;
+		line.dVecHead *= scale;
 		constexpr float radius{ 0.0015f };
 
-		vCount = getLineVertices(point, dVectorOrigin, dVectorHead, color, radius, vertexData);
+		vCount = getLineVertices(line.point, line.dVecOrigin, line.dVecHead, color, radius, vertexData);
 	}
 
 	else if (type == Object::Plane)
 	{
-		std::array<glm::vec3, 3> plane{ assemblyPlane(obj, object) };
+		//std::array<glm::vec3, 3> plane{ assemblyPlane(obj, object) };
+		Eval::Plane plane{ std::get<Eval::Plane>(obj.getComponents()) };
 
-		auto [normalOrigin, normalHead, point] = plane;
+		plane.point *= scale;
+		plane.normalOrigin *= scale;
+		plane.normalHead *= scale;
 
-		normalOrigin *= scale;
-		normalHead *= scale;
-		point *= scale;
+		printRuntimeValue(plane);
 
 		// getPlaneVertices create 6 new vertices
-		vCount = getPlaneVertices(normalOrigin, normalHead, point, color, vertexData);
+		vCount = getPlaneVertices(plane.normalOrigin, plane.normalHead, plane.point, color, vertexData);
 	}
 
 	return vCount;
 }
 
-void buildAndRegisterObject(Object::Type type, const std::vector<float>& components, const glm::vec4& color, const std::array<int, 3>& pIDs, const std::array<int, 3>& pCompIndex)
-{
-	if (scanForIdenticalObject(type, components, Context::object))
-	{
-		std::cerr << "Object already exist.\n";
-		return;
-	}
-
-	int pCount{ 0 };
-	for (size_t i{ 0 }; i < std::size(pIDs); ++i)
-	{
-		if (pIDs[i] != -1 && pIDs[i] != Context::componentLiteral)
-			++pCount;
-	}
-
-	glm::vec4 finalColor{ color };
-
-	// plane random color
-	if (type == Object::Plane)
-	{
-		float r{}, g{}, b{};
-
-		do {
-			r = static_cast<float>(Random::get(0, 10)) * 0.1f;
-			g = static_cast<float>(Random::get(0, 10)) * 0.1f;
-			b = static_cast<float>(Random::get(0, 10)) * 0.1f;
-		} while (r < 0.2f && g > 0.4f && b > 0.7f); 
-
-		finalColor = { r, g, b, 0.2f };
-	}
-
-	Object obj{ std::string(1, Context::objectSymbols[type]++), type, Context::primitives[type], components, finalColor, pIDs, pCompIndex, pCount};
-	int vCount{ generateObjectVertices(obj, Context::vertexData) };
-
-	if (vCount == -1)
-	{
-		std::cerr << "ERROR::FAILED_TO_GENERATE_VERTICES\n";
-		return;
-	}
-
-	const std::string objName{ obj.getName() };
-	size_t objIdx{ createObject(std::move(obj), vCount) };
-
-	Context::symbolTable[objName] = objIdx;
-
-	updateBufferData(Context::vertexData);
-
-	for (const auto& [name, idx] : Context::symbolTable)
-	{
-		std::cout << idx << " - " << name << "\n";
-	}
-
-	std::cout << "\n\n";
-}
+//void buildAndRegisterObject(Object::Type type, const std::vector<float>& components, const glm::vec4& color, const std::array<int, 3>& pIDs, const std::array<int, 3>& pCompIndex)
+//{
+//	if (scanForIdenticalObject(type, components, Context::object))
+//	{
+//		std::cerr << "Object already exist.\n";
+//		return;
+//	}
+//
+//	int pCount{ 0 };
+//	for (size_t i{ 0 }; i < std::size(pIDs); ++i)
+//	{
+//		if (pIDs[i] != -1 && pIDs[i] != Context::componentLiteral)
+//			++pCount;
+//	}
+//
+//	glm::vec4 finalColor{ color };
+//
+//	// plane random color
+//	if (type == Object::Plane)
+//	{
+//		float r{}, g{}, b{};
+//
+//		do {
+//			r = static_cast<float>(Random::get(0, 10)) * 0.1f;
+//			g = static_cast<float>(Random::get(0, 10)) * 0.1f;
+//			b = static_cast<float>(Random::get(0, 10)) * 0.1f;
+//		} while (r < 0.2f && g > 0.4f && b > 0.7f); 
+//
+//		finalColor = { r, g, b, 0.2f };
+//	}
+//
+//	Object obj{ std::string(1, Context::objectSymbols[type]++), type, Context::primitives[type], components, finalColor, pIDs, pCompIndex, pCount};
+//	int vCount{ generateObjectVertices(obj, Context::vertexData) };
+//
+//	if (vCount == -1)
+//	{
+//		std::cerr << "ERROR::FAILED_TO_GENERATE_VERTICES\n";
+//		return;
+//	}
+//
+//	const std::string objName{ obj.getName() };
+//	size_t objIdx{ createObject(std::move(obj), vCount) };
+//
+//	Context::symbolTable[objName] = objIdx;
+//
+//	updateBufferData(Context::vertexData);
+//
+//	for (const auto& [name, idx] : Context::symbolTable)
+//	{
+//		std::cout << idx << " - " << name << "\n";
+//	}
+//
+//	std::cout << "\n\n";
+//}
 
 void drawObjectLabels
 (
-	std::vector<Object>& object,
+	const std::vector<Object>& object,
 	const glm::mat4& viewMatrix,
 	const glm::mat4& projectionMatrix,
 	const glm::mat4& modelMatrix,
@@ -678,35 +651,35 @@ void drawObjectLabels
 
 	for (size_t idx{ 8 }; idx < object.size(); ++idx)
 	{
-		auto& obj{ object[idx] };
-		auto type{ obj.getType() };
+		const Object& obj{ object[idx] };
+		Object::Type type{ obj.getType() };
 
 		if (type == Object::Line || type == Object::Plane)
 			continue;
 
 		glm::vec3 targetWorldPos{};
-		auto comp{ obj.getComponents() };
+		const RuntimeValue& comp{ obj.getComponents() };
 
-		if (type == Object::Vector)
+		if (type == Object::Vector && std::holds_alternative<Eval::Vector>(comp))
 		{
-			std::array<glm::vec3, 2> vector{ assemblyVector(obj, object) };
-
-			targetWorldPos = vector[1];
+			targetWorldPos = std::get<Eval::Vector>(comp).head;
 
 			targetWorldPos *= scale;
 			targetWorldPos += glm::vec3{ 0.0f, 0.03f, 0.0f };
 		}
 
-		else if (type == Object::Point)
+		else if (type == Object::Point && std::holds_alternative<glm::vec3>(comp))
 		{
-			targetWorldPos = { comp[0], comp[1], comp[2] };
+			targetWorldPos = std::get<glm::vec3>(comp);
 			targetWorldPos *= scale;
 			targetWorldPos += glm::vec3{ 0.0f, 0.015f, 0.0f };
 		}
 
-		else if (type == Object::Segment)
+		else if (type == Object::Segment && std::holds_alternative<Eval::Segment>(comp))
 		{
-			targetWorldPos = { (comp[0] + comp[3]) * 0.5f, (comp[1] + comp[4]) * 0.5f, (comp[2] + comp[5]) * 0.5f };
+			const Eval::Segment& seg{ std::get<Eval::Segment>(comp) };
+
+			targetWorldPos = (seg.A + seg.B) * 0.5f;
 			targetWorldPos *= scale;
 		}
 
@@ -727,7 +700,7 @@ void drawObjectLabels
 
 void drawAxisLabels
 (
-	std::vector<Object>& object,
+	const std::vector<Object>& object,
 	const glm::mat4& viewMatrix,
 	const glm::mat4& projectionMatrix,
 	const glm::mat4& modelMatrix,
@@ -815,4 +788,71 @@ void drawAxisLabels
 			ringPos += direction * stride;
 		}
 	}
+}
+
+void extractAndRegisterObject(const RuntimeValue& evalObj, const std::vector<Object>& object, const std::vector<Node>& nodes)
+{
+	Object::Type type{ duduceRuntimeValueType(evalObj) };
+
+	std::array<int, 3> pIDs{ findParentsIDs(nodes) };
+
+	if (scanForIdenticalObject(type, evalObj, object))
+	{
+		std::cerr << "Object already exist.\n";
+		return;
+	}
+
+	const std::string objName{ Context::objectSymbols[type]++ };
+	unsigned int primitive{ Context::primitives[type] };
+	glm::vec4 color{ Context::defaultColors[type] };
+
+	int pCount{ 0 };
+	for (size_t i{ 0 }; i < std::size(pIDs); ++i)
+	{
+		if (pIDs[i] != -1 && pIDs[i] != Context::componentLiteral)
+			++pCount;
+	}
+
+	glm::vec4 finalColor{ color };
+
+	// plane random color
+	if (type == Object::Plane)
+	{
+		float r{}, g{}, b{};
+
+		do {
+			r = static_cast<float>(Random::get(0, 10)) * 0.1f;
+			g = static_cast<float>(Random::get(0, 10)) * 0.1f;
+			b = static_cast<float>(Random::get(0, 10)) * 0.1f;
+		} while (r < 0.2f && g > 0.4f && b > 0.7f);
+
+		finalColor = { r, g, b, 0.2f };
+	}
+
+	//std::cout << "pIDS: [" << pIDs[0] << ", " << pIDs[1] << ", " << pIDs[2] << "]\n";
+	//std::cout << "pCompIndex: [" << pCompIndex[0] << ", " << pCompIndex[1] << ", " << pCompIndex[2] << "]\n";
+
+	std::cout << getStringFunctionType(type) << "\n";
+
+	Object obj{ objName, type, Context::primitives[type], evalObj, finalColor, pIDs, pCount };
+	int vCount{ generateObjectVertices(obj, object, Context::vertexData) };
+
+	if (vCount == -1)
+	{
+		std::cerr << "ERROR::FAILED_TO_GENERATE_VERTICES\n";
+		return;
+	}
+
+	size_t objIdx{ createObject(std::move(obj), vCount) };
+
+	Context::symbolTable[objName] = objIdx;
+
+	updateBufferData(Context::vertexData);
+
+	for (const auto& [name, idx] : Context::symbolTable)
+	{
+		std::cout << idx << " - " << name << "\n";
+	}
+
+	std::cout << "\n\n";
 }

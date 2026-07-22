@@ -1,7 +1,17 @@
 #include "evaluator.h"
+#include "Object.h"
+#include "utilities.h"
+#include "objectAssembling.h"
+#include "objectCoords.h"
+#include "Random.h"
 
-RuntimeValue evaluator(const std::vector<Node>& nodes, std::vector<Object>& object, int nodeIdx)
+RuntimeValue evaluator(const std::vector<Node>& nodes, const std::vector<Object>& object, int nodeIdx)
 {
+    if (nodes.empty())
+    {
+        return Context::RuntimeError{ "SEMANTICS::ERROR::NODES_IS_EMPTY\n" };
+    }
+
     const Node& node{ nodes[nodeIdx] };
 
     if (node.type == Node::Literal)
@@ -52,6 +62,10 @@ RuntimeValue evaluator(const std::vector<Node>& nodes, std::vector<Object>& obje
         {
             return evaluateVectorFunc(args);
         }
+        else if (node.content == "Cross")
+        {
+            return evaluateCrossFunc(args);
+        }
         else if (node.content == "Segment")
         {
             return evaluateSegmentFunc(args);
@@ -63,6 +77,10 @@ RuntimeValue evaluator(const std::vector<Node>& nodes, std::vector<Object>& obje
         else if (node.content == "Plane")
         {
             return evaluatePlaneFunc(args);
+        }
+        else if (node.content == "Intersect")
+        {
+            // do later
         }
 
         return Context::RuntimeError{ "SEMANTICS::ERROR::FUNCTION_NOT_FOUND\n" };
@@ -76,9 +94,9 @@ RuntimeValue evaluator(const std::vector<Node>& nodes, std::vector<Object>& obje
             return Context::RuntimeError{ "SEMANTICS::ERROR::VARIABLE::" + std::string(node.content) + "_DOES_NOT_EXIST\n" };
         }
 
-        Object& obj{ object[objIdx] };
+        const Object& obj{ object[objIdx] };
 
-        return assemblyVariable(obj, object);
+        return obj.getComponents();
     }
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::UNKNOWN_NODE_TYPE\n" };
@@ -97,9 +115,6 @@ std::optional<float> convertSVToFloat(std::string_view sv)
 
     return {};
 }
-
-template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 void printRuntimeValue(const RuntimeValue& value)
 {
@@ -143,65 +158,65 @@ void printRuntimeValue(const RuntimeValue& value)
         }, value);
 }
 
-RuntimeValue assemblyVariable(Object& obj, const std::vector<Object>& object)
-{
-    Object::Type type{ obj.getType() };
-    const std::vector<float>& comp{ obj.getComponents() };
-
-    if (type == Object::Point)
-    {
-        glm::vec3 point{ comp[0], comp[1], comp[2] };
-        return point;
-    }
-    else if (type == Object::Vector)
-    {
-        Eval::Vector vector{};
-        std::array<glm::vec3, 2> temp{ assemblyVector(obj, object) };
-
-        vector.origin = temp[0];
-        vector.head = temp[1];
-
-        return vector;
-    }
-    else if (type == Object::Segment)
-    {
-        std::array<int, 3> pCompIndex{ obj.getpCompIndex() };
-        int startA{ pCompIndex[0] };
-        int startB{ pCompIndex[1] };
-
-        Eval::Segment segment
-        {
-            { comp[startA], comp[startA + 1], comp[startA + 2] },
-            { comp[startB], comp[startB + 1], comp[startB + 2] }
-        };
-
-        return segment;
-    }
-    else if (type == Object::Line)
-    {
-        Eval::Line line{};
-        std::array<glm::vec3, 3> temp{ assemblyLine(obj) };
-
-        line.point = temp[0];
-        line.dVecOrigin = temp[1];
-        line.dVecHead = temp[2];
-
-        return line;
-    }
-    else if (type == Object::Plane)
-    {
-        Eval::Plane plane{};
-        std::array<glm::vec3, 3> temp{ assemblyPlane(obj, object) };
-
-        plane.normalOrigin = temp[0];
-        plane.normalHead = temp[1];
-        plane.point = temp[2];
-
-        return plane;
-    }
-
-    return Context::RuntimeError{ "???" };
-}
+//RuntimeValue assemblyVariable(const Object& obj, const std::vector<Object>& object)
+//{
+//    Object::Type type{ obj.getType() };
+//    const std::vector<float>& comp{ obj.getComponents() };
+//
+//    if (type == Object::Point)
+//    {
+//        glm::vec3 point{ comp[0], comp[1], comp[2] };
+//        return point;
+//    }
+//    else if (type == Object::Vector)
+//    {
+//        Eval::Vector vector{};
+//        std::array<glm::vec3, 2> temp{ assemblyVector(obj, object) };
+//
+//        vector.origin = temp[0];
+//        vector.head = temp[1];
+//
+//        return vector;
+//    }
+//    else if (type == Object::Segment)
+//    {
+//        std::array<int, 3> pCompIndex{ obj.getpCompIndex() };
+//        int startA{ pCompIndex[0] };
+//        int startB{ pCompIndex[1] };
+//
+//        Eval::Segment segment
+//        {
+//            { comp[startA], comp[startA + 1], comp[startA + 2] },
+//            { comp[startB], comp[startB + 1], comp[startB + 2] }
+//        };
+//
+//        return segment;
+//    }
+//    else if (type == Object::Line)
+//    {
+//        Eval::Line line{};
+//        std::array<glm::vec3, 3> temp{ assemblyLine(obj) };
+//
+//        line.point = temp[0];
+//        line.dVecOrigin = temp[1];
+//        line.dVecHead = temp[2];
+//
+//        return line;
+//    }
+//    else if (type == Object::Plane)
+//    {
+//        Eval::Plane plane{};
+//        std::array<glm::vec3, 3> temp{ assemblyPlane(obj, object) };
+//
+//        plane.normalOrigin = temp[0];
+//        plane.normalHead = temp[1];
+//        plane.point = temp[2];
+//
+//        return plane;
+//    }
+//
+//    return Context::RuntimeError{ "???" };
+//}
 
 RuntimeValue evaluatePointFunc(const std::vector<RuntimeValue>& args)
 {
@@ -250,6 +265,23 @@ RuntimeValue evaluateVectorFunc(const std::vector<RuntimeValue>& args)
     }
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::VECTOR::INVALID_ARGUMENTS_OVERLOAD\n" };
+}
+
+RuntimeValue evaluateCrossFunc(const std::vector<RuntimeValue>& args)
+{
+    if (args.size() == 2 && std::holds_alternative<Eval::Vector>(args[0]) &&
+        std::holds_alternative<Eval::Vector>(args[1]))
+    {
+        Eval::Vector cross
+        {
+            glm::vec3{ 0.0f, 0.0f, 0.0f },
+            glm::cross(std::get<glm::vec3>(args[0]), std::get<glm::vec3>(args[1]))
+        };
+
+        return cross;
+    }
+
+    return Context::RuntimeError{ "SEMANTICS::ERROR::CROSS::INVALID_ARGUMENTS_OVERLOAD\n" };
 }
 
 RuntimeValue evaluateSegmentFunc(const std::vector<RuntimeValue>& args)
@@ -340,10 +372,60 @@ RuntimeValue evaluatePlaneFunc(const std::vector<RuntimeValue>& args)
         glm::vec3 u{ B - A };
         glm::vec3 v{ C - A };
 
-        Eval::Plane plane{ A, A, glm::cross(u, v) };
+        glm::vec3 normal{};
+
+        const float lengthProduct{ glm::length(u) * glm::length(v) };
+        constexpr float epsilon_0{ 0.001f };
+        if (lengthProduct > epsilon_0)
+        {
+            const float theta{ glm::dot(u, v) / lengthProduct };
+
+            constexpr float epsilon_1{ 0.999f };
+            if (glm::abs(theta) > epsilon_1)
+            {
+                glm::vec3 right{};
+
+                getNewCoordSystem(u, right, normal);
+            }
+            else
+            {
+                normal = glm::cross(u, v);
+            }
+        }
+        else
+        {
+            normal = glm::cross(u, v);
+        }
+
+        Eval::Plane plane{ A, glm::vec3(0.0f, 0.0f, 0.0f), normal };
 
         return plane;
     }
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::PLANE::INVALID_ARGUMENTS_OVERLOAD\n" };
+}
+
+std::array<int, 3> findParentsIDs(const std::vector<Node>& nodes)
+{
+    const std::array<int, 3>& childrenIdx{ nodes[0].children };
+    std::array<int, 3> pIDs{ -1, -1, -1 };
+
+    int i{ 0 };
+    while (i < childrenIdx.size())
+    {
+        if (childrenIdx[i] != -1)
+        {
+            int idx{ searchObjectIndexByName(std::string(nodes[childrenIdx[i]].content), Context::object) };
+
+            if (idx >= 0) pIDs[i] = Context::object[idx].getID();
+        }
+        else
+        {
+            pIDs[i] = Context::componentLiteral;
+        }
+
+        ++i;
+    }
+
+    return pIDs;
 }

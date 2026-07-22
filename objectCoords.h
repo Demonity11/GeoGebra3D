@@ -1,7 +1,8 @@
 #ifndef OBJECT_COORDS_H
 #define OBJECT_COORDS_H
 
-#include "draw_utils.h"
+#include <vector>
+#include <glm/glm.hpp>
 
 auto getCilinderVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, float radius, std::vector<float>& vertexData)						-> int;
 auto getRingsVertices(glm::vec3 p0, glm::vec3 p, glm::vec4 color, std::vector<float>& vertexData)										-> int;
