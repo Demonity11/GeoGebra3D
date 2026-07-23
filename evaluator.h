@@ -24,6 +24,8 @@ RuntimeValue evaluateCrossFunc(const std::vector<RuntimeValue>& args, const Node
 RuntimeValue evaluateSegmentFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes);
 RuntimeValue evaluateLineFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes);
 RuntimeValue evaluatePlaneFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes);
+RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes);
+RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args);
 
 std::array<int, 3> findParentsIDs(const std::vector<Node>& nodes);
 Object::Type deduceTypeByIdentifierName(std::string_view func);

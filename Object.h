@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <utility>
 #include <glm/glm.hpp>
+#include <iostream>
 
 #include "ObjectType.h"
 #include "RuntimeValue.h"
@@ -51,6 +52,13 @@ public:
 	Object()
 		: m_id{ -1 }
 	{ }
+
+	void printObject() const
+	{
+		std::cout << "NAME: " << this->getName() << "\n";
+		std::cout << "ID: " << this->getID() << "\n";
+		std::cout << "MUTABLE: " << std::boolalpha << this->isMutable() << "\n";
+	}
 
 	int						  getID() const          { return m_id; }
 	const std::string&		  getName() const        { return m_name; }

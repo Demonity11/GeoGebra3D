@@ -29,12 +29,9 @@ bool rebuildObjectFromParents(Object& obj, const std::vector<Object>& object);
 auto getExpression(const Object& obj, const std::vector<Object>& object)																						  -> std::string;
 std::string getRuntimeValueCompAsString(int id, const std::vector<Object>& objectRef);
 auto getEquation(const Object& obj)																														  -> std::string;
-auto intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::vec3 planeNormal, float d)												  -> glm::vec3;
-glm::vec3 intersectionLinePlane(const Eval::Line& line, const glm::vec3& planeNormal);
-auto intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::vec3 vt)																	  -> glm::vec3;
-glm::vec3 intersectionLineLine(const Eval::Line& lineS, const Eval::Line& lineT);
-auto intersectionPlanePlane(glm::vec3 p1, glm::vec3 n1, glm::vec3 p2, glm::vec3 n2)																	  -> Eval::Line;
-Eval::Line intersectionPlanePlane(Eval::Plane plane1, Eval::Plane plane2);
+RuntimeValue intersectionLinePlane(const Eval::Line& line, const Eval::Plane& plane); // Eval::IPoint or RuntimeError
+RuntimeValue intersectionLineLine(const Eval::Line& lineS, const Eval::Line& lineT); // Eval::IPoint or RuntimeError
+RuntimeValue intersectionPlanePlane(const Eval::Plane& plane1, const Eval::Plane& plane2); // Eval::ILine or RuntimeError
 auto recalculateIntersect(Object& obj, const std::vector<Object>& object)																					  -> bool;
 auto testInput(std::string input)																													  -> std::vector<std::string>;
 

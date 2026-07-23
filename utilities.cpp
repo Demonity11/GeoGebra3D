@@ -635,48 +635,28 @@ void updateSelectedObjectColor(int objIndex, std::vector<Object>& object, std::v
 	updateBufferData(vertexData);
 }
 
-//bool scanForIdenticalObject(Object::Type type, const std::vector<float>& components, std::vector<Object>& object, int ignoreID)
-//{
-//	constexpr float epsilon{ 0.001f };
-//
-//	for (auto& obj : object)
-//	{
-//		if (obj.getID() == ignoreID) continue;
-//		if (obj.getType() != type) continue;
-//
-//		const RuntimeValue& objComponents{ obj.getComponents() };
-//		if (objComponents.size() != components.size()) continue;
-//
-//		bool isIdentical{ true };
-//
-//		for (std::size_t i{ 0 }; i < components.size(); ++i)
-//		{
-//			if (glm::abs(objComponents[i] - components[i]) >= epsilon)
-//			{
-//				isIdentical = false;
-//				break;
-//			}
-//		}
-//
-//		if (isIdentical)
-//			return true;
-//	}
-//
-//	return false;
-//}
-
 bool compareRuntimeValue(Object::Type type, const RuntimeValue& components1, const RuntimeValue& components2)
 {
 	constexpr float epsilon{ 0.001f };
 	bool isIdentical{ true };
 
 	if (type == Object::Point &&
-		std::holds_alternative<glm::vec3>(components1) &&
-		std::holds_alternative<glm::vec3>(components2)
+		(std::holds_alternative<glm::vec3>(components1) || std::holds_alternative<Eval::IPoint>(components1)) &&
+		(std::holds_alternative<glm::vec3>(components2) || std::holds_alternative<Eval::IPoint>(components2))
 		)
-	{
-		const glm::vec3& point1{ std::get<glm::vec3>(components1) };
-		const glm::vec3& point2{ std::get<glm::vec3>(components2) };
+	{ 
+		glm::vec3 point1{};
+		glm::vec3 point2{};
+
+		if (std::holds_alternative<glm::vec3>(components1))
+			point1 = std::get<glm::vec3>(components1);
+		else
+			point1 = std::get<Eval::IPoint>(components1).point;
+
+		if (std::holds_alternative<glm::vec3>(components2))
+			point2 = std::get<glm::vec3>(components2);
+		else
+			point2 = std::get<Eval::IPoint>(components2).point;
 
 		return glm::distance(point1, point2) < epsilon;
 	}
@@ -708,12 +688,22 @@ bool compareRuntimeValue(Object::Type type, const RuntimeValue& components1, con
 		return directMatch || inverseMatch;
 	}
 	else if (type == Object::Line &&
-		std::holds_alternative<Eval::Line>(components1) &&
-		std::holds_alternative<Eval::Line>(components2)
+		(std::holds_alternative<Eval::Line>(components1) || std::holds_alternative<Eval::ILine>(components1)) &&
+		(std::holds_alternative<Eval::Line>(components2) || std::holds_alternative<Eval::ILine>(components2))
 		)
 	{
-		const Eval::Line& line1{ std::get<Eval::Line>(components1) };
-		const Eval::Line& line2{ std::get<Eval::Line>(components2) };
+		Eval::Line line1{};
+		Eval::Line line2{};
+
+		if (std::holds_alternative<Eval::Line>(components1))
+			line1 = std::get<Eval::Line>(components1);
+		else
+			line1 = std::get<Eval::ILine>(components1).line;
+
+		if (std::holds_alternative<Eval::Line>(components2))
+			line2 = std::get<Eval::Line>(components2);
+		else
+			line2 = std::get<Eval::ILine>(components2).line;
 
 		return (glm::distance(line1.point, line2.point) < epsilon) &&
 			   (glm::distance(line1.dVecOrigin, line2.dVecOrigin) < epsilon) &&
@@ -820,12 +810,23 @@ std::string getExpression(const Object& obj, const std::vector<Object>& object)
 			}
 		}
 
-		else if (type == Object::Vector && !obj.isMutable())
+		else if (type == Object::Vector)
 		{
-			ss << "Cross(";
-			ss << object[searchObjectByID(obj.getParentIDs()[0], object)].getName() << ", ";
-			ss << object[searchObjectByID(obj.getParentIDs()[1], object)].getName();
-			ss << ")";
+			const std::array<int, 3>& pIDs{ obj.getParentIDs() };
+			const Eval::Vector vec{ std::get<Eval::Vector>(obj.getComponents()) };
+
+			if (!obj.isMutable()) ss << "Cross(";
+			else ss << getStringFunctionType(type) << "(";
+
+			if (pIDs[0] >= 0 && pIDs[1] >= 0)
+			{
+				ss << object[searchObjectByID(pIDs[0], object)].getName() << ", ";
+				ss << object[searchObjectByID(pIDs[1], object)].getName() << ")";
+			}
+			else
+			{
+				ss << vec.head - vec.origin << ")";
+			}
 
 			return ss.str();
 		}
@@ -982,39 +983,41 @@ std::string getEquation(const Object& obj)
 
 // return the intersection of a plane and a line, if it exist
 // return (-9999,-9999,-9999) if not
-glm::vec3 intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::vec3 planeNormal, float d)
+//glm::vec3 intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::vec3 planeNormal, float d)
+//{
+//	float divisor{ glm::dot(planeNormal, lineVector) };
+//	float t{};
+//
+//	// t = -(a.x1 + b.y1 + c.z1 + d) / n.v
+//	// where
+//	// A(x1, y1, z1) is a point of the line
+//	// v is the direction vector of the line
+//	// n = (a, b, c) is the normal vector of the plane
+//	// 
+//	// d = -(a.x0 + b.y0 + c.z0)
+//	// B(x0, y0, z0) is a point of the plane
+//
+//	const float epsilon{ 0.001f };
+//	if (glm::abs(divisor) < epsilon)
+//	{
+//		if (glm::abs(glm::dot(planeNormal, linePoint) + d) < epsilon)
+//			return linePoint;
+//
+//		return glm::vec3(-9999.0f, -9999.0f, -9999.0f);
+//	}
+//	else	
+//		t = -(glm::dot(planeNormal, linePoint) + d) / divisor;
+//
+//	glm::vec3 intersection{ linePoint + t * lineVector };
+//
+//	return intersection;
+//}
+
+RuntimeValue intersectionLinePlane(const Eval::Line& line, const Eval::Plane& plane)
 {
-	float divisor{ glm::dot(planeNormal, lineVector) };
-	float t{};
+	const glm::vec3& planeNormal{ plane.normalHead - plane.normalOrigin };
 
-	// t = -(a.x1 + b.y1 + c.z1 + d) / n.v
-	// where
-	// A(x1, y1, z1) is a point of the line
-	// v is the direction vector of the line
-	// n = (a, b, c) is the normal vector of the plane
-	// 
-	// d = -(a.x0 + b.y0 + c.z0)
-	// B(x0, y0, z0) is a point of the plane
-
-	const float epsilon{ 0.001f };
-	if (glm::abs(divisor) < epsilon)
-	{
-		if (glm::abs(glm::dot(planeNormal, linePoint) + d) < epsilon)
-			return linePoint;
-
-		return glm::vec3(-9999.0f, -9999.0f, -9999.0f);
-	}
-	else	
-		t = -(glm::dot(planeNormal, linePoint) + d) / divisor;
-
-	glm::vec3 intersection{ linePoint + t * lineVector };
-
-	return intersection;
-}
-
-glm::vec3 intersectionLinePlane(const Eval::Line& line, const glm::vec3& planeNormal)
-{
-	float d{ glm::dot(line.point, planeNormal) };
+	float d{ -glm::dot(plane.point, planeNormal) };
 
 	float divisor{ glm::dot(planeNormal, line.dVecHead - line.dVecOrigin) };
 	float t{};
@@ -1032,81 +1035,81 @@ glm::vec3 intersectionLinePlane(const Eval::Line& line, const glm::vec3& planeNo
 	if (glm::abs(divisor) < epsilon)
 	{
 		if (glm::abs(glm::dot(planeNormal, line.point) + d) < epsilon)
-			return line.point;
+			return Eval::IPoint{ line.point };
 
-		return glm::vec3(-9999.0f, -9999.0f, -9999.0f);
+		return Context::RuntimeError{ "INTERSECT::DOES_NOT_EXIST\n" };
 	}
 	else
 		t = -(glm::dot(planeNormal, line.point) + d) / divisor;
 
-	glm::vec3 intersection{ line.point + t * (line.dVecHead - line.dVecOrigin) };
+	Eval::IPoint intersection{ line.point + t * (line.dVecHead - line.dVecOrigin) };
 
 	return intersection;
 }
 
 // return the intersection of a line and a line, if it exist
 // return (-9999,-9999,-9999) if not
-glm::vec3 intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::vec3 vt)
-{
-	// s: P = ps + s * vs
-	// t: P = pt + t * vt
+//glm::vec3 intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::vec3 vt)
+//{
+//	// s: P = ps + s * vs
+//	// t: P = pt + t * vt
+//
+//	const float epsilon{ 0.001f }; // for float comparison purposes
+//	auto cross{ glm::cross(vs, vt) };
+//
+//	bool isParallel{ true };
+//	for (int i{ 0 }; i < 3; ++i)
+//	{
+//		if (glm::abs(cross[i]) >= epsilon)
+//		{
+//			isParallel = false;
+//			break;
+//		}
+//	}
+//
+//	auto w0{ pt - ps };
+//	
+//	bool isSuperimposed{ false };
+//	if (isParallel)
+//	{
+//		auto separationCross{ glm::cross(w0, vt) };
+//
+//		isSuperimposed = true;
+//		for (int i{ 0 }; i < 3; ++i)
+//		{
+//			if (glm::abs(separationCross[i]) >= epsilon)
+//			{
+//				isSuperimposed = false;
+//				break;
+//			}
+//		}
+//	}
+//
+//	if (isSuperimposed)
+//		return ps;
+//
+//	auto crossDot{ glm::dot(cross, w0) };
+//
+//	if (glm::abs(crossDot) >= epsilon)
+//		return glm::vec3(-9999.0f, -9999.0f, -9999.0f); // intersection doesn't exist
+//
+//	float a{ glm::dot(vs, vs) };
+//	float b{ glm::dot(vs, vt) };
+//	float c{ glm::dot(vt, vt) };
+//	float d{ glm::dot(w0, vs) };
+//	float e{ glm::dot(w0, vt) };
+//
+//	float D{ a * (-c) + b * b };
+//	float Ds{ -d * c + e * b };
+//
+//	float s{ Ds / D };
+//	
+//	glm::vec3 intersection{ ps + s * vs };
+//
+//	return intersection;
+//}
 
-	const float epsilon{ 0.001f }; // for float comparison purposes
-	auto cross{ glm::cross(vs, vt) };
-
-	bool isParallel{ true };
-	for (int i{ 0 }; i < 3; ++i)
-	{
-		if (glm::abs(cross[i]) >= epsilon)
-		{
-			isParallel = false;
-			break;
-		}
-	}
-
-	auto w0{ pt - ps };
-	
-	bool isSuperimposed{ false };
-	if (isParallel)
-	{
-		auto separationCross{ glm::cross(w0, vt) };
-
-		isSuperimposed = true;
-		for (int i{ 0 }; i < 3; ++i)
-		{
-			if (glm::abs(separationCross[i]) >= epsilon)
-			{
-				isSuperimposed = false;
-				break;
-			}
-		}
-	}
-
-	if (isSuperimposed)
-		return ps;
-
-	auto crossDot{ glm::dot(cross, w0) };
-
-	if (glm::abs(crossDot) >= epsilon)
-		return glm::vec3(-9999.0f, -9999.0f, -9999.0f); // intersection doesn't exist
-
-	float a{ glm::dot(vs, vs) };
-	float b{ glm::dot(vs, vt) };
-	float c{ glm::dot(vt, vt) };
-	float d{ glm::dot(w0, vs) };
-	float e{ glm::dot(w0, vt) };
-
-	float D{ a * (-c) + b * b };
-	float Ds{ -d * c + e * b };
-
-	float s{ Ds / D };
-	
-	glm::vec3 intersection{ ps + s * vs };
-
-	return intersection;
-}
-
-glm::vec3 intersectionLineLine(const Eval::Line& lineS, const Eval::Line& lineT)
+RuntimeValue intersectionLineLine(const Eval::Line& lineS, const Eval::Line& lineT)
 {
 	// s: P = ps + s * vs
 	// t: P = pt + t * vt
@@ -1146,12 +1149,12 @@ glm::vec3 intersectionLineLine(const Eval::Line& lineS, const Eval::Line& lineT)
 	}
 
 	if (isSuperimposed)
-		return lineS.point;
+		return Eval::IPoint{ lineS.point };
 
 	auto crossDot{ glm::dot(cross, w0) };
 
 	if (glm::abs(crossDot) >= epsilon)
-		return glm::vec3(-9999.0f, -9999.0f, -9999.0f); // intersection doesn't exist
+		return Context::RuntimeError{ "INTERSECT::DOES_NOT_EXIST\n" }; // intersection doesn't exist
 
 	float a{ glm::dot(dVecS, dVecS) };
 	float b{ glm::dot(dVecS, dVecT) };
@@ -1164,91 +1167,91 @@ glm::vec3 intersectionLineLine(const Eval::Line& lineS, const Eval::Line& lineT)
 
 	float s{ Ds / D };
 
-	glm::vec3 intersection{ lineS.point + s * dVecS };
+	Eval::IPoint intersection{ lineS.point + s * dVecS };
 
 	return intersection;
 }
 
-Eval::Line intersectionPlanePlane(glm::vec3 p1, glm::vec3 n1, glm::vec3 p2, glm::vec3 n2)
-{
-	const float epsilon{ 0.001f };
-	glm::vec3 dVec{ glm::cross(n1, n2) };
+//Eval::Line intersectionPlanePlane(glm::vec3 p1, glm::vec3 n1, glm::vec3 p2, glm::vec3 n2)
+//{
+//	const float epsilon{ 0.001f };
+//	glm::vec3 dVec{ glm::cross(n1, n2) };
+//
+//	float d1{ -glm::dot(n1, p1) };
+//	float d2{ -glm::dot(n2, p2) };
+//
+//	Eval::Line intersection{};
+//
+//	// parallel planes
+//	bool isSuperimposed{ false };
+//	bool isParallel{ false };
+//	if (glm::length(dVec) < epsilon)
+//	{
+//		isParallel = true;
+//
+//		float pointTest{ glm::dot(n2, p1) + d2 };
+//		if (glm::abs(pointTest) < epsilon)
+//		{
+//			isSuperimposed = true;
+//			isParallel = false;
+//		}
+//	}
+//
+//	if (isSuperimposed)
+//	{
+//		std::cerr << "The planes are the same. Handle later.\n";
+//		return intersection;
+//	}
+//	else if (isParallel)
+//	{
+//		std::cerr << "The intersection doesn't exist. Handle later.\n";
+//		return intersection;
+//	}
+//
+//	if (glm::abs(dVec.x) >= glm::abs(dVec.y) && glm::abs(dVec.x) >= glm::abs(dVec.z))
+//	{
+//		float D{ dVec.x };
+//		float Dy{ -d1 * n2.z + d2 * n1.z };
+//		float Dz{ -n1.y * d2 + n2.y * d1 };
+//
+//		float x{ 0.0f };
+//		float y{ Dy / D };
+//		float z{ Dz / D };
+//
+//		intersection.point = glm::vec3(x, y, z);
+//	}
+//	else if (glm::abs(dVec.y) >= glm::abs(dVec.z))
+//	{
+//		float D{ dVec.y };
+//		float Dx{ -n1.z * d2 + n2.z * d1 };
+//		float Dz{ -d1 * n2.x + d2 * n1.x }; 
+//
+//		float x{ Dx / D };
+//		float y{ 0.0f };
+//		float z{ Dz / D };
+//
+//		intersection.point = glm::vec3(x, y, z);
+//	}
+//	else
+//	{
+//		float D{ dVec.z };
+//		float Dx{ -d1 * n2.y + d2 * n1.y };
+//		float Dy{ -n1.x * d2 + n2.x * d1 };
+//
+//		float x{ Dx / D };
+//		float y{ Dy / D };
+//		float z{ 0.0f };
+//
+//		intersection.point = glm::vec3(x, y, z);
+//	}
+//
+//	intersection.dVecOrigin = glm::vec3{ 0.0f, 0.0f, 0.0f };
+//	intersection.dVecHead = dVec;
+//
+//	return intersection;
+//}
 
-	float d1{ -glm::dot(n1, p1) };
-	float d2{ -glm::dot(n2, p2) };
-
-	Eval::Line intersection{};
-
-	// parallel planes
-	bool isSuperimposed{ false };
-	bool isParallel{ false };
-	if (glm::length(dVec) < epsilon)
-	{
-		isParallel = true;
-
-		float pointTest{ glm::dot(n2, p1) + d2 };
-		if (glm::abs(pointTest) < epsilon)
-		{
-			isSuperimposed = true;
-			isParallel = false;
-		}
-	}
-
-	if (isSuperimposed)
-	{
-		std::cerr << "The planes are the same. Handle later.\n";
-		return intersection;
-	}
-	else if (isParallel)
-	{
-		std::cerr << "The intersection doesn't exist. Handle later.\n";
-		return intersection;
-	}
-
-	if (glm::abs(dVec.x) >= glm::abs(dVec.y) && glm::abs(dVec.x) >= glm::abs(dVec.z))
-	{
-		float D{ dVec.x };
-		float Dy{ -d1 * n2.z + d2 * n1.z };
-		float Dz{ -n1.y * d2 + n2.y * d1 };
-
-		float x{ 0.0f };
-		float y{ Dy / D };
-		float z{ Dz / D };
-
-		intersection.point = glm::vec3(x, y, z);
-	}
-	else if (glm::abs(dVec.y) >= glm::abs(dVec.z))
-	{
-		float D{ dVec.y };
-		float Dx{ -n1.z * d2 + n2.z * d1 };
-		float Dz{ -d1 * n2.x + d2 * n1.x }; 
-
-		float x{ Dx / D };
-		float y{ 0.0f };
-		float z{ Dz / D };
-
-		intersection.point = glm::vec3(x, y, z);
-	}
-	else
-	{
-		float D{ dVec.z };
-		float Dx{ -d1 * n2.y + d2 * n1.y };
-		float Dy{ -n1.x * d2 + n2.x * d1 };
-
-		float x{ Dx / D };
-		float y{ Dy / D };
-		float z{ 0.0f };
-
-		intersection.point = glm::vec3(x, y, z);
-	}
-
-	intersection.dVecOrigin = glm::vec3{ 0.0f, 0.0f, 0.0f };
-	intersection.dVecHead = dVec;
-
-	return intersection;
-}
-
-Eval::Line intersectionPlanePlane(Eval::Plane plane1, Eval::Plane plane2)
+RuntimeValue intersectionPlanePlane(const Eval::Plane& plane1, const Eval::Plane& plane2)
 {
 	glm::vec3 n1{ plane1.normalHead - plane1.normalOrigin };
 	glm::vec3 n2{ plane2.normalHead - plane2.normalOrigin };
@@ -1259,7 +1262,7 @@ Eval::Line intersectionPlanePlane(Eval::Plane plane1, Eval::Plane plane2)
 	float d1{ -glm::dot(n1, plane1.point) };
 	float d2{ -glm::dot(n2, plane2.point) };
 
-	Eval::Line intersection{};
+	Eval::ILine intersection{};
 
 	// parallel planes
 	bool isSuperimposed{ false };
@@ -1278,13 +1281,11 @@ Eval::Line intersectionPlanePlane(Eval::Plane plane1, Eval::Plane plane2)
 
 	if (isSuperimposed)
 	{
-		std::cerr << "The planes are the same. Handle later.\n";
-		return intersection;
+		return Context::RuntimeError{ "INTERSECT::THE_PLANES_ARE_THE_SAME\n" };
 	}
 	else if (isParallel)
 	{
-		std::cerr << "The intersection doesn't exist. Handle later.\n";
-		return intersection;
+		return Context::RuntimeError{ "INTERSECT::DOES_NOT_EXIST\n" };
 	}
 
 	if (glm::abs(dVec.x) >= glm::abs(dVec.y) && glm::abs(dVec.x) >= glm::abs(dVec.z))
@@ -1297,7 +1298,7 @@ Eval::Line intersectionPlanePlane(Eval::Plane plane1, Eval::Plane plane2)
 		float y{ Dy / D };
 		float z{ Dz / D };
 
-		intersection.point = glm::vec3(x, y, z);
+		intersection.line.point = glm::vec3(x, y, z);
 	}
 	else if (glm::abs(dVec.y) >= glm::abs(dVec.z))
 	{
@@ -1309,7 +1310,7 @@ Eval::Line intersectionPlanePlane(Eval::Plane plane1, Eval::Plane plane2)
 		float y{ 0.0f };
 		float z{ Dz / D };
 
-		intersection.point = glm::vec3(x, y, z);
+		intersection.line.point = glm::vec3(x, y, z);
 	}
 	else
 	{
@@ -1321,11 +1322,11 @@ Eval::Line intersectionPlanePlane(Eval::Plane plane1, Eval::Plane plane2)
 		float y{ Dy / D };
 		float z{ 0.0f };
 
-		intersection.point = glm::vec3(x, y, z);
+		intersection.line.point = glm::vec3(x, y, z);
 	}
 
-	intersection.dVecOrigin = glm::vec3{ 0.0f, 0.0f, 0.0f };
-	intersection.dVecHead = dVec;
+	intersection.line.dVecOrigin = glm::vec3{ 0.0f, 0.0f, 0.0f };
+	intersection.line.dVecHead = dVec;
 
 	return intersection;
 }
@@ -1358,40 +1359,69 @@ bool recalculateIntersect(Object& obj, const std::vector<Object>& object)
 	Object::Type type{ obj.getType() };
 	std::array<int, 3> pIDs{ obj.getParentIDs() };
 
-	if (type == Object::Line)
+	if (type == Object::Line && std::holds_alternative<Eval::ILine>(obj.getComponents()))
 	{
-		Intersect intersect{ gatherPlaneLine(obj, object) };
+		//Intersect intersect{ gatherPlaneLine(obj, object) };
 
-		Eval::Plane plane1{ intersect.points[0], glm::vec3{0.0f, 0.0f, 0.0f}, intersect.vectors[0] };
-		Eval::Plane plane2{ intersect.points[1], glm::vec3{0.0f, 0.0f, 0.0f}, intersect.vectors[2] };
-		//auto [p1, p2] = intersect.points;
-		//auto [n1, n2] = intersect.vectors;
-
-		Eval::Line intersection{ intersectionPlanePlane(plane1, plane2) };
-
-		constexpr float epsilon{ 0.001f };
-		if (glm::length(intersection.dVecHead - intersection.dVecOrigin) < epsilon)
+		if (pIDs[0] >= 0 && pIDs[1] >= 0)
 		{
-			std::cerr << "Intersection doesn't exist.\n";
-			return false;
-		}
+			int idx0{ searchObjectByID(pIDs[0], object) };
+			int idx1{ searchObjectByID(pIDs[1], object) };
 
-		obj.setComponents(intersection);
+			std::vector<RuntimeValue> args{};
+			args.reserve(2);
+
+			args.push_back(object[idx0].getComponents());
+			args.push_back(object[idx1].getComponents());
+
+			RuntimeValue temp{ evaluateIntersectFunc(args) };
+
+			if (std::holds_alternative<Context::RuntimeError>(temp))
+			{
+				return false;
+			}
+
+			//constexpr float epsilon{ 0.001f };
+			//if (glm::length(intersection.line.dVecHead - intersection.line.dVecOrigin) < epsilon)
+			//{
+			//	std::cerr << "Intersection doesn't exist.\n";
+			//	return false;
+			//}
+
+			obj.setComponents(std::get<Eval::ILine>(temp));
+		}
 	}
 
-	else if (type == Object::Point)
+	else if (type == Object::Point && std::holds_alternative<Eval::IPoint>(obj.getComponents()))
 	{
-		Intersect intersect{ gatherPlaneLine(obj, object) };
-
-		glm::vec3 intersection{ assemblyIntersectPoint(intersect) };
-
-		if (intersection == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
+		if (pIDs[0] >= 0 && pIDs[1] >= 0)
 		{
-			std::cerr << "Intersection doesn't exist.\n";
-			return false;
-		}
+			int idx0{ searchObjectByID(pIDs[0], object) };
+			int idx1{ searchObjectByID(pIDs[1], object) };
 
-		obj.setComponents(intersection);
+			std::vector<RuntimeValue> args{};
+			args.reserve(2);
+
+			args.push_back(object[idx0].getComponents());
+			args.push_back(object[idx1].getComponents());
+
+			RuntimeValue temp{ evaluateIntersectFunc(args) };
+
+			if (std::holds_alternative<Context::RuntimeError>(temp))
+			{
+				return false;
+			}
+
+			//const Eval::IPoint& intersection{ std::get<Eval::IPoint>(newIntersection) };
+
+			//if (intersection.point == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
+			//{
+			//	std::cerr << "Intersection doesn't exist.\n";
+			//	return false;
+			//}
+
+			obj.setComponents(std::get<Eval::IPoint>(temp));
+		}
 	}
 
 	return true;
@@ -1444,9 +1474,15 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 		
 		const RuntimeValue& comp{ obj.getComponents() };
 		
-		if (type == Object::Point && std::holds_alternative<glm::vec3>(comp))
+		if (type == Object::Point && (std::holds_alternative<glm::vec3>(comp) || std::holds_alternative<Eval::IPoint>(comp)))
 		{
-			glm::vec3 targetPoint{ std::get<glm::vec3>(comp) };
+			glm::vec3 targetPoint{};
+
+			if (std::holds_alternative<glm::vec3>(comp))
+				targetPoint = std::get<glm::vec3>(comp);
+			else
+				targetPoint = std::get<Eval::IPoint>(comp).point;
+
 			targetPoint *= scale;
 
 			glm::vec3 v{ targetPoint - rayOrigin };
@@ -1480,9 +1516,14 @@ int getSelectedObjectID(const glm::vec3& rayOrigin, const glm::vec3& rayDirectio
 			glm::vec3 vecOrigin{};
 			glm::vec3 vecHead{};
 
-			if (type == Object::Line && std::holds_alternative<Eval::Line>(comp))
+			if (type == Object::Line && (std::holds_alternative<Eval::Line>(comp) || std::holds_alternative<Eval::ILine>(comp)))
 			{
-				const Eval::Line& line{ std::get<Eval::Line>(comp) };
+				Eval::Line line{};
+
+				if (std::holds_alternative<Eval::Line>(comp))
+					line = std::get<Eval::Line>(comp);
+				else
+					line = std::get<Eval::ILine>(comp).line;
 
 				point = line.point;
 				vecOrigin = line.dVecOrigin;
@@ -1659,6 +1700,10 @@ Object::Type duduceRuntimeValueType(const RuntimeValue& value)
 		{
 			type = Object::Point;
 		},
+		[&](Eval::IPoint iPoint)
+		{
+			type = Object::Point;
+		},
 		[&](Eval::Vector vector)
 		{
 			type = Object::Vector;
@@ -1668,6 +1713,10 @@ Object::Type duduceRuntimeValueType(const RuntimeValue& value)
 			type = Object::Segment;
 		},
 		[&](Eval::Line line)
+		{
+			type = Object::Line;
+		},
+		[&](Eval::ILine iLine)
 		{
 			type = Object::Line;
 		},

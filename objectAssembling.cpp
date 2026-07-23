@@ -4,123 +4,86 @@
 
 #include <iostream>
 
-Intersect gatherPlaneLine(const Object& obj, const std::vector<Object>& object)
-{
-	const std::array<int, 3>& pIDs{ obj.getParentIDs() };
-
-	std::array<Object, 2> args{};
-
-	for (int i{ 0 }; i < pIDs.size(); ++i)
-	{
-		if (pIDs[i] >= 0)
-		{
-			int index{ searchObjectByID(pIDs[i], object) };
-			const Object& obj{ object[index] };
-
-			args[i] = obj;
-		}
-	}
-	
-	Intersect intersect{};
-
-	for (size_t i{ 0 }; i < args.size(); ++i)
-	{
-		const Object& arg{ args[i] };
-
-		if (arg.getType() == Object::Line)
-		{
-			Eval::Line comp{ std::get<Eval::Line>(arg.getComponents()) };
-
-			intersect.points[i] = comp.point;
-			intersect.vectors[i] = comp.dVecHead - comp.dVecOrigin;
-
-			//int parentIndex2{ searchObjectByID(arg.getParentIDs()[1], object) };
-			//comp = object[parentIndex2].getComponents();
-
-			//if (object[parentIndex2].getType() == Object::Vector)
-			//	intersect.vectors[i] = { comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2] };
-
-			//else if (object[parentIndex2].getType() == Object::Point)
-			//	intersect.vectors[i] = { comp[0] - intersect.points[i].x, comp[1] - intersect.points[i].y, comp[2] - intersect.points[i].z };
-
-			++intersect.lineCount;
-			intersect.types[i] = Object::Line;
-		}
-
-		else if (arg.getType() == Object::Plane)
-		{
-			//int parentIndex1 = searchObjectByID(arg.getParentIDs()[0], object);
-			Eval::Plane comp{ std::get<Eval::Plane>(arg.getComponents()) };
-
-			intersect.points[i] = comp.point;
-			intersect.vectors[i] = comp.normalHead - comp.normalOrigin;
-
-			//int parentIndex2{ searchObjectByID(arg.getParentIDs()[1], object) };
-			//if (object[parentIndex2].getType() == Object::Point)
-			//{
-			//	glm::vec3 A{ intersect.points[i] };
-
-			//	comp = object[parentIndex2].getComponents();
-			//	glm::vec3 B{ comp[0], comp[1], comp[2] };
-
-			//	int parentIndex3{ searchObjectByID(arg.getParentIDs()[2], object) };
-			//	comp = object[parentIndex3].getComponents();
-			//	glm::vec3 C{ comp[0], comp[1], comp[2] };
-
-			//	glm::vec3 u{ B - A };
-			//	glm::vec3 v{ C - A };
-
-			//	glm::vec3 normal{ glm::cross(u, v) };
-
-			//	intersect.vectors[i] = normal;
-			//}
-
-			//else
-			//{
-			//	comp = object[parentIndex2].getComponents();
-
-			//	intersect.vectors[i] = { comp[3] - comp[0], comp[4] - comp[1], comp[5] - comp[2] };
-			//}
-
-			++intersect.planeCount;
-			intersect.types[i] = Object::Plane;
-		}
-	}
-
-	return intersect;
-}
-
-glm::vec3 assemblyIntersectPoint(const Intersect& intersect)
-{
-	glm::vec3 intersection{};
-
-	if (intersect.lineCount == 2)
-	{
-		intersection = intersectionLineLine(intersect.points[0], intersect.vectors[0], intersect.points[1], intersect.vectors[1]);
-	}
-
-	else
-	{
-		float d{};
-		if (intersect.types[0] == Object::Plane)
-		{
-			d = -glm::dot(intersect.points[0], intersect.vectors[0]);
-			intersection = intersectionLinePlane(intersect.points[1], intersect.vectors[1], intersect.vectors[0], d);
-		}
-		else
-		{
-			d = -glm::dot(intersect.points[1], intersect.vectors[1]);
-			intersection = intersectionLinePlane(intersect.points[0], intersect.vectors[0], intersect.vectors[1], d);
-		}
-	}
-
-	if (intersection == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
-	{
-		std::cerr << "Intersection doesn't exist. Handle later.\n";
-	}
-
-	return intersection;
-}
+//Eval::IPoint gatherPlaneLine(const Object& obj, const std::vector<Object>& object)
+//{
+//	const std::array<int, 3>& pIDs{ obj.getParentIDs() };
+//
+//	std::array<Object, 2> args{};
+//
+//	for (int i{ 0 }; i < pIDs.size(); ++i)
+//	{
+//		if (pIDs[i] >= 0)
+//		{
+//			int index{ searchObjectByID(pIDs[i], object) };
+//			const Object& obj{ object[index] };
+//
+//			args[i] = obj;
+//		}
+//	}
+//	
+//	Intersect intersect{};
+//
+//	for (size_t i{ 0 }; i < args.size(); ++i)
+//	{
+//		const Object& arg{ args[i] };
+//
+//		if (arg.getType() == Object::Line)
+//		{
+//			const Eval::Line& comp{ std::get<Eval::Line>(arg.getComponents()) };
+//
+//			intersect.points[i] = comp.point;
+//			intersect.vectors[i] = comp.dVecHead - comp.dVecOrigin;
+//
+//			++intersect.lineCount;
+//			intersect.types[i] = Object::Line;
+//		}
+//
+//		else if (arg.getType() == Object::Plane)
+//		{
+//			const Eval::Plane& comp{ std::get<Eval::Plane>(arg.getComponents()) };
+//
+//			intersect.points[i] = comp.point;
+//			intersect.vectors[i] = comp.normalHead - comp.normalOrigin;
+//
+//			++intersect.planeCount;
+//			intersect.types[i] = Object::Plane;
+//		}
+//	}
+//
+//	return intersect;
+//}
+//
+//Eval::IPoint assemblyIntersectPoint(const Intersect& intersect)
+//{
+//	Eval::IPoint intersection{};
+//
+//	if (intersect.lineCount == 2)
+//	{
+//		intersection.point = intersectionLineLine(intersect.points[0], intersect.vectors[0], intersect.points[1], intersect.vectors[1]);
+//	}
+//
+//	else
+//	{
+//		float d{};
+//		if (intersect.types[0] == Object::Plane)
+//		{
+//			d = -glm::dot(intersect.points[0], intersect.vectors[0]);
+//			intersection.point = intersectionLinePlane(intersect.points[1], intersect.vectors[1], intersect.vectors[0], d);
+//		}
+//		else
+//		{
+//			d = -glm::dot(intersect.points[1], intersect.vectors[1]);
+//			intersection.point = intersectionLinePlane(intersect.points[0], intersect.vectors[0], intersect.vectors[1], d);
+//		}
+//	}
+//
+//	if (intersection.point == glm::vec3(-9999.0f, -9999.0f, -9999.0f))
+//	{
+//		std::cerr << "Intersection doesn't exist. Handle later.\n";
+//	}
+//
+//	return intersection;
+//}
 
 //std::array<glm::vec3, 2> assemblyVector(Object& obj, const std::vector<Object>& object)
 //{

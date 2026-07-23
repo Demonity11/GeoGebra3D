@@ -226,6 +226,8 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 		//"Vector(Point(-2,-1,3), Point(-3,1,-2))\n"
 		//"Cross(u,v)\n"
 		"Cross(Vector(A,B), Vector(Point(-2,-1,3), Point(-3,1,-2)))\n"
+		"Line(A,B)\n"
+		"Intersect(r,p)\n"
 	) };
 
 	//static auto inputArray{ testInput("") };
@@ -246,6 +248,8 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 	printNodes(Parser::nodes);
 
 	RuntimeValue evalObj{ evaluator(Parser::nodes, object) };
+
+	printRuntimeValue(evalObj);
 
 	if (std::holds_alternative<Context::RuntimeError>(evalObj))
 	{
@@ -378,6 +382,10 @@ bool getObjectInputFloats(Object& obj)
 		{
 			checkInput("::Point", &point[0]);
 		},
+		[&](Eval::IPoint iPoint)
+		{
+			checkInput("::Point", &iPoint.point[0]);
+		},
 		[&](Eval::Vector& vector)
 		{
 			checkInput("::Origin", &vector.origin[0]);
@@ -393,6 +401,12 @@ bool getObjectInputFloats(Object& obj)
 			checkInput("::Point", &line.point[0]);
 			checkInput("::DVecOrigin", &line.dVecOrigin[0]);
 			checkInput("::DVecHead", &line.dVecHead[0]);
+		},
+		[&](Eval::ILine iLine)
+		{
+			checkInput("::Point", &iLine.line.point[0]);
+			checkInput("::DVecOrigin", &iLine.line.dVecOrigin[0]);
+			checkInput("::DVecHead", &iLine.line.dVecHead[0]);
 		},
 		[&](Eval::Plane& plane)
 		{
@@ -427,25 +441,26 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 	// intersection
 	if (type == Object::Point && pIDs[0] >= 0)
 	{
-		Intersect intersect{ gatherPlaneLine(obj, object) };
-		glm::vec3 intersection{ assemblyIntersectPoint(intersect) };
+		Eval::IPoint intersection{ std::get<Eval::IPoint>(obj.getComponents()) };
+
+		//Intersect intersect{ gatherPlaneLine(obj, object) };
+		//glm::vec3 intersection{ assemblyIntersectPoint(intersect) };
 		//std::vector components{ intersection.x, intersection.y, intersection.z };
 
 		if (scanForIdenticalObject(type, intersection, object, obj.getID()))
 		{
-			std::cout << intersection << "\n";
+			std::cout << intersection.point << "\n";
 			std::cerr << "INTERSECTION::ALREADY::EXISTS\n";
 			return -1;
 		}
 
 		obj.setMutable(false);
-		obj.setComponents(intersection);
 		obj.setColor({ 0.7f, 0.3f, 0.0f, 1.0f });
 
-		intersection *= scale;
+		intersection.point *= scale;
 		constexpr float radius{ 0.005f };
 
-		vCount = getSphereVertices(intersection, color, radius, vertexData);
+		vCount = getSphereVertices(intersection.point, color, radius, vertexData);
 	}
 
 	else if (type == Object::Point)
@@ -490,14 +505,17 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 		int vCountCone{};
 
 		// check if the vector is a cross product
-		if (pIDs[0] >= 0 && pIDs[1] >= 0)
-		{
-			int pIndex0{ searchObjectByID(pIDs[0], object) };
-			int pIndex1{ searchObjectByID(pIDs[1], object) };
+		//if (pIDs[0] >= 0 && pIDs[1] >= 0)
+		//{
+		//	int pIndex0{ searchObjectByID(pIDs[0], object) };
+		//	int pIndex1{ searchObjectByID(pIDs[1], object) };
 
-			if (object[pIndex0].getType() == Object::Vector && object[pIndex1].getType() == Object::Vector)
-				obj.setMutable(false);
-		}
+		//	if (object[pIndex0].getType() == Object::Vector && object[pIndex1].getType() == Object::Vector)
+		//		obj.setMutable(false);
+		//}
+
+		if (vector.pTypes[1] == ObjectType::Vector)
+			obj.setMutable(false);
 
 		// getCilinderVertices creates 144 new vertices 
 		vCountCilinder = getCilinderVertices(vecOrigin, newVecHead, color, radius, vertexData);
@@ -521,21 +539,19 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 		vCount = getCilinderVertices(pointA, pointB, color, radius, vertexData);
 	}
 
-	else if 
-	(
-		int pIdx0{ (pIDs[0] >= 0) ? searchObjectByID(pIDs[0], object) : -1 };
-		type == Object::Line && pIdx0 >= 0 && object[pIdx0].getType() == Object::Plane
-	)
+	else if (type == Object::Line && std::holds_alternative<Eval::ILine>(obj.getComponents()))
 	{
-		Intersect intersect{ gatherPlaneLine(obj, object) };
+		//Intersect intersect{ gatherPlaneLine(obj, object) };
 
-		auto [p1, p2] = intersect.points;
-		auto [n1, n2] = intersect.vectors;
+		//auto [p1, p2] = intersect.points;
+		//auto [n1, n2] = intersect.vectors;
 
-		Eval::Line intersection{ intersectionPlanePlane(p1, n1, p2, n2) };
+		//Eval::Line intersection{ intersectionPlanePlane(p1, n1, p2, n2) };
+
+		Eval::ILine intersection{ std::get<Eval::ILine>(obj.getComponents()) };
 
 		constexpr float epsilon{ 0.001f };
-		if (glm::length(intersection.dVecHead -intersection.dVecOrigin) < epsilon)
+		if (glm::length(intersection.line.dVecHead -intersection.line.dVecOrigin) < epsilon)
 		{
 			std::cerr << "Intersection doesn't exist.\n";
 			return -1;
@@ -551,12 +567,12 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 		obj.setColor({ 0.7f, 0.3f, 0.0f, 1.0f });
 		obj.setComponents(intersection);
 
-		intersection.point *= scale;
-		intersection.dVecOrigin *= scale;
-		intersection.dVecHead *= scale;
+		intersection.line.point *= scale;
+		intersection.line.dVecOrigin *= scale;
+		intersection.line.dVecHead *= scale;
 		constexpr float radius{ 0.0015f };
 		
-		vCount = getLineVertices(intersection.point, { 0.0f, 0.0f, 0.0f }, intersection.dVecHead - intersection.dVecOrigin, color, radius, vertexData);
+		vCount = getLineVertices(intersection.line.point, { 0.0f, 0.0f, 0.0f }, intersection.line.dVecHead - intersection.line.dVecOrigin, color, radius, vertexData);
 	}
 
 	else if (type == Object::Line)
@@ -624,6 +640,13 @@ void drawObjectLabels
 		else if (type == Object::Point && std::holds_alternative<glm::vec3>(comp))
 		{
 			targetWorldPos = std::get<glm::vec3>(comp);
+			targetWorldPos *= scale;
+			targetWorldPos += glm::vec3{ 0.0f, 0.015f, 0.0f };
+		}
+
+		else if (type == Object::Point && std::holds_alternative<Eval::IPoint>(comp))
+		{
+			targetWorldPos = std::get<Eval::IPoint>(comp).point;
 			targetWorldPos *= scale;
 			targetWorldPos += glm::vec3{ 0.0f, 0.015f, 0.0f };
 		}
@@ -796,4 +819,9 @@ void extractAndRegisterObject(const RuntimeValue& evalObj, const std::vector<Obj
 	Context::symbolTable[objName] = objIdx;
 
 	updateBufferData(Context::vertexData);
+
+	for (const auto& obj : Context::object)
+	{
+		obj.printObject();
+	}
 }

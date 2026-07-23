@@ -31,7 +31,11 @@ RuntimeValue evaluator(const std::vector<Node>& nodes, const std::vector<Object>
         bool funcExist{ false };
         for (const auto& func : Context::function)
         {
-            if (node.content == func.name) funcExist = true;
+            if (node.content == func.name) 
+            {
+                funcExist = true;
+                break;
+            }
         }
 
         if (!funcExist)
@@ -40,45 +44,6 @@ RuntimeValue evaluator(const std::vector<Node>& nodes, const std::vector<Object>
         }
 
         std::vector<RuntimeValue> args{};
-        //for (size_t i{ 0 }; i < node.children.size(); ++i)
-        //{
-        //    int childIdx{ node.children[i] };
-
-        //    if (childIdx == -1) break;
-
-        //    RuntimeValue childVal{ evaluator(nodes, object, childIdx) };
-
-        //    if (std::holds_alternative<Context::RuntimeError>(childVal))
-        //    {
-        //        return childVal;
-        //    }
-
-        //    Object::Type pType{ duduceRuntimeValueType(childVal) };
-
-        //    if (pType == Object::Vector)
-        //    {
-        //        Eval::Vector vec{ std::get<Eval::Vector>(childVal) };
-        //        vec.pTypes[i] = pType;
-        //        args.push_back(vec);
-        //        continue;
-        //    }
-        //    else if (pType == Object::Segment)
-        //    {
-        //        Eval::Segment seg{ std::get<Eval::Segment>(childVal) };
-        //        seg.pTypes[i] = pType;
-        //        args.push_back(seg);
-        //        continue;
-        //    }
-        //    else if (pType == Object::Line)
-        //    {
-        //        Eval::Line line{ std::get<Eval::Line>(childVal) };
-        //        line.pTypes[i] = pType;
-        //        args.push_back(line);
-        //        continue;
-        //    }
-
-        //    args.push_back(childVal);
-        //}
         for (int childIdx : node.children)
         {
             if (childIdx == -1) break;
@@ -119,7 +84,7 @@ RuntimeValue evaluator(const std::vector<Node>& nodes, const std::vector<Object>
         }
         else if (node.content == "Intersect")
         {
-            // do later
+            return evaluateIntersectFunc(args, node, nodes);
         }
 
         return Context::RuntimeError{ "SEMANTICS::ERROR::FUNCTION_NOT_FOUND\n" };
@@ -161,11 +126,11 @@ void printRuntimeValue(const RuntimeValue& value)
         {
         [](float f)
         {
-            std::cout << "Literal: " << f << '\n';
+            std::cout << "Literal:\t" << f << '\n';
         },
         [](glm::vec3 point)
         {
-            std::cout << "Point: (" << point << ")\n";
+            std::cout << "Point:\t(" << point << ")\n";
         },
         [](Eval::Vector vector)
         {
@@ -188,6 +153,17 @@ void printRuntimeValue(const RuntimeValue& value)
             std::cout << "Point:\t(" << plane.point << ")\n";
             std::cout << "Normal Vector Origin:\t(" << plane.normalOrigin << ")\n";
             std::cout << "Normal Vector Head:\t(" << plane.normalHead << ")\n";
+        },
+        [](Eval::IPoint iPoint)
+        {
+            std::cout << "Intersect:\t(" << iPoint.point << ")\n";
+        },
+        [](Eval::ILine iLine)
+        {
+            std::cout << "Intersect\n";
+            std::cout << "Point:\t(" << iLine.line.point << ")\n";
+            std::cout << "Direction Vector Origin:\t(" << iLine.line.dVecOrigin << ")\n";
+            std::cout << "Direction Vector Head:\t(" << iLine.line.dVecHead << ")\n";
         },
         [](Context::RuntimeError error)
         {
@@ -369,11 +345,6 @@ RuntimeValue evaluateLineFunc(const std::vector<RuntimeValue>& args, const Node&
 {
     const std::array<int, 3>& cIdx{ node.children };
 
-    //if (args.size() == 1 && std::holds_alternative<Eval::Line>(args[0]))
-    //{
-    //    return args[0];
-    //}
-
     if (args.size() == 2 &&
         std::holds_alternative<glm::vec3>(args[0]) &&
         std::holds_alternative<Eval::Vector>(args[1])
@@ -477,6 +448,162 @@ RuntimeValue evaluatePlaneFunc(const std::vector<RuntimeValue>& args, const Node
     }
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::PLANE::INVALID_ARGUMENTS_OVERLOAD\n" };
+}
+
+RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes)
+{
+    const std::array<int, 3>& cIdx{ node.children };
+
+    if (args.size() == 2 &&
+        std::holds_alternative<Eval::Line>(args[0]) &&
+        std::holds_alternative<Eval::Line>(args[1])
+        )
+    {
+        RuntimeValue temp{ intersectionLineLine(std::get<Eval::Line>(args[0]), std::get<Eval::Line>(args[1])) };
+
+        if (Eval::IPoint* intersection{ std::get_if<Eval::IPoint>(&temp) })
+        {
+            intersection->pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+            intersection->pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+
+            return *intersection;
+        }
+
+        return temp;
+    }
+
+    else if (args.size() == 2 &&
+        std::holds_alternative<Eval::Line>(args[0]) &&
+        std::holds_alternative<Eval::Plane>(args[1])
+        )
+    {
+        RuntimeValue temp{ intersectionLinePlane(std::get<Eval::Line>(args[0]), std::get<Eval::Plane>(args[1])) };
+
+        if (Eval::IPoint * intersection{ std::get_if<Eval::IPoint>(&temp) })
+        {
+            intersection->pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+            intersection->pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+
+            return *intersection;
+        }
+
+        return temp;
+    }
+
+    else if (args.size() == 2 &&
+        std::holds_alternative<Eval::Plane>(args[0]) &&
+        std::holds_alternative<Eval::Line>(args[1])
+        )
+    {
+        RuntimeValue temp{ intersectionLinePlane(std::get<Eval::Line>(args[1]), std::get<Eval::Plane>(args[0])) };
+
+        if (Eval::IPoint * intersection{ std::get_if<Eval::IPoint>(&temp) })
+        {
+            intersection->pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+            intersection->pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+
+            return *intersection;
+        }
+
+        return temp;
+    }
+
+    else if (args.size() == 2 &&
+        std::holds_alternative<Eval::Plane>(args[0]) &&
+        std::holds_alternative<Eval::Plane>(args[1])
+        )
+    {
+        RuntimeValue temp{ intersectionPlanePlane(std::get<Eval::Plane>(args[0]), std::get<Eval::Plane>(args[1])) };
+
+        if (Eval::ILine* intersection{ std::get_if<Eval::ILine>(&temp) })
+        {
+            intersection->pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+            intersection->pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+
+            return *intersection;
+        }
+
+        return temp;
+    }
+
+    return Context::RuntimeError{ "SEMANTICS::ERROR::INTERSECT::INVALID_ARGUMENTS_OVERLOAD\n" };
+}
+
+RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args)
+{
+    if (args.size() == 2 &&
+        std::holds_alternative<Eval::Line>(args[0]) &&
+        std::holds_alternative<Eval::Line>(args[1])
+        )
+    {
+        RuntimeValue temp{ intersectionLineLine(std::get<Eval::Line>(args[0]), std::get<Eval::Line>(args[1])) };
+
+        if (Eval::IPoint * intersection{ std::get_if<Eval::IPoint>(&temp) })
+        {
+            intersection->pTypes[0] = Object::Line;
+            intersection->pTypes[1] = Object::Line;
+
+            return *intersection;
+        }
+
+        return temp;
+    }
+
+    else if (args.size() == 2 &&
+        std::holds_alternative<Eval::Line>(args[0]) &&
+        std::holds_alternative<Eval::Plane>(args[1])
+        )
+    {
+        RuntimeValue temp{ intersectionLinePlane(std::get<Eval::Line>(args[0]), std::get<Eval::Plane>(args[1])) };
+
+        if (Eval::IPoint * intersection{ std::get_if<Eval::IPoint>(&temp) })
+        {
+            intersection->pTypes[0] = Object::Line;
+            intersection->pTypes[1] = Object::Plane;
+
+            return *intersection;
+        }
+
+        return temp;
+    }
+
+    else if (args.size() == 2 &&
+        std::holds_alternative<Eval::Plane>(args[0]) &&
+        std::holds_alternative<Eval::Line>(args[1])
+        )
+    {
+        RuntimeValue temp{ intersectionLinePlane(std::get<Eval::Line>(args[1]), std::get<Eval::Plane>(args[0])) };
+
+        if (Eval::IPoint * intersection{ std::get_if<Eval::IPoint>(&temp) })
+        {
+            intersection->pTypes[0] = Object::Plane;
+            intersection->pTypes[1] = Object::Line;
+
+            return *intersection;
+        }
+
+        return temp;
+    }
+
+    else if (args.size() == 2 &&
+        std::holds_alternative<Eval::Plane>(args[0]) &&
+        std::holds_alternative<Eval::Plane>(args[1])
+        )
+    {
+        RuntimeValue temp{ intersectionPlanePlane(std::get<Eval::Plane>(args[0]), std::get<Eval::Plane>(args[1])) };
+
+        if (Eval::ILine * intersection{ std::get_if<Eval::ILine>(&temp) })
+        {
+            intersection->pTypes[0] = Object::Plane;
+            intersection->pTypes[1] = Object::Plane;
+
+            return *intersection;
+        }
+
+        return temp;
+    }
+
+    return Context::RuntimeError{ "SEMANTICS::ERROR::INTERSECT::INVALID_ARGUMENTS_OVERLOAD\n" };
 }
 
 Object::Type deduceTypeByIdentifierName(std::string_view func)

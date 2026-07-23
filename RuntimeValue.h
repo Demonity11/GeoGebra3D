@@ -52,8 +52,35 @@ namespace Eval
 
 		std::array<ObjectType, 3> pTypes{ ObjectType::Null, ObjectType::Null, ObjectType::Null };
 	};
+
+	// Intersect Point
+	struct IPoint
+	{
+		glm::vec3 point{};
+
+		std::array<ObjectType, 2> pTypes{ ObjectType::Null, ObjectType::Null };
+	};
+
+	// Intersect Line
+	struct ILine
+	{
+		Eval::Line line{};
+
+		std::array<ObjectType, 2> pTypes{ ObjectType::Null, ObjectType::Null };
+	};
 }
 
-using RuntimeValue = std::variant<float, glm::vec3, Eval::Vector, Eval::Segment, Eval::Line, Eval::Plane, Context::RuntimeError>;
+using RuntimeValue = std::variant
+<
+	float, 
+	glm::vec3, 
+	Eval::Vector, 
+	Eval::Segment, 
+	Eval::Line, 
+	Eval::Plane, 
+	Eval::IPoint,
+	Eval::ILine,
+	Context::RuntimeError
+>;
 
 #endif
