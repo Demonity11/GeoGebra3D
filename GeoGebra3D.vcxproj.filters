@@ -63,9 +63,6 @@
     <ClCompile Include="Context.cpp">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="objectAssembling.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="lexer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -105,9 +102,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Context.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="objectAssembling.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Random.h">

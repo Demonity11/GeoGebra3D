@@ -152,7 +152,6 @@
     <ClCompile Include="Context.cpp" />
     <ClCompile Include="evaluator.cpp" />
     <ClCompile Include="lexer.cpp" />
-    <ClCompile Include="objectAssembling.cpp" />
     <ClCompile Include="objectCoords.cpp" />
     <ClCompile Include="helloCamera.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -177,7 +176,6 @@
     <ClInclude Include="evaluator.h" />
     <ClInclude Include="lexer.h" />
     <ClInclude Include="Object.h" />
-    <ClInclude Include="objectAssembling.h" />
     <ClInclude Include="objectCoords.h" />
     <ClInclude Include="ObjectType.h" />
     <ClInclude Include="Random.h" />

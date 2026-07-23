@@ -1,7 +1,6 @@
 #include "evaluator.h"
 #include "Object.h"
 #include "utilities.h"
-#include "objectAssembling.h"
 #include "objectCoords.h"
 #include "Random.h"
 
@@ -173,66 +172,6 @@ void printRuntimeValue(const RuntimeValue& value)
         }, value);
 }
 
-//RuntimeValue assemblyVariable(const Object& obj, const std::vector<Object>& object)
-//{
-//    Object::Type type{ obj.getType() };
-//    const std::vector<float>& comp{ obj.getComponents() };
-//
-//    if (type == Object::Point)
-//    {
-//        glm::vec3 point{ comp[0], comp[1], comp[2] };
-//        return point;
-//    }
-//    else if (type == Object::Vector)
-//    {
-//        Eval::Vector vector{};
-//        std::array<glm::vec3, 2> temp{ assemblyVector(obj, object) };
-//
-//        vector.origin = temp[0];
-//        vector.head = temp[1];
-//
-//        return vector;
-//    }
-//    else if (type == Object::Segment)
-//    {
-//        std::array<int, 3> pCompIndex{ obj.getpCompIndex() };
-//        int startA{ pCompIndex[0] };
-//        int startB{ pCompIndex[1] };
-//
-//        Eval::Segment segment
-//        {
-//            { comp[startA], comp[startA + 1], comp[startA + 2] },
-//            { comp[startB], comp[startB + 1], comp[startB + 2] }
-//        };
-//
-//        return segment;
-//    }
-//    else if (type == Object::Line)
-//    {
-//        Eval::Line line{};
-//        std::array<glm::vec3, 3> temp{ assemblyLine(obj) };
-//
-//        line.point = temp[0];
-//        line.dVecOrigin = temp[1];
-//        line.dVecHead = temp[2];
-//
-//        return line;
-//    }
-//    else if (type == Object::Plane)
-//    {
-//        Eval::Plane plane{};
-//        std::array<glm::vec3, 3> temp{ assemblyPlane(obj, object) };
-//
-//        plane.normalOrigin = temp[0];
-//        plane.normalHead = temp[1];
-//        plane.point = temp[2];
-//
-//        return plane;
-//    }
-//
-//    return Context::RuntimeError{ "???" };
-//}
-
 RuntimeValue evaluatePointFunc(const std::vector<RuntimeValue>& args)
 {
     if (args.size() == 3 &&
@@ -250,38 +189,47 @@ RuntimeValue evaluatePointFunc(const std::vector<RuntimeValue>& args)
         return point;
     }
 
-    else if (args.size() == 1 && std::holds_alternative<glm::vec3>(args[0]))
-    {
-        return std::get<glm::vec3>(args[0]);
-    }
+    //else if (args.size() == 1 && std::holds_alternative<glm::vec3>(args[0]))
+    //{
+    //    return std::get<glm::vec3>(args[0]);
+    //}
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::POINT::INVALID_ARGUMENTS_OVERLOAD\n" };
 }
 
 RuntimeValue evaluateVectorFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes)
 {
-    //if (args.size() == 1 && std::holds_alternative<Eval::Vector>(args[0]))
-    //{
-    //    return args[0];
-    //}
-
     const std::array<int, 3>& cIdx{ node.children };
 
-    if (args.size() == 2 &&
-        std::holds_alternative<glm::vec3>(args[0]) &&
-        std::holds_alternative<glm::vec3>(args[1])
-        )
+    if (args.size() == 1)
     {
-        Eval::Vector vector
+        auto p{ extractPoint(args[0]) };
+
+        if (p)
         {
-            std::get<glm::vec3>(args[0]),
-            std::get<glm::vec3>(args[1])
-        };
+            Eval::Vector vector{ glm::vec3(0.0f), *p};
 
-        vector.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
-        vector.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+            vector.pTypes[0] = Object::Null;
+            vector.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
 
-        return vector;
+            return vector;
+        }
+    }
+
+    else if (args.size() == 2)
+    {
+        auto p0{ extractPoint(args[0]) };
+        auto p1{ extractPoint(args[1]) };
+
+        if (p0 && p1)
+        {
+            Eval::Vector vector{ *p0,*p1 };
+
+            vector.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+            vector.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+
+            return vector;
+        }
     }
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::VECTOR::INVALID_ARGUMENTS_OVERLOAD\n" };
@@ -291,7 +239,8 @@ RuntimeValue evaluateCrossFunc(const std::vector<RuntimeValue>& args, const Node
 {
     const std::array<int, 3>& cIdx{ node.children };
 
-    if (args.size() == 2 && std::holds_alternative<Eval::Vector>(args[0]) &&
+    if (args.size() == 2 && 
+        std::holds_alternative<Eval::Vector>(args[0]) &&
         std::holds_alternative<Eval::Vector>(args[1]))
     {
         const Eval::Vector& u{ std::get<Eval::Vector>(args[0]) };
@@ -316,26 +265,20 @@ RuntimeValue evaluateSegmentFunc(const std::vector<RuntimeValue>& args, const No
 {
     const std::array<int, 3>& cIdx{ node.children };
 
-    //if (args.size() == 1 && std::holds_alternative<Eval::Segment>(args[0]))
-    //{
-    //    return args[0];
-    //}
-
-    if (args.size() == 2 &&
-        std::holds_alternative<glm::vec3>(args[0]) &&
-        std::holds_alternative<glm::vec3>(args[1])
-        )
+    if (args.size() == 2)
     {
-        Eval::Segment segment
+        auto p0{ extractPoint(args[0]) };
+        auto p1{ extractPoint(args[1]) };
+
+        if (p0 && p1)
         {
-            std::get<glm::vec3>(args[0]),
-            std::get<glm::vec3>(args[1])
-        };
+            Eval::Segment segment{ *p0, *p1 };
 
-        segment.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
-        segment.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+            segment.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+            segment.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
 
-        return segment;
+            return segment;
+        }
     }
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::SEGMENT::INVALID_ARGUMENTS_OVERLOAD\n" };
@@ -345,36 +288,39 @@ RuntimeValue evaluateLineFunc(const std::vector<RuntimeValue>& args, const Node&
 {
     const std::array<int, 3>& cIdx{ node.children };
 
-    if (args.size() == 2 &&
-        std::holds_alternative<glm::vec3>(args[0]) &&
-        std::holds_alternative<Eval::Vector>(args[1])
-        )
+    if (args.size() == 2 && std::holds_alternative<Eval::Vector>(args[1]))
     {
-        glm::vec3 point{ std::get<glm::vec3>(args[0]) };
-        Eval::Vector vector{ std::get<Eval::Vector>(args[1]) };
+        auto p{ extractPoint(args[0]) };
 
-        Eval::Line line{ point, vector.origin, vector.head };
+        if (p)
+        {
+            Eval::Vector vector{ std::get<Eval::Vector>(args[1]) };
 
-        line.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
-        line.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+            Eval::Line line{ *p, vector.origin, vector.head };
 
-        return line;
+            line.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+            line.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+
+            return line;
+        }
     }
 
-    else if (args.size() == 2 &&
-        std::holds_alternative<glm::vec3>(args[0]) &&
-        std::holds_alternative<glm::vec3>(args[1])
-        )
+    else if (args.size() == 2 && (std::holds_alternative<glm::vec3>(args[1]) || std::holds_alternative<Eval::IPoint>(args[1])))
     {
-        glm::vec3 point{ std::get<glm::vec3>(args[0]) };
-        Eval::Vector vector{ point, std::get<glm::vec3>(args[1]) };
+        auto p0{ extractPoint(args[0]) };
+        auto p1{ extractPoint(args[1]) };
 
-        Eval::Line line{ point, vector.origin, vector.head };
+        if (p0 && p1)
+        {
+            Eval::Vector vector{ *p0, *p1 };
 
-        line.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
-        line.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+            Eval::Line line{ *p0, vector.origin, vector.head };
 
-        return line;
+            line.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+            line.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+
+            return line;
+        }
     }
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::LINE::INVALID_ARGUMENTS_OVERLOAD\n" };
@@ -384,67 +330,67 @@ RuntimeValue evaluatePlaneFunc(const std::vector<RuntimeValue>& args, const Node
 {
     const std::array<int, 3>& cIdx{ node.children };
 
-    if (args.size() == 2 &&
-        std::holds_alternative<glm::vec3>(args[0]) &&
-        std::holds_alternative<Eval::Vector>(args[1])
-        )
+    if (args.size() == 2 && std::holds_alternative<Eval::Vector>(args[1]))
     {
-        glm::vec3 point{ std::get<glm::vec3>(args[0]) };
-        Eval::Vector vector{ std::get<Eval::Vector>(args[1]) };
+        auto p{ extractPoint(args[0]) };
 
-        Eval::Plane plane{ point, vector.origin, vector.head };
+        if (p)
+        {
+            Eval::Vector vector{ std::get<Eval::Vector>(args[1]) };
 
-        plane.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
-        plane.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+            Eval::Plane plane{ *p, vector.origin, vector.head };
 
-        return plane;
+            plane.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+            plane.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+
+            return plane;
+        }
     }
 
-    else if (args.size() == 3 &&
-        std::holds_alternative<glm::vec3>(args[0]) &&
-        std::holds_alternative<glm::vec3>(args[1]) &&
-        std::holds_alternative<glm::vec3>(args[2])
-        )
+    else if (args.size() == 3)
     {
-        glm::vec3 A{ std::get<glm::vec3>(args[0]) };
-        glm::vec3 B{ std::get<glm::vec3>(args[1]) };
-        glm::vec3 C{ std::get<glm::vec3>(args[2]) };
+        auto A{ extractPoint(args[0]) };
+        auto B{ extractPoint(args[1]) };
+        auto C{ extractPoint(args[2]) };
 
-        glm::vec3 u{ B - A };
-        glm::vec3 v{ C - A };
-
-        glm::vec3 normal{};
-
-        const float lengthProduct{ glm::length(u) * glm::length(v) };
-        constexpr float epsilon_0{ 0.001f };
-        if (lengthProduct > epsilon_0)
+        if (A && B && C)
         {
-            const float theta{ glm::dot(u, v) / lengthProduct };
+            glm::vec3 u{ *B - *A };
+            glm::vec3 v{ *C - *A };
 
-            constexpr float epsilon_1{ 0.999f };
-            if (glm::abs(theta) > epsilon_1)
+            glm::vec3 normal{};
+
+            const float lengthProduct{ glm::length(u) * glm::length(v) };
+            constexpr float epsilon_0{ 0.001f };
+            if (lengthProduct > epsilon_0)
             {
-                glm::vec3 right{};
+                const float theta{ glm::dot(u, v) / lengthProduct };
 
-                getNewCoordSystem(u, right, normal);
+                constexpr float epsilon_1{ 0.999f };
+                if (glm::abs(theta) > epsilon_1)
+                {
+                    glm::vec3 right{};
+
+                    getNewCoordSystem(u, right, normal);
+                }
+                else
+                {
+                    normal = glm::cross(u, v);
+                }
             }
             else
             {
                 normal = glm::cross(u, v);
             }
+
+            Eval::Plane plane{ *A, glm::vec3(0.0f, 0.0f, 0.0f), normal };
+
+            plane.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
+            plane.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
+            plane.pTypes[2] = deduceTypeByIdentifierName(nodes[cIdx[2]].content);
+
+            return plane;
         }
-        else
-        {
-            normal = glm::cross(u, v);
-        }
-
-        Eval::Plane plane{ A, glm::vec3(0.0f, 0.0f, 0.0f), normal };
-
-        plane.pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
-        plane.pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
-        plane.pTypes[2] = deduceTypeByIdentifierName(nodes[cIdx[2]].content);
-
-        return plane;
     }
 
     return Context::RuntimeError{ "SEMANTICS::ERROR::PLANE::INVALID_ARGUMENTS_OVERLOAD\n" };
@@ -453,6 +399,11 @@ RuntimeValue evaluatePlaneFunc(const std::vector<RuntimeValue>& args, const Node
 RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes)
 {
     const std::array<int, 3>& cIdx{ node.children };
+
+    if (nodes[cIdx[0]].type != Node::Variable || nodes[cIdx[1]].type != Node::Variable)
+    {
+        return Context::RuntimeError{ "SEMANTICS::ERROR::INTERSECT_ONLY_ACCEPT_VARIABLES\n" };
+    }
 
     if (args.size() == 2 &&
         std::holds_alternative<Eval::Line>(args[0]) &&
@@ -479,7 +430,7 @@ RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args, const 
     {
         RuntimeValue temp{ intersectionLinePlane(std::get<Eval::Line>(args[0]), std::get<Eval::Plane>(args[1])) };
 
-        if (Eval::IPoint * intersection{ std::get_if<Eval::IPoint>(&temp) })
+        if (Eval::IPoint* intersection{ std::get_if<Eval::IPoint>(&temp) })
         {
             intersection->pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
             intersection->pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
@@ -497,7 +448,7 @@ RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args, const 
     {
         RuntimeValue temp{ intersectionLinePlane(std::get<Eval::Line>(args[1]), std::get<Eval::Plane>(args[0])) };
 
-        if (Eval::IPoint * intersection{ std::get_if<Eval::IPoint>(&temp) })
+        if (Eval::IPoint* intersection{ std::get_if<Eval::IPoint>(&temp) })
         {
             intersection->pTypes[0] = deduceTypeByIdentifierName(nodes[cIdx[0]].content);
             intersection->pTypes[1] = deduceTypeByIdentifierName(nodes[cIdx[1]].content);
@@ -538,7 +489,7 @@ RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args)
     {
         RuntimeValue temp{ intersectionLineLine(std::get<Eval::Line>(args[0]), std::get<Eval::Line>(args[1])) };
 
-        if (Eval::IPoint * intersection{ std::get_if<Eval::IPoint>(&temp) })
+        if (Eval::IPoint* intersection{ std::get_if<Eval::IPoint>(&temp) })
         {
             intersection->pTypes[0] = Object::Line;
             intersection->pTypes[1] = Object::Line;
@@ -556,7 +507,7 @@ RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args)
     {
         RuntimeValue temp{ intersectionLinePlane(std::get<Eval::Line>(args[0]), std::get<Eval::Plane>(args[1])) };
 
-        if (Eval::IPoint * intersection{ std::get_if<Eval::IPoint>(&temp) })
+        if (Eval::IPoint* intersection{ std::get_if<Eval::IPoint>(&temp) })
         {
             intersection->pTypes[0] = Object::Line;
             intersection->pTypes[1] = Object::Plane;
@@ -574,7 +525,7 @@ RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args)
     {
         RuntimeValue temp{ intersectionLinePlane(std::get<Eval::Line>(args[1]), std::get<Eval::Plane>(args[0])) };
 
-        if (Eval::IPoint * intersection{ std::get_if<Eval::IPoint>(&temp) })
+        if (Eval::IPoint* intersection{ std::get_if<Eval::IPoint>(&temp) })
         {
             intersection->pTypes[0] = Object::Plane;
             intersection->pTypes[1] = Object::Line;
@@ -592,7 +543,7 @@ RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args)
     {
         RuntimeValue temp{ intersectionPlanePlane(std::get<Eval::Plane>(args[0]), std::get<Eval::Plane>(args[1])) };
 
-        if (Eval::ILine * intersection{ std::get_if<Eval::ILine>(&temp) })
+        if (Eval::ILine* intersection{ std::get_if<Eval::ILine>(&temp) })
         {
             intersection->pTypes[0] = Object::Plane;
             intersection->pTypes[1] = Object::Plane;
@@ -608,7 +559,7 @@ RuntimeValue evaluateIntersectFunc(const std::vector<RuntimeValue>& args)
 
 Object::Type deduceTypeByIdentifierName(std::string_view func)
 {
-    if (func == "Point") return Object::Point;
+    if      (func == "Point") return Object::Point;
     else if (func == "Vector") return Object::Vector;
     else if (func == "Cross") return Object::Vector;
     else if (func == "Segment") return Object::Segment;

@@ -17,16 +17,13 @@ bool scanForIdenticalObject(Object::Type type, const RuntimeValue& components, c
 
 auto searchObjectByID(int id, const std::vector<Object>& objectRef)																					  -> int;
 auto searchObjectIndexByName(const std::string& objName, const std::vector<Object>& object)															  -> int;
-auto nextFreeParentIndex(const std::array<int, 3>& pIDs)																							  -> int;
-auto splitArgs(const std::string& argumentString)																									  -> std::vector<std::string>;
 auto getStringFunctionType(Object::Type type)																										  -> std::string;
 auto getObjectTypeFromString(const std::string& funcName)																							  -> Object::Type;
 auto deleteObject(int objIndex, std::vector<Object>& object, std::vector<float>& vertexData)														  -> void;
 auto updateObject(int objIndex, const Object& newObj, std::vector<Object>& object, std::vector<float>& vertexData)									  -> void;
 bool rebuildObjectFromParents(Object& obj, const std::vector<Object>& object);
-// return true if exist an object with the same type and components 
-//auto scanForIdenticalObject(Object::Type type, const std::vector<float>& components, std::vector<Object>& object, int ignoreID = -1)				  -> bool;
 auto getExpression(const Object& obj, const std::vector<Object>& object)																						  -> std::string;
+std::string extractPName(const Object& obj);
 std::string getRuntimeValueCompAsString(int id, const std::vector<Object>& objectRef);
 auto getEquation(const Object& obj)																														  -> std::string;
 RuntimeValue intersectionLinePlane(const Eval::Line& line, const Eval::Plane& plane); // Eval::IPoint or RuntimeError
@@ -55,5 +52,7 @@ size_t createObject(Object obj, int vCount);
 std::ostream& operator<<(std::ostream& os, const glm::vec3& vec);
 
 Object::Type duduceRuntimeValueType(const RuntimeValue& value);
+std::optional<glm::vec3> extractPoint(const RuntimeValue& val);
+std::optional<Eval::Line> extractLine(const RuntimeValue& val);
 
 #endif

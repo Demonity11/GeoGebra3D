@@ -13,11 +13,9 @@
 class Object;
 
 void printRuntimeValue(const RuntimeValue& value);
+std::optional<float> convertSVToFloat(std::string_view sv);
 
 RuntimeValue evaluator(const std::vector<Node>& nodes, const std::vector<Object>& object, int nodeIdx = 0);
-std::optional<float> convertSVToFloat(std::string_view sv);
-//RuntimeValue assemblyVariable(const Object& obj, const std::vector<Object>& object);
-
 RuntimeValue evaluatePointFunc(const std::vector<RuntimeValue>& args);
 RuntimeValue evaluateVectorFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes);
 RuntimeValue evaluateCrossFunc(const std::vector<RuntimeValue>& args, const Node& node, const std::vector<Node>& nodes);

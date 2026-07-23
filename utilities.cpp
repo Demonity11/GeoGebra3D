@@ -1,6 +1,5 @@
 #include "utilities.h"
 #include "objectCoords.h"
-#include "objectAssembling.h"
 #include "draw_utils.h"
 #include "Random.h"
 #include <iomanip>
@@ -41,118 +40,6 @@ Object::Type getObjectTypeFromString(const std::string& funcName)
 	return Object::Null;
 }
 
-// convert std::string parameters to float
-//void convertParametersToFloat(std::string& parameters, std::vector<float>& vecComponents)
-//{
-//	auto commaPos{ parameters.find(",") };
-//
-//	while (parameters.find(",") != std::string::npos)
-//	{
-//		int startComp{ 0 };
-//
-//		// convert the extracted string component into float
-//		try
-//		{
-//			vecComponents.push_back(std::stof(parameters.substr(startComp, commaPos - startComp)));
-//		}
-//
-//		catch (const std::invalid_argument& e)
-//		{
-//			std::cerr << "ERROR::" << e.what() << "\n";
-//			vecComponents = { -9999.0f, -9999.0f, -9999.0f };
-//			return;
-//		}
-//
-//		parameters = parameters.substr(commaPos + 1, parameters.length() - 1);
-//
-//		commaPos = parameters.find(",");
-//
-//		if (commaPos == std::string::npos)
-//		{
-//			try
-//			{
-//				vecComponents.push_back(std::stof(parameters));
-//			}
-//
-//			catch (const std::invalid_argument& e)
-//			{
-//				std::cerr << "ERROR::" << e.what() << "\n";
-//				vecComponents = { -9999.0f, -9999.0f, -9999.0f };
-//				return;
-//			}
-//
-//			break;
-//		}
-//	}
-//}
-
-// compare if the given object has the specified type
-//bool compareObjectType(const std::string& objName, Object::Type expectedType, const std::vector<Object>& object)
-//{
-//	for (const auto& obj : object)
-//	{
-//		if (objName == obj.getName())
-//		{
-//			if (obj.getType() == expectedType)
-//				return true;
-//
-//			return false;
-//		}
-//	}
-//
-//	return false;
-//}
-
-// removes the characters '(', ')', and ' ' from the argument
-//void stripArg(std::string& arg)
-//{
-//	std::string newArg{};
-//
-//	for (char c : arg)
-//	{
-//		if (c != '(' && c != ')' && c != ' ')
-//			newArg += c;
-//	}
-//
-//	arg = newArg;
-//}
-
-// split multiple arguments into separated ones.
-//std::vector<std::string> splitArgs(const std::string& argumentString)
-//{
-//	std::vector<std::string> args{};
-//	std::string currentArg{};
-//	int parenthesisCount{ 0 };
-//
-//	for (char c : argumentString)
-//	{
-//		if (c == '(')
-//			++parenthesisCount;
-//		if (c == ')')
-//			--parenthesisCount;
-//
-//		if (c == ',' && parenthesisCount == 0)
-//		{
-//			stripArg(currentArg);
-//
-//			args.push_back(currentArg);
-//			currentArg.clear();
-//		}
-//		else
-//		{
-//			currentArg += c;
-//		}
-//	}
-//
-//	if (!currentArg.empty())
-//	{
-//		stripArg(currentArg);
-//		args.push_back(currentArg);
-//	}
-//
-//	return args;
-//}
-
 // search object's index by name
 int searchObjectIndexByName(const std::string& objName, const std::vector<Object>& object)
 {
@@ -163,50 +50,6 @@ int searchObjectIndexByName(const std::string& objName, const std::vector<Object
 
 	return -1;
 }
-
-// return the std::string arguments into components float vector
-//void getObjectComponents(std::vector<std::string>& args, std::vector<float>& vecComponents, std::array<int, 3>& pIDs, std::array<int, 3>& pCompIndex)
-//{
-//	for (int index{ 0 }; index < args.size(); ++index)
-//	{
-//		auto& arg{ args[index] };
-//
-//		//stripArg(arg);
-//
-//		int objIndex{ searchObjectIndexByName(arg, Context::object) };
-//
-//		if (objIndex != -1)
-//		{
-//			int pIndex{ nextFreeParentIndex(pIDs) };
-//
-//			pIDs[pIndex] = Context::object[objIndex].getID();
-//			pCompIndex[pIndex] = static_cast<int>(vecComponents.size());
-//
-//			for (const auto comp : Context::object[objIndex].getComponents())
-//				vecComponents.push_back(comp);
-//		}
-//
-//		else if (objIndex == -1)
-//		{
-//			int pIndex{ nextFreeParentIndex(pIDs) };
-//
-//			pIDs[pIndex] = Context::componentLiteral;
-//			pCompIndex[pIndex] = static_cast<int>(vecComponents.size());
-//
-//			convertParametersToFloat(arg, vecComponents);
-//		}
-//	}
-//}
-
-// return the next free index in parentIDs array
-//int nextFreeParentIndex(const std::array<int, 3>& pIDs)
-//{
-//	for (int index{ 0 }; index < pIDs.size(); ++index)
-//		if (pIDs[index] == -1) 
-//			return index;
-//
-//	return -1;
-//}
 
 // return the object's index if it exists or return -1 if not
 int searchObjectByID(int id, const std::vector<Object>& objectRef)
@@ -435,7 +278,10 @@ bool rebuildObjectFromParents(Object& obj, const std::vector<Object>& object)
 				{
 					const Object& obj{ object[idx] };
 					const RuntimeValue& comp{ obj.getComponents() };
-					if (std::holds_alternative<glm::vec3>(comp)) return std::get<glm::vec3>(comp);
+
+					auto p{ extractPoint(comp) };
+
+					if (p) return *p;
 				}
 			}
 
@@ -753,7 +599,7 @@ bool scanForIdenticalObject(Object::Type type, const RuntimeValue& components, c
 // return the content of each object
 std::string getExpression(const Object& obj, const std::vector<Object>& object)
 {
-	auto type{ obj.getType() };
+	Object::Type type{ obj.getType() };
 
 	if (type == Object::Point)
 	{
@@ -795,6 +641,8 @@ std::string getExpression(const Object& obj, const std::vector<Object>& object)
 
 	else
 	{
+		std::array<int, 3> pIDs{ obj.getParentIDs() };
+
 		std::stringstream ss{};
 
 		if (type == Object::Line)
@@ -802,8 +650,7 @@ std::string getExpression(const Object& obj, const std::vector<Object>& object)
 			if (!obj.isMutable())
 			{
 				ss << "Intersect(";
-				ss << object[searchObjectByID(obj.getParentIDs()[0], object)].getName() << ", ";
-				ss << object[searchObjectByID(obj.getParentIDs()[1], object)].getName();
+				ss << extractPName(obj);
 				ss << ")";
 
 				return ss.str();
@@ -818,52 +665,77 @@ std::string getExpression(const Object& obj, const std::vector<Object>& object)
 			if (!obj.isMutable()) ss << "Cross(";
 			else ss << getStringFunctionType(type) << "(";
 
-			if (pIDs[0] >= 0 && pIDs[1] >= 0)
-			{
-				ss << object[searchObjectByID(pIDs[0], object)].getName() << ", ";
-				ss << object[searchObjectByID(pIDs[1], object)].getName() << ")";
-			}
-			else
-			{
-				ss << vec.head - vec.origin << ")";
-			}
+			ss << extractPName(obj) << ")";
 
 			return ss.str();
 		}
 
 		ss << getStringFunctionType(type) << "(";
 
-		const RuntimeValue& comp{ obj.getComponents() };
-
-		int pCount{ 0 };
-
-		for (int p : obj.getParentIDs())
-			if (p >= 0) ++pCount;
-
-		for (int i{ 0 }; i < pCount; ++i)
-		{
-			int pID{ obj.getParentIDs()[i] };
-
-			if (pID >= 0)
-			{
-				const std::string& parent{ object[searchObjectByID(pID, object)].getName() };
-
-				ss << parent;
-
-				if (i < pCount - 1) ss << ", ";
-			}
-
-			else ss << "(" << getRuntimeValueCompAsString(pID, object);
-
-			if (i == pCount - 1) ss << ")";
-
-			if (pID == -2) ss << "), ";
-		}
+		ss << extractPName(obj) << ")";
 
 		return ss.str();
 	}
 
 	return "";
+}
+
+std::string extractPName(const Object& obj)
+{
+	using Context::object;
+
+	const std::array<int, 3> pIDs{ obj.getParentIDs() };
+	std::stringstream comp{};
+
+	for (int i{ 0 }; i < obj.getParentCount(); ++i)
+	{
+		int pID{ pIDs[i] };
+
+		if (pID >= 0) comp << object[searchObjectByID(pID, object)].getName();
+		else
+		{
+			comp.clear();
+			break;
+		}
+
+		if (i < obj.getParentCount() - 1) comp << ", ";
+		if (i == obj.getParentCount() - 1)
+		{
+			return comp.str();
+		}
+	}
+
+	std::visit(overloaded{
+		[](float f) {},
+		[&](glm::vec3 p)
+		{
+			comp << p;
+		},
+		[&](Eval::IPoint ip)
+		{
+			comp << ip.point;
+		},
+		[&](Eval::Vector vec)
+		{
+			comp << vec.head - vec.origin;
+		},
+		[&](Eval::Segment seg)
+		{
+			comp << "(" << seg.A << "), (" << seg.B << ")";
+		},
+		[&](Eval::Line line)
+		{
+			comp << "(" << line.point << "), (" << line.dVecHead - line.dVecOrigin << ")";
+		},
+		[](Eval::ILine iline) {},
+		[&](Eval::Plane plane)
+		{
+			comp << "(" << plane.point << "), (" << plane.normalHead - plane.normalOrigin << ")";
+		},
+		[](Context::RuntimeError r) {}
+		}, obj.getComponents());
+
+	return comp.str();
 }
 
 std::string getRuntimeValueCompAsString(int id, const std::vector<Object>& objectRef)
@@ -877,9 +749,9 @@ std::string getRuntimeValueCompAsString(int id, const std::vector<Object>& objec
 		const Object& obj{ objectRef[idx] };
 		const RuntimeValue& comp{ obj.getComponents() };
 
-		if (std::holds_alternative<glm::vec3>(comp))
+		if (auto p{ extractPoint(comp) })
 		{
-			ss << std::get<glm::vec3>(comp);
+			ss << *p;
 			return ss.str();
 		}
 		else if (std::holds_alternative<Eval::Vector>(comp))
@@ -964,54 +836,23 @@ std::string getEquation(const Object& obj)
 		return ss.str();
 	}
 
-	else if (type == Object::Line && std::holds_alternative<Eval::Line>(comp))
+	else if (type == Object::Line)
 	{
-		const Eval::Line& line{ std::get<Eval::Line>(comp) };
+		if (auto line{ extractLine(comp) })
+		{
+			glm::vec3 point{ line->point };
+			glm::vec3 dVector{ line->dVecHead - line->dVecOrigin };
 
-		glm::vec3 point{ line.point };
-		glm::vec3 dVector{ line.dVecHead - line.dVecOrigin };
+			std::stringstream ss{};
 
-		std::stringstream ss{};
+			ss << "P = (" << point.x << ", " << point.y << ", " << point.z << ") + t(" << dVector.x << ", " << dVector.y << ", " << dVector.z << ")";
 
-		ss << "P = (" << point.x << ", " << point.y << ", " << point.z << ") + t(" << dVector.x << ", " << dVector.y << ", " << dVector.z << ")";
-
-		return ss.str();
+			return ss.str();
+		}
 	}
 
 	return "";
 }
-
-// return the intersection of a plane and a line, if it exist
-// return (-9999,-9999,-9999) if not
-//glm::vec3 intersectionLinePlane(glm::vec3 linePoint, glm::vec3 lineVector, glm::vec3 planeNormal, float d)
-//{
-//	float divisor{ glm::dot(planeNormal, lineVector) };
-//	float t{};
-//
-//	// t = -(a.x1 + b.y1 + c.z1 + d) / n.v
-//	// where
-//	// A(x1, y1, z1) is a point of the line
-//	// v is the direction vector of the line
-//	// n = (a, b, c) is the normal vector of the plane
-//	// 
-//	// d = -(a.x0 + b.y0 + c.z0)
-//	// B(x0, y0, z0) is a point of the plane
-//
-//	const float epsilon{ 0.001f };
-//	if (glm::abs(divisor) < epsilon)
-//	{
-//		if (glm::abs(glm::dot(planeNormal, linePoint) + d) < epsilon)
-//			return linePoint;
-//
-//		return glm::vec3(-9999.0f, -9999.0f, -9999.0f);
-//	}
-//	else	
-//		t = -(glm::dot(planeNormal, linePoint) + d) / divisor;
-//
-//	glm::vec3 intersection{ linePoint + t * lineVector };
-//
-//	return intersection;
-//}
 
 RuntimeValue intersectionLinePlane(const Eval::Line& line, const Eval::Plane& plane)
 {
@@ -1046,68 +887,6 @@ RuntimeValue intersectionLinePlane(const Eval::Line& line, const Eval::Plane& pl
 
 	return intersection;
 }
-
-// return the intersection of a line and a line, if it exist
-// return (-9999,-9999,-9999) if not
-//glm::vec3 intersectionLineLine(glm::vec3 ps, glm::vec3 vs, glm::vec3 pt, glm::vec3 vt)
-//{
-//	// s: P = ps + s * vs
-//	// t: P = pt + t * vt
-//
-//	const float epsilon{ 0.001f }; // for float comparison purposes
-//	auto cross{ glm::cross(vs, vt) };
-//
-//	bool isParallel{ true };
-//	for (int i{ 0 }; i < 3; ++i)
-//	{
-//		if (glm::abs(cross[i]) >= epsilon)
-//		{
-//			isParallel = false;
-//			break;
-//		}
-//	}
-//
-//	auto w0{ pt - ps };
-//	
-//	bool isSuperimposed{ false };
-//	if (isParallel)
-//	{
-//		auto separationCross{ glm::cross(w0, vt) };
-//
-//		isSuperimposed = true;
-//		for (int i{ 0 }; i < 3; ++i)
-//		{
-//			if (glm::abs(separationCross[i]) >= epsilon)
-//			{
-//				isSuperimposed = false;
-//				break;
-//			}
-//		}
-//	}
-//
-//	if (isSuperimposed)
-//		return ps;
-//
-//	auto crossDot{ glm::dot(cross, w0) };
-//
-//	if (glm::abs(crossDot) >= epsilon)
-//		return glm::vec3(-9999.0f, -9999.0f, -9999.0f); // intersection doesn't exist
-//
-//	float a{ glm::dot(vs, vs) };
-//	float b{ glm::dot(vs, vt) };
-//	float c{ glm::dot(vt, vt) };
-//	float d{ glm::dot(w0, vs) };
-//	float e{ glm::dot(w0, vt) };
-//
-//	float D{ a * (-c) + b * b };
-//	float Ds{ -d * c + e * b };
-//
-//	float s{ Ds / D };
-//	
-//	glm::vec3 intersection{ ps + s * vs };
-//
-//	return intersection;
-//}
 
 RuntimeValue intersectionLineLine(const Eval::Line& lineS, const Eval::Line& lineT)
 {
@@ -1171,85 +950,6 @@ RuntimeValue intersectionLineLine(const Eval::Line& lineS, const Eval::Line& lin
 
 	return intersection;
 }
-
-//Eval::Line intersectionPlanePlane(glm::vec3 p1, glm::vec3 n1, glm::vec3 p2, glm::vec3 n2)
-//{
-//	const float epsilon{ 0.001f };
-//	glm::vec3 dVec{ glm::cross(n1, n2) };
-//
-//	float d1{ -glm::dot(n1, p1) };
-//	float d2{ -glm::dot(n2, p2) };
-//
-//	Eval::Line intersection{};
-//
-//	// parallel planes
-//	bool isSuperimposed{ false };
-//	bool isParallel{ false };
-//	if (glm::length(dVec) < epsilon)
-//	{
-//		isParallel = true;
-//
-//		float pointTest{ glm::dot(n2, p1) + d2 };
-//		if (glm::abs(pointTest) < epsilon)
-//		{
-//			isSuperimposed = true;
-//			isParallel = false;
-//		}
-//	}
-//
-//	if (isSuperimposed)
-//	{
-//		std::cerr << "The planes are the same. Handle later.\n";
-//		return intersection;
-//	}
-//	else if (isParallel)
-//	{
-//		std::cerr << "The intersection doesn't exist. Handle later.\n";
-//		return intersection;
-//	}
-//
-//	if (glm::abs(dVec.x) >= glm::abs(dVec.y) && glm::abs(dVec.x) >= glm::abs(dVec.z))
-//	{
-//		float D{ dVec.x };
-//		float Dy{ -d1 * n2.z + d2 * n1.z };
-//		float Dz{ -n1.y * d2 + n2.y * d1 };
-//
-//		float x{ 0.0f };
-//		float y{ Dy / D };
-//		float z{ Dz / D };
-//
-//		intersection.point = glm::vec3(x, y, z);
-//	}
-//	else if (glm::abs(dVec.y) >= glm::abs(dVec.z))
-//	{
-//		float D{ dVec.y };
-//		float Dx{ -n1.z * d2 + n2.z * d1 };
-//		float Dz{ -d1 * n2.x + d2 * n1.x }; 
-//
-//		float x{ Dx / D };
-//		float y{ 0.0f };
-//		float z{ Dz / D };
-//
-//		intersection.point = glm::vec3(x, y, z);
-//	}
-//	else
-//	{
-//		float D{ dVec.z };
-//		float Dx{ -d1 * n2.y + d2 * n1.y };
-//		float Dy{ -n1.x * d2 + n2.x * d1 };
-//
-//		float x{ Dx / D };
-//		float y{ Dy / D };
-//		float z{ 0.0f };
-//
-//		intersection.point = glm::vec3(x, y, z);
-//	}
-//
-//	intersection.dVecOrigin = glm::vec3{ 0.0f, 0.0f, 0.0f };
-//	intersection.dVecHead = dVec;
-//
-//	return intersection;
-//}
 
 RuntimeValue intersectionPlanePlane(const Eval::Plane& plane1, const Eval::Plane& plane2)
 {
@@ -1731,4 +1431,20 @@ Object::Type duduceRuntimeValueType(const RuntimeValue& value)
 		}, value);
 
 	return type;
+}
+
+std::optional<glm::vec3> extractPoint(const RuntimeValue& val)
+{
+	if (const auto* p = std::get_if<glm::vec3>(&val)) return *p;
+	if (const auto* ip = std::get_if<Eval::IPoint>(&val)) return ip->point;
+	
+	return std::nullopt;
+}
+
+std::optional<Eval::Line> extractLine(const RuntimeValue& val)
+{
+	if (const auto* l = std::get_if<Eval::Line>(&val)) return *l;
+	if (const auto* il = std::get_if<Eval::ILine>(&val)) return il->line;
+	
+	return std::nullopt;
 }

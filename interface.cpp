@@ -2,7 +2,6 @@
 #include "draw_utils.h"
 #include "utilities.h"
 #include "objectCoords.h"
-#include "objectAssembling.h"
 #include "Random.h"
 #include "lexer.h"
 #include "parser.h"
@@ -222,9 +221,6 @@ void processInput(char inputBuffer[128], const std::vector<FunctionArgs>& functi
 		"Point(2,2,2)\n"
 		"Point(3,3,3)\n"
 		"Plane(Point(-2,1,-3), Vector(B,C))\n"
-		//"Vector(A,B)\n"
-		//"Vector(Point(-2,-1,3), Point(-3,1,-2))\n"
-		//"Cross(u,v)\n"
 		"Cross(Vector(A,B), Vector(Point(-2,-1,3), Point(-3,1,-2)))\n"
 		"Line(A,B)\n"
 		"Intersect(r,p)\n"
@@ -382,7 +378,7 @@ bool getObjectInputFloats(Object& obj)
 		{
 			checkInput("::Point", &point[0]);
 		},
-		[&](Eval::IPoint iPoint)
+		[&](Eval::IPoint& iPoint)
 		{
 			checkInput("::Point", &iPoint.point[0]);
 		},
@@ -402,7 +398,7 @@ bool getObjectInputFloats(Object& obj)
 			checkInput("::DVecOrigin", &line.dVecOrigin[0]);
 			checkInput("::DVecHead", &line.dVecHead[0]);
 		},
-		[&](Eval::ILine iLine)
+		[&](Eval::ILine& iLine)
 		{
 			checkInput("::Point", &iLine.line.point[0]);
 			checkInput("::DVecOrigin", &iLine.line.dVecOrigin[0]);
@@ -442,10 +438,6 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 	if (type == Object::Point && pIDs[0] >= 0)
 	{
 		Eval::IPoint intersection{ std::get<Eval::IPoint>(obj.getComponents()) };
-
-		//Intersect intersect{ gatherPlaneLine(obj, object) };
-		//glm::vec3 intersection{ assemblyIntersectPoint(intersect) };
-		//std::vector components{ intersection.x, intersection.y, intersection.z };
 
 		if (scanForIdenticalObject(type, intersection, object, obj.getID()))
 		{
@@ -504,16 +496,6 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 		int vCountCilinder{};
 		int vCountCone{};
 
-		// check if the vector is a cross product
-		//if (pIDs[0] >= 0 && pIDs[1] >= 0)
-		//{
-		//	int pIndex0{ searchObjectByID(pIDs[0], object) };
-		//	int pIndex1{ searchObjectByID(pIDs[1], object) };
-
-		//	if (object[pIndex0].getType() == Object::Vector && object[pIndex1].getType() == Object::Vector)
-		//		obj.setMutable(false);
-		//}
-
 		if (vector.pTypes[1] == ObjectType::Vector)
 			obj.setMutable(false);
 
@@ -541,13 +523,6 @@ int generateObjectVertices(Object& obj, const std::vector<Object>& object, std::
 
 	else if (type == Object::Line && std::holds_alternative<Eval::ILine>(obj.getComponents()))
 	{
-		//Intersect intersect{ gatherPlaneLine(obj, object) };
-
-		//auto [p1, p2] = intersect.points;
-		//auto [n1, n2] = intersect.vectors;
-
-		//Eval::Line intersection{ intersectionPlanePlane(p1, n1, p2, n2) };
-
 		Eval::ILine intersection{ std::get<Eval::ILine>(obj.getComponents()) };
 
 		constexpr float epsilon{ 0.001f };
